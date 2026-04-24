@@ -101,7 +101,7 @@ func NewServer(registry *TunnelRegistry, domain, secret string, secure bool) *Se
 // any path-based routing. This prevents admin endpoints from intercepting
 // requests destined for a client's local service.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if ParseTunnelID(r.Host) != "" {
+	if ParseTunnelID(r.Host, s.domain) != "" {
 		s.handleTCP(w, r)
 		return
 	}
@@ -319,7 +319,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 // local service. Both WebSocket and plain HTTP are handled by writing the full
 // HTTP request into the tunnel stream and then relaying raw bytes bidirectionally.
 func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
-	tunnelID := ParseTunnelID(r.Host)
+	tunnelID := ParseTunnelID(r.Host, s.domain)
 	if tunnelID == "" {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return

@@ -66,10 +66,10 @@ func (t *TunnelRegistry) HandleWildcardTunnelID(ctx context.Context) (string, er
 	return "", fmt.Errorf("failed to generate unique tunnel ID after 100 attempts")
 }
 
-func ParseTunnelID(host string) string {
-	parts := strings.Split(host, ".")
-	if len(parts) >= 3 {
-		return strings.Join(parts[:len(parts)-2], ".")
+func ParseTunnelID(host, domain string) string {
+	suffix := "." + domain
+	if !strings.HasSuffix(host, suffix) {
+		return ""
 	}
-	return ""
+	return strings.TrimSuffix(host, suffix)
 }
