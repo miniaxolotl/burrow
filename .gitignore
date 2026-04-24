@@ -4,3 +4,4 @@ bin/
 !.env.example
 
 plans/
+.opencode/

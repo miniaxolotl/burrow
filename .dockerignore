@@ -1,0 +1,13 @@
+bin/
+burrowctl/
+
+.env
+.env.*
+
+.git/
+.opencode/
+
+documentation/
+plans/
+
+*.md

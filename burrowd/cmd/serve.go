@@ -37,9 +37,28 @@ func init() {
 
 func runServe(cmd *cobra.Command, args []string) error {
 	port := viper.GetString("port")
+	// Dokku sets PORT; use it when neither --port flag nor BURROW_PORT env var was given.
+	if !cmd.Flags().Changed("port") {
+		if _, ok := os.LookupEnv("BURROW_PORT"); !ok {
+			if p := os.Getenv("PORT"); p != "" {
+				port = p
+			}
+		}
+	}
+
 	hostname := viper.GetString("hostname")
 	domain := viper.GetString("domain")
+
 	redisURL := viper.GetString("redis-url")
+	// Dokku Redis plugin sets REDIS_URL; use it when BURROW_REDIS_URL is not configured.
+	if !cmd.Flags().Changed("redis-url") {
+		if _, ok := os.LookupEnv("BURROW_REDIS_URL"); !ok {
+			if u := os.Getenv("REDIS_URL"); u != "" {
+				redisURL = u
+			}
+		}
+	}
+
 	secret := viper.GetString("secret")
 
 	if secret == "" {

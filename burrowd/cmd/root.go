@@ -2,11 +2,13 @@ package cmd
 
 import (
 	"os"
+	"strings"
 
 	"burrow/burrowd/cmd/auth"
 	"burrow/burrowd/cmd/tunnel"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var rootCmd = &cobra.Command{
@@ -20,6 +22,11 @@ func Execute() error {
 }
 
 func init() {
+	// BURROW_* env vars map to config keys (hyphens become underscores).
+	viper.SetEnvPrefix("BURROW")
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
+	viper.AutomaticEnv()
+
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(auth.AuthCmd)
 	rootCmd.AddCommand(tunnel.TunnelCmd)

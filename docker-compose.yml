@@ -2,32 +2,54 @@ services:
   burrowd:
     build:
       context: .
-      dockerfile: burrowd/Dockerfile
+      dockerfile: Dockerfile
     command: >
       serve
       --port ${BURROW_PORT}
-      --hostname ${BURROW_HOSTNAME}
       --domain ${BURROW_DOMAIN}
       --redis-url ${BURROW_REDIS_URL}
       --secret ${BURROW_SECRET}
     ports:
-      - "${BURROW_PORT}:${BURROW_PORT}"
+      - "127.0.0.1:${BURROW_PORT}:${BURROW_PORT}"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - burrow-net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:${BURROW_PORT}/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    mem_limit: 256m
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     restart: unless-stopped
     networks:
       - burrow-net
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    mem_limit: 160m
+    logging:
+      driver: json-file
+      options:
+        max-size: 5m
+        max-file: "2"
 
 networks:
   burrow-net:
@@ -35,3 +57,4 @@ networks:
 
 volumes:
   redis_data:
+  
