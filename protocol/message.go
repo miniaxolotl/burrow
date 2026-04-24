@@ -51,7 +51,8 @@ func DeserializeMessage(data []byte) (*Message, error) {
 		if len(data) < payloadEnd {
 			return nil, fmt.Errorf("payload length mismatch: expected %d, got %d", m.Length, len(data)-9)
 		}
-		m.Payload = data[payloadStart:payloadEnd]
+		m.Payload = make([]byte, m.Length)
+		copy(m.Payload, data[payloadStart:payloadEnd])
 	}
 	return m, nil
 }
@@ -149,10 +150,10 @@ func DeserializeErrorMessage(data []byte) (*ErrorMessage, error) {
 }
 
 type TunnelInfo struct {
-	TunnelID string
-	Port     uint16
-	URL      string
-	Status   string
+	TunnelID string `json:"tunnel_id"`
+	Port     uint16 `json:"port"`
+	URL      string `json:"url"`
+	Status   string `json:"status"`
 }
 
 type TunnelListResponse struct {

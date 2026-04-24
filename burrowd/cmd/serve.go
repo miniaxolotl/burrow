@@ -52,7 +52,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 	defer redis.Close()
 
-	registry := internal.NewTunnelRegistry(redis, hostname, domain)
+	registry := internal.NewTunnelRegistry(redis, domain)
 
 	server := internal.NewServer(registry, redis, hostname, domain, secret)
 

@@ -3,6 +3,7 @@ package internal
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -11,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"burrow/protocol"
 
 	"github.com/gorilla/websocket"
 	"github.com/xtaci/yamux"
@@ -22,7 +25,7 @@ type wsConn struct {
 }
 
 func (c *wsConn) Read(b []byte) (int, error) {
-	// Drain any leftover bytes from the previous message before reading a new one.
+	// Drain leftover bytes from the previous WebSocket message before reading a new one.
 	if len(c.buf) > 0 {
 		n := copy(b, c.buf)
 		c.buf = c.buf[n:]
@@ -51,10 +54,8 @@ func (c *wsConn) Write(b []byte) (int, error) {
 
 type Server struct {
 	registry    *TunnelRegistry
-	redis       *RedisClient
 	upgrader    websocket.Upgrader
 	mux         *http.ServeMux
-	hostname    string
 	domain      string
 	secret      string
 	startTime   time.Time
@@ -63,19 +64,17 @@ type Server struct {
 	httpServer  *http.Server
 }
 
-func NewServer(registry *TunnelRegistry, redis *RedisClient, hostname, domain, secret string) *Server {
+func NewServer(registry *TunnelRegistry, domain, secret string) *Server {
 	s := &Server{
 		registry:    registry,
-		redis:       redis,
-		hostname:    hostname,
 		domain:      domain,
 		secret:      secret,
 		startTime:   time.Now(),
 		connections: make(map[string]*yamux.Session),
 	}
 
-	// CheckOrigin is intentionally permissive: tunnel clients connect from
-	// arbitrary hosts and browser-based CSRF is not a concern here.
+	// CheckOrigin is intentionally permissive: clients connect from arbitrary
+	// locations and browser-based CSRF is not a concern for a tunnel service.
 	s.upgrader = websocket.Upgrader{
 		CheckOrigin:     func(r *http.Request) bool { return true },
 		ReadBufferSize:  1024,
@@ -84,39 +83,63 @@ func NewServer(registry *TunnelRegistry, redis *RedisClient, hostname, domain, s
 
 	s.mux = http.NewServeMux()
 	s.mux.HandleFunc("/health", s.handleHealth)
+	s.mux.HandleFunc("/tunnels", s.handleTunnelList)
 	s.mux.HandleFunc("/tunnel/", s.handleTunnel)
 	s.mux.HandleFunc("/", s.handleHTTP)
 
 	return s
 }
 
-func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
-	s.mu.RLock()
-	tunnels := len(s.connections)
-	s.mu.RUnlock()
-
-	uptime := time.Since(s.startTime).Round(time.Second)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"status":"ok","tunnels":%d,"uptime":"%s"}`, tunnels, uptime)
-}
-
-func (s *Server) handleTunnel(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" && r.URL.Path == "/tunnel/ws" {
-		s.handleWebSocket(w, r)
-		return
-	}
-
-	if r.Method != "POST" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-
+func (s *Server) auth(r *http.Request) bool {
 	token := r.Header.Get("X-Tunnel-Token")
 	if token == "" {
 		token = r.URL.Query().Get("token")
 	}
+	return protocol.ValidateToken(token, s.secret)
+}
 
-	if !ValidateToken(token, s.secret) {
+func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	s.mu.RLock()
+	tunnels := len(s.connections)
+	s.mu.RUnlock()
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintf(w, `{"status":"ok","tunnels":%d,"uptime":"%s"}`,
+		tunnels, time.Since(s.startTime).Round(time.Second))
+}
+
+func (s *Server) handleTunnelList(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.auth(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	tunnels, err := s.registry.List(r.Context())
+	if err != nil {
+		http.Error(w, "Failed to list tunnels", http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tunnels)
+}
+
+func (s *Server) handleTunnel(w http.ResponseWriter, r *http.Request) {
+	switch {
+	case r.Method == "GET" && r.URL.Path == "/tunnel/ws":
+		s.handleWebSocket(w, r)
+	case r.Method == "POST":
+		s.handleTunnelCreate(w, r)
+	case r.Method == "DELETE":
+		s.handleTunnelDelete(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (s *Server) handleTunnelCreate(w http.ResponseWriter, r *http.Request) {
+	if !s.auth(r) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -148,13 +171,25 @@ func (s *Server) handleTunnel(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `{"tunnel_id":"%s","url":"%s"}`, tunnelID, url)
 }
 
-func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	token := r.Header.Get("X-Tunnel-Token")
-	if token == "" {
-		token = r.URL.Query().Get("token")
+func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
+	if !s.auth(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
 	}
+	tunnelID := strings.TrimPrefix(r.URL.Path, "/tunnel/")
+	if tunnelID == "" {
+		http.Error(w, "Tunnel ID required", http.StatusBadRequest)
+		return
+	}
+	if err := s.registry.Remove(tunnelID); err != nil {
+		http.Error(w, "Failed to remove tunnel", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
 
-	if !ValidateToken(token, s.secret) {
+func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	if !s.auth(r) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -173,17 +208,14 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tunnelURL := fmt.Sprintf("https://%s.%s", tunnelID, s.domain)
-	responseHeader := http.Header{"X-Tunnel-URL": []string{tunnelURL}}
-
-	conn, err := s.upgrader.Upgrade(w, r, responseHeader)
+	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Tunnel-URL": []string{tunnelURL}})
 	if err != nil {
 		log.Printf("WebSocket upgrade failed: %v", err)
 		return
 	}
 	defer conn.Close()
 
-	wrappedConn := &wsConn{Conn: conn}
-	session, err := yamux.Server(wrappedConn, nil)
+	session, err := yamux.Server(&wsConn{Conn: conn}, nil)
 	if err != nil {
 		log.Printf("Yamux server failed: %v", err)
 		return
@@ -207,8 +239,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Tunnel %s connected (port %d)", tunnelID, port)
 
-	// Block until the session closes. The client should not open streams;
-	// close any unexpected client-initiated streams immediately.
+	// Block until session closes. Close any unexpected client-initiated streams.
 	for {
 		stream, err := session.AcceptStream()
 		if err != nil {
@@ -219,12 +250,10 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleHTTP routes an incoming HTTP request through the yamux tunnel to the
-// client's local service, then relays the response back to the caller.
+// handleHTTP routes an incoming request through the yamux tunnel to the
+// client's local service and relays the response back.
 func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
-	host := r.Host
-	tunnelID := ParseTunnelID(host)
-
+	tunnelID := ParseTunnelID(r.Host)
 	if tunnelID == "" {
 		http.Error(w, "Not Found", http.StatusNotFound)
 		return
@@ -246,12 +275,19 @@ func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	if err := r.Write(conn); err != nil {
+	proxyReq, err := http.NewRequest(r.Method, r.URL.String(), r.Body)
+	if err != nil {
+		http.Error(w, "Failed to create proxy request", http.StatusBadGateway)
+		return
+	}
+	proxyReq.Header = r.Header.Clone()
+
+	if err := proxyReq.Write(conn); err != nil {
 		http.Error(w, "Failed to forward request", http.StatusBadGateway)
 		return
 	}
 
-	resp, err := http.ReadResponse(bufio.NewReader(conn), r)
+	resp, err := http.ReadResponse(bufio.NewReader(conn), proxyReq)
 	if err != nil {
 		http.Error(w, "Failed to read response", http.StatusBadGateway)
 		return
@@ -274,11 +310,9 @@ func (s *Server) Start(addr string) error {
 		ReadTimeout:  30 * time.Second,
 		WriteTimeout: 30 * time.Second,
 	}
-
 	s.mu.Lock()
 	s.httpServer = srv
 	s.mu.Unlock()
-
 	log.Printf("Starting server on %s", addr)
 	return srv.ListenAndServe()
 }
