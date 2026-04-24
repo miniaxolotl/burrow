@@ -273,8 +273,10 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Keep the Redis TTL alive for as long as the session is open.
 	done := make(chan struct{})
-	defer close(done)
+	var keepaliveWg sync.WaitGroup
+	keepaliveWg.Add(1)
 	go func() {
+		defer keepaliveWg.Done()
 		ticker := time.NewTicker(time.Hour)
 		defer ticker.Stop()
 		for {
@@ -285,6 +287,13 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
+	}()
+	// Stop keepalive before deferred Remove runs (defers are LIFO; this is
+	// registered after Remove so it runs first, ensuring no Register call
+	// can race with Remove).
+	defer func() {
+		close(done)
+		keepaliveWg.Wait()
 	}()
 
 	// Block until session closes. Client-initiated streams are unexpected.
@@ -360,6 +369,7 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	go func() { io.Copy(stream, client); done <- struct{}{} }()
 	go func() { io.Copy(client, stream); done <- struct{}{} }()
 	<-done
+	<-done
 }
 
 // proxyWebSocket hijacks the inbound connection and relays the WebSocket
@@ -393,6 +403,7 @@ func (s *Server) proxyWebSocket(w http.ResponseWriter, r *http.Request, stream n
 	done := make(chan struct{}, 2)
 	go func() { io.Copy(client, stream); done <- struct{}{} }()
 	go func() { io.Copy(stream, client); done <- struct{}{} }()
+	<-done
 	<-done
 }
 

@@ -83,10 +83,18 @@ func (r *RedisClient) DeleteTunnel(ctx context.Context, id string) error {
 }
 
 func (r *RedisClient) ListTunnels(ctx context.Context) ([]*TunnelData, error) {
-	pattern := "tunnel:*"
-	keys, err := r.client.Keys(ctx, pattern).Result()
-	if err != nil {
-		return nil, err
+	var keys []string
+	var cursor uint64
+	for {
+		batch, next, err := r.client.Scan(ctx, cursor, "tunnel:*", 100).Result()
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, batch...)
+		cursor = next
+		if cursor == 0 {
+			break
+		}
 	}
 
 	tunnels := make([]*TunnelData, 0, len(keys))
@@ -100,7 +108,6 @@ func (r *RedisClient) ListTunnels(ctx context.Context) ([]*TunnelData, error) {
 			tunnels = append(tunnels, data)
 		}
 	}
-
 	return tunnels, nil
 }
 

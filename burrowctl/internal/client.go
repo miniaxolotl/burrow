@@ -121,6 +121,14 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 // handleTunnel accepts yamux streams opened by the server and pipes each one
 // to the client's local service at the given port.
 func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
+	defer func() {
+		c.mu.Lock()
+		if c.tunnels[port] == tc {
+			delete(c.tunnels, port)
+		}
+		c.mu.Unlock()
+	}()
+
 	localAddr := fmt.Sprintf("localhost:%d", port)
 
 	for {
@@ -143,6 +151,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			done := make(chan struct{}, 2)
 			go func() { io.Copy(conn, s); conn.Close(); done <- struct{}{} }()
 			go func() { io.Copy(s, conn); s.Close(); done <- struct{}{} }()
+			<-done
 			<-done
 		}(stream)
 	}

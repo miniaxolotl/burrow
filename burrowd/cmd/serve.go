@@ -100,13 +100,19 @@ func runServe(cmd *cobra.Command, args []string) error {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
+	startErr := make(chan error, 1)
 	go func() {
 		if err := server.Start(addr); err != nil && err != http.ErrServerClosed {
-			fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
+			startErr <- err
 		}
 	}()
 
-	<-sigCh
+	select {
+	case err := <-startErr:
+		return fmt.Errorf("server failed to start: %w", err)
+	case <-sigCh:
+	}
+
 	fmt.Println("\nShutting down...")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
