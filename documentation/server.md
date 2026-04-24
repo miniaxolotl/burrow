@@ -142,10 +142,9 @@ https://{tunnel_id}.{domain}
 The server extracts the tunnel ID by matching the host against the configured domain suffix. This supports any domain depth:
 
 Examples:
-- Domain `mawa.dev`: `https://swiftly-ancient-silent-dragon.mawa.dev`
-- Domain `burrow.mawa.dev`: `https://swiftly-ancient-silent-dragon.burrow.mawa.dev`
-- Domain `preview.burrow.mawa.dev`: `https://swiftly-ancient-silent-dragon.preview.burrow.mawa.dev`
 - Domain `tryburrow.dev`: `https://swiftly-ancient-silent-dragon.tryburrow.dev`
+- Domain `burrow.mawa.dev`: `https://swiftly-ancient-silent-dragon.burrow.mawa.dev`
+- Domain `burrow-preview.mawa.dev`: `https://swiftly-ancient-silent-dragon.burrow-preview.mawa.dev`
 
 ## API Endpoints
 
