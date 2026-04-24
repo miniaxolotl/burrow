@@ -3,7 +3,6 @@ package tunnel
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"burrow/burrowd/internal"
 
@@ -18,24 +17,9 @@ var revokeCmd = &cobra.Command{
 	RunE:  runTunnelRevoke,
 }
 
-func init() {
-	revokeCmd.Flags().String("redis-url", "", "Redis connection URL")
-	viper.BindPFlag("revoke.redis-url", revokeCmd.Flags().Lookup("redis-url"))
-}
-
 func runTunnelRevoke(cmd *cobra.Command, args []string) error {
 	tunnelID := args[0]
-
-	redisURL := viper.GetString("revoke.redis-url")
-	if redisURL == "" {
-		redisURL = os.Getenv("BURROW_REDIS_URL")
-	}
-	if redisURL == "" {
-		redisURL = viper.GetString("redis-url")
-	}
-	if redisURL == "" {
-		redisURL = "localhost:6379"
-	}
+	redisURL := viper.GetString("redis-url")
 
 	client, err := internal.NewRedisClient(redisURL)
 	if err != nil {

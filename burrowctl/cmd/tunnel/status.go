@@ -13,8 +13,6 @@ var statusCmd = &cobra.Command{
 }
 
 func runTunnelStatus(cmd *cobra.Command, args []string) error {
-	fmt.Println("TUNNEL ID              PORT    LATENCY    RECONNECTS")
-	fmt.Println("arcane-dragon-xorn    3000    12ms       0")
-	fmt.Println("shadow-lich-umbra      8080    8ms        1")
+	fmt.Println("not implemented")
 	return nil
 }

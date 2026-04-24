@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"net"
 	"net/http"
 	"sync"
@@ -51,21 +50,19 @@ func (c *wsConn) Write(b []byte) (int, error) {
 }
 
 type Client struct {
-	server    string
-	token     string
-	domain    string
-	tunnels   map[uint16]*TunnelConn
-	mu        sync.RWMutex
-	reconnect bool
+	server  string
+	token   string
+	domain  string
+	tunnels map[uint16]*TunnelConn
+	mu      sync.RWMutex
 }
 
 type TunnelConn struct {
-	ID        string
-	Port      uint16
-	URL       string
-	wsConn    *websocket.Conn
-	session   *yamux.Session
-	localConn net.Conn
+	ID      string
+	Port    uint16
+	URL     string
+	wsConn  *websocket.Conn
+	session *yamux.Session
 }
 
 func NewClient(server, token, domain string) *Client {
@@ -78,7 +75,7 @@ func NewClient(server, token, domain string) *Client {
 }
 
 func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) {
-	tunnelID := generateTunnelID()
+	tunnelID := protocol.RandomTunnelID()
 
 	// Send token as a header, not a query parameter, to avoid it appearing in logs.
 	header := http.Header{"X-Tunnel-Token": []string{c.token}}
@@ -162,9 +159,6 @@ func (c *Client) CloseTunnel(port uint16) error {
 		if tc.wsConn != nil {
 			tc.wsConn.Close()
 		}
-		if tc.localConn != nil {
-			tc.localConn.Close()
-		}
 		delete(c.tunnels, port)
 	}
 	return nil
@@ -181,21 +175,18 @@ func (c *Client) Close() error {
 		if tc.wsConn != nil {
 			tc.wsConn.Close()
 		}
-		if tc.localConn != nil {
-			tc.localConn.Close()
-		}
 	}
 	c.tunnels = make(map[uint16]*TunnelConn)
 	return nil
 }
 
-func (c *Client) ListTunnels() []*TunnelInfo {
+func (c *Client) ListTunnels() []*protocol.TunnelInfo {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	tunnels := make([]*TunnelInfo, 0, len(c.tunnels))
+	tunnels := make([]*protocol.TunnelInfo, 0, len(c.tunnels))
 	for port, tc := range c.tunnels {
-		tunnels = append(tunnels, &TunnelInfo{
+		tunnels = append(tunnels, &protocol.TunnelInfo{
 			TunnelID: tc.ID,
 			Port:     port,
 			URL:      tc.URL,
@@ -204,36 +195,3 @@ func (c *Client) ListTunnels() []*TunnelInfo {
 	}
 	return tunnels
 }
-
-type TunnelInfo struct {
-	TunnelID string
-	Port     uint16
-	URL      string
-	Status   string
-}
-
-var tunnelIDAdjectives = []string{
-	"arcane", "ancient", "astral", "bold", "brave", "chaotic", "cryptic", "dark", "elder",
-	"ethereal", "fierce", "frozen", "hidden", "icy", "jade", "keen", "liquid", "mystic",
-	"noble", "obscure", "potent", "quick", "radiant", "shadow", "swift", "twilight",
-	"uncanny", "vivid", "wandering", "wild",
-}
-
-var tunnelIDNouns = []string{
-	"amulet", "basilisk", "cipher", "dragon", "ember", "fortress", "gargoyle", "helm",
-	"illusion", "kraken", "lich", "mithril", "nymph", "oracle", "phoenix", "quest",
-	"rune", "specter", "talisman", "umbral", "void", "wyrm", "zephyr", "amethyst",
-	"bramble", "crypt", "druid", "forge", "grimoire", "haven", "isle", "knave",
-	"lava", "moon", "nexus", "obsidian", "prism", "quill", "shadow", "tome", "umbra",
-	"vestige", "warden", "xorn", "zinc",
-}
-
-func generateTunnelID() string {
-	adj := tunnelIDAdjectives[rand.Intn(len(tunnelIDAdjectives))]
-	noun := tunnelIDNouns[rand.Intn(len(tunnelIDNouns))]
-	return fmt.Sprintf("%s-%s-%d", adj, noun, rand.Intn(100))
-}
-
-// GenerateToken creates a time-stamped HMAC token delegating to the shared protocol package.
-func GenerateToken(secret string) string      { return protocol.GenerateToken(secret) }
-func ValidateToken(token, secret string) bool { return protocol.ValidateToken(token, secret) }

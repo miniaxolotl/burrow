@@ -54,7 +54,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	registry := internal.NewTunnelRegistry(redis, domain)
 
-	server := internal.NewServer(registry, redis, hostname, domain, secret)
+	server := internal.NewServer(registry, domain, secret)
 
 	addr := fmt.Sprintf(":%s", port)
 	fmt.Printf("Starting burrowd on %s\n", addr)

@@ -21,40 +21,14 @@ var createCmd = &cobra.Command{
 
 func init() {
 	createCmd.Flags().IntSlice("port", []int{}, "Local port to tunnel (can be specified multiple times)")
-	createCmd.Flags().String("server", "", "Burrow server address")
-	createCmd.Flags().String("token", "", "Authentication token")
-	createCmd.Flags().String("domain", "", "Domain used to build tunnel URLs")
-
 	viper.BindPFlag("port", createCmd.Flags().Lookup("port"))
-	viper.BindPFlag("server", createCmd.Flags().Lookup("server"))
-	viper.BindPFlag("token", createCmd.Flags().Lookup("token"))
-	viper.BindPFlag("domain", createCmd.Flags().Lookup("domain"))
-
-	viper.SetDefault("server", "localhost:25701")
-	viper.SetDefault("domain", "localhost")
 }
 
 func runTunnelCreate(cmd *cobra.Command, args []string) error {
 	ports := viper.GetIntSlice("port")
 	server := viper.GetString("server")
-	token := viper.GetString("token")
 	domain := viper.GetString("domain")
-	if domain == "" {
-		domain = os.Getenv("BURROW_DOMAIN")
-	}
-
-	if server == "" {
-		hostname := os.Getenv("BURROW_HOSTNAME")
-		if hostname == "" {
-			hostname = "localhost"
-		}
-		port := os.Getenv("BURROW_PORT")
-		if port == "" {
-			port = "25701"
-		}
-		server = fmt.Sprintf("%s:%s", hostname, port)
-	}
-
+	token := viper.GetString("token")
 	if token == "" {
 		token = os.Getenv("BURROW_TOKEN")
 	}
