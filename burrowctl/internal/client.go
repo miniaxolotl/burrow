@@ -59,13 +59,13 @@ type Client struct {
 }
 
 type TunnelConn struct {
-	ID       string
-	Port     uint16
-	URL      string
-	wsConn   *websocket.Conn
-	session  *yamux.Session
-	closed   bool
-	closeMu  sync.Mutex
+	ID      string
+	Port    uint16
+	URL     string
+	wsConn  *websocket.Conn
+	session *yamux.Session
+	ctx     context.Context
+	cancel  context.CancelFunc
 }
 
 func NewClient(server, token, domain string, secure bool) *Client {
@@ -84,6 +84,10 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 	if err != nil {
 		return "", err
 	}
+
+	tctx, cancel := context.WithCancel(context.Background())
+	tc.ctx = tctx
+	tc.cancel = cancel
 
 	c.mu.Lock()
 	c.tunnels[port] = tc
@@ -131,7 +135,13 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 	}, nil
 }
 
+// maxReconnectAttempts is the number of consecutive failures before abandoning
+// the current tunnel ID and creating a fresh one. The backoff reaches its 30s
+// cap after ~5 attempts (~62s total), so this is a reasonable switchover point.
+const maxReconnectAttempts = 5
+
 func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
+	defer tc.cancel()
 	defer func() {
 		c.mu.Lock()
 		if c.tunnels[port] == tc {
@@ -142,33 +152,56 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 
 	localAddr := fmt.Sprintf("localhost:%d", port)
 	reconnectDelay := time.Second
+	failCount := 0
 
 	for {
 		stream, err := tc.session.AcceptStream()
 		if err != nil {
-			tc.closeMu.Lock()
-			if tc.closed {
-				tc.closeMu.Unlock()
+			if tc.ctx.Err() != nil {
 				return
 			}
-			tc.closeMu.Unlock()
 
 			log.Printf("Tunnel %s lost, reconnecting in %v...", tc.ID, reconnectDelay)
-			time.Sleep(reconnectDelay)
+			select {
+			case <-tc.ctx.Done():
+				return
+			case <-time.After(reconnectDelay):
+			}
 			if reconnectDelay < 30*time.Second {
 				reconnectDelay *= 2
 			}
 
-			newURL, err := c.createTunnelSession(context.Background(), tc.ID, port)
+			tunnelID := tc.ID
+			if failCount >= maxReconnectAttempts {
+				tunnelID = protocol.RandomTunnelID()
+			}
+
+			newTC, err := c.createTunnelSession(tc.ctx, tunnelID, port)
 			if err != nil {
+				if tc.ctx.Err() != nil {
+					return
+				}
+				failCount++
 				log.Printf("Reconnect failed for tunnel %s: %v", tc.ID, err)
 				continue
 			}
 
-			tc.wsConn, tc.session, tc.URL = newURL.wsConn, newURL.session, newURL.URL
+			tc.wsConn.Close()
+			tc.wsConn, tc.session = newTC.wsConn, newTC.session
+			if tunnelID != tc.ID {
+				tc.ID, tc.URL = tunnelID, newTC.URL
+				log.Printf("Tunnel resumed with new URL: %s", tc.URL)
+			} else {
+				tc.URL = newTC.URL
+				log.Printf("Tunnel %s reconnected", tc.ID)
+			}
+			reconnectDelay = time.Second
+			failCount = 0
 			continue
 		}
 
+		reconnectDelay = time.Second
+		failCount = 0
 		go func(s *yamux.Stream) {
 			defer s.Close()
 
@@ -193,15 +226,9 @@ func (c *Client) CloseTunnel(port uint16) error {
 	defer c.mu.Unlock()
 
 	if tc, ok := c.tunnels[port]; ok {
-		tc.closeMu.Lock()
-		tc.closed = true
-		tc.closeMu.Unlock()
-		if tc.session != nil {
-			tc.session.Close()
-		}
-		if tc.wsConn != nil {
-			tc.wsConn.Close()
-		}
+		tc.cancel()
+		tc.session.Close()
+		tc.wsConn.Close()
 		delete(c.tunnels, port)
 	}
 	return nil
@@ -212,15 +239,9 @@ func (c *Client) Close() error {
 	defer c.mu.Unlock()
 
 	for _, tc := range c.tunnels {
-		tc.closeMu.Lock()
-		tc.closed = true
-		tc.closeMu.Unlock()
-		if tc.session != nil {
-			tc.session.Close()
-		}
-		if tc.wsConn != nil {
-			tc.wsConn.Close()
-		}
+		tc.cancel()
+		tc.session.Close()
+		tc.wsConn.Close()
 	}
 	c.tunnels = make(map[uint16]*TunnelConn)
 	return nil
