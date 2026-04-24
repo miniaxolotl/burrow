@@ -12,17 +12,26 @@ import (
 type TunnelRegistry struct {
 	redis  *RedisClient
 	domain string
+	secure bool
 }
 
-func NewTunnelRegistry(redis *RedisClient, domain string) *TunnelRegistry {
-	return &TunnelRegistry{redis: redis, domain: domain}
+func NewTunnelRegistry(redis *RedisClient, domain string, secure bool) *TunnelRegistry {
+	return &TunnelRegistry{redis: redis, domain: domain, secure: secure}
+}
+
+func (t *TunnelRegistry) tunnelURL(tunnelID string) string {
+	scheme := "http"
+	if t.secure {
+		scheme = "https"
+	}
+	return fmt.Sprintf("%s://%s.%s", scheme, tunnelID, t.domain)
 }
 
 func (t *TunnelRegistry) Register(ctx context.Context, tunnelID string, port uint16) (string, error) {
 	if err := t.redis.SetTunnel(ctx, tunnelID, port, 24*time.Hour); err != nil {
 		return "", fmt.Errorf("failed to register tunnel: %w", err)
 	}
-	return fmt.Sprintf("https://%s.%s", tunnelID, t.domain), nil
+	return t.tunnelURL(tunnelID), nil
 }
 
 func (t *TunnelRegistry) Remove(tunnelID string) error {
@@ -39,7 +48,7 @@ func (t *TunnelRegistry) List(ctx context.Context) ([]*protocol.TunnelInfo, erro
 		result = append(result, &protocol.TunnelInfo{
 			TunnelID: td.ID,
 			Port:     td.Port,
-			URL:      fmt.Sprintf("https://%s.%s", td.ID, t.domain),
+			URL:      t.tunnelURL(td.ID),
 			Status:   "active",
 		})
 	}

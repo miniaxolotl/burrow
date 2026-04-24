@@ -21,16 +21,34 @@ func init() {
 	TunnelCmd.PersistentFlags().String("token", "", "Authentication token")
 	TunnelCmd.PersistentFlags().String("secret", "", "Shared secret (generates a token)")
 	TunnelCmd.PersistentFlags().String("domain", "inkspire.one", "Domain for tunnel URLs")
+	TunnelCmd.PersistentFlags().Bool("tls", false, "Use TLS (wss:// and https://) when connecting to the server")
 	viper.BindPFlag("server", TunnelCmd.PersistentFlags().Lookup("server"))
 	viper.BindPFlag("token", TunnelCmd.PersistentFlags().Lookup("token"))
 	viper.BindPFlag("secret", TunnelCmd.PersistentFlags().Lookup("secret"))
 	viper.BindPFlag("domain", TunnelCmd.PersistentFlags().Lookup("domain"))
+	viper.BindPFlag("tls", TunnelCmd.PersistentFlags().Lookup("tls"))
 
 	TunnelCmd.AddCommand(createCmd)
 	TunnelCmd.AddCommand(listCmd)
 	TunnelCmd.AddCommand(statusCmd)
 	TunnelCmd.AddCommand(inspectCmd)
 	TunnelCmd.AddCommand(closeCmd)
+}
+
+// httpScheme returns "https" when BURROW_TLS is set, otherwise "http".
+func httpScheme() string {
+	if viper.GetBool("tls") {
+		return "https"
+	}
+	return "http"
+}
+
+// wsScheme returns "wss" when BURROW_TLS is set, otherwise "ws".
+func wsScheme() string {
+	if viper.GetBool("tls") {
+		return "wss"
+	}
+	return "ws"
 }
 
 // resolveToken returns the best available auth token. Priority:

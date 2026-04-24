@@ -53,6 +53,7 @@ type Client struct {
 	server  string
 	token   string
 	domain  string
+	secure  bool
 	tunnels map[uint16]*TunnelConn
 	mu      sync.RWMutex
 }
@@ -67,11 +68,12 @@ type TunnelConn struct {
 	closeMu  sync.Mutex
 }
 
-func NewClient(server, token, domain string) *Client {
+func NewClient(server, token, domain string, secure bool) *Client {
 	return &Client{
 		server:  server,
 		token:   token,
 		domain:  domain,
+		secure:  secure,
 		tunnels: make(map[uint16]*TunnelConn),
 	}
 }
@@ -94,7 +96,11 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 
 func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port uint16) (*TunnelConn, error) {
 	header := http.Header{"X-Tunnel-Token": []string{c.token}}
-	wsURL := fmt.Sprintf("ws://%s/tunnel/ws?tunnel_id=%s&port=%d", c.server, tunnelID, port)
+	scheme := "ws"
+	if c.secure {
+		scheme = "wss"
+	}
+	wsURL := fmt.Sprintf("%s://%s/tunnel/ws?tunnel_id=%s&port=%d", scheme, c.server, tunnelID, port)
 
 	conn, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
 	if err != nil {

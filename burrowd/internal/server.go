@@ -58,22 +58,22 @@ type Server struct {
 	mux         *http.ServeMux
 	domain      string
 	secret      string
+	secure      bool
 	startTime   time.Time
 	mu          sync.RWMutex
 	connections map[string]*yamux.Session
 	httpServer  *http.Server
 	closeOnce   sync.Once
-	closed      chan struct{}
 }
 
-func NewServer(registry *TunnelRegistry, domain, secret string) *Server {
+func NewServer(registry *TunnelRegistry, domain, secret string, secure bool) *Server {
 	s := &Server{
 		registry:    registry,
 		domain:      domain,
 		secret:      secret,
+		secure:      secure,
 		startTime:   time.Now(),
 		connections: make(map[string]*yamux.Session),
-		closed:      make(chan struct{}),
 	}
 
 	// CheckOrigin is intentionally permissive: clients connect from arbitrary
@@ -119,7 +119,11 @@ func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "404 not found")
 		return
 	}
-	fmt.Fprintf(w, "burrow\n\nExpose local services to the internet.\n\nTunnels: https://<id>.%s\n", s.domain)
+	scheme := "http"
+	if s.secure {
+		scheme = "https"
+	}
+	fmt.Fprintf(w, "burrow\n\nExpose local services to the internet.\n\nTunnels: %s://<id>.%s\n", scheme, s.domain)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -153,46 +157,11 @@ func (s *Server) handleTunnel(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case r.Method == "GET" && r.URL.Path == "/tunnel/ws":
 		s.handleWebSocket(w, r)
-	case r.Method == "POST":
-		s.handleTunnelCreate(w, r)
 	case r.Method == "DELETE":
 		s.handleTunnelDelete(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
-}
-
-func (s *Server) handleTunnelCreate(w http.ResponseWriter, r *http.Request) {
-	if !s.auth(r) {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
-
-	tunnelID := strings.TrimPrefix(r.URL.Path, "/tunnel/")
-	if tunnelID == "" || tunnelID == "-" {
-		var err error
-		tunnelID, err = s.registry.HandleWildcardTunnelID(r.Context())
-		if err != nil {
-			http.Error(w, "Failed to generate tunnel ID", http.StatusInternalServerError)
-			return
-		}
-	}
-
-	portStr := r.URL.Query().Get("port")
-	port, err := strconv.ParseUint(portStr, 10, 16)
-	if err != nil || port == 0 {
-		http.Error(w, "Valid port required: specify ?port=N", http.StatusBadRequest)
-		return
-	}
-
-	url, err := s.registry.Register(r.Context(), tunnelID, uint16(port))
-	if err != nil {
-		http.Error(w, "Failed to register tunnel", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintf(w, `{"tunnel_id":"%s","url":"%s"}`, tunnelID, url)
 }
 
 func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
@@ -240,7 +209,11 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tunnelURL := fmt.Sprintf("https://%s.%s", tunnelID, s.domain)
+	scheme := "http"
+	if s.secure {
+		scheme = "https"
+	}
+	tunnelURL := fmt.Sprintf("%s://%s.%s", scheme, tunnelID, s.domain)
 	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Tunnel-URL": []string{tunnelURL}})
 	if err != nil {
 		log.Printf("WebSocket upgrade failed: %v", err)
@@ -426,7 +399,6 @@ func (s *Server) Start(addr string) error {
 func (s *Server) Shutdown(ctx context.Context) error {
 	var err error
 	s.closeOnce.Do(func() {
-		close(s.closed)
 		s.mu.Lock()
 		for id, session := range s.connections {
 			session.Close()

@@ -36,7 +36,7 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 
 	fmt.Printf("Creating tunnels to %s...\n", server)
 
-	client := internal.NewClient(server, token, domain)
+	client := internal.NewClient(server, token, domain, viper.GetBool("tls"))
 	defer client.Close()
 
 	ctx := context.Background()

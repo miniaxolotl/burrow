@@ -24,16 +24,16 @@ var serveCmd = &cobra.Command{
 
 func init() {
 	serveCmd.Flags().String("port", "25701", "Port to listen on")
-	serveCmd.Flags().String("hostname", "localhost", "Hostname for tunnel URLs")
 	serveCmd.Flags().String("domain", "inkspire.one", "Domain for tunnel URLs")
 	serveCmd.Flags().String("redis-url", "localhost:6379", "Redis connection URL")
 	serveCmd.Flags().String("secret", "", "Authentication secret")
+	serveCmd.Flags().Bool("tls", false, "Generate tunnel URLs with https:// (set when server is behind HTTPS)")
 
 	viper.BindPFlag("port", serveCmd.Flags().Lookup("port"))
-	viper.BindPFlag("hostname", serveCmd.Flags().Lookup("hostname"))
 	viper.BindPFlag("domain", serveCmd.Flags().Lookup("domain"))
 	viper.BindPFlag("redis-url", serveCmd.Flags().Lookup("redis-url"))
 	viper.BindPFlag("secret", serveCmd.Flags().Lookup("secret"))
+	viper.BindPFlag("tls", serveCmd.Flags().Lookup("tls"))
 }
 
 func redactURL(raw string) string {
@@ -57,8 +57,8 @@ func runServe(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	hostname := viper.GetString("hostname")
 	domain := viper.GetString("domain")
+	secure := viper.GetBool("tls")
 
 	redisURL := viper.GetString("redis-url")
 	if !cmd.Flags().Changed("redis-url") {
@@ -87,14 +87,13 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 	defer redis.Close()
 
-	registry := internal.NewTunnelRegistry(redis, domain)
+	registry := internal.NewTunnelRegistry(redis, domain, secure)
 
-	server := internal.NewServer(registry, domain, secret)
+	server := internal.NewServer(registry, domain, secret, secure)
 
 	addr := fmt.Sprintf(":%s", port)
 	fmt.Printf("Starting burrowd on %s\n", addr)
-	fmt.Printf("Hostname: %s\n", hostname)
-	fmt.Printf("Domain: %s\n", domain)
+	fmt.Printf("Domain: %s (TLS: %v)\n", domain, secure)
 	fmt.Printf("Redis: %s\n", redactURL(redisURL))
 
 	sigCh := make(chan os.Signal, 1)

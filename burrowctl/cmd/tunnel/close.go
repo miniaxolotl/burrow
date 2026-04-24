@@ -22,7 +22,7 @@ func runTunnelClose(cmd *cobra.Command, args []string) error {
 	token := resolveToken()
 
 	req, err := http.NewRequestWithContext(context.Background(), "DELETE",
-		fmt.Sprintf("http://%s/tunnel/%s", server, tunnelID), nil)
+		fmt.Sprintf("%s://%s/tunnel/%s", httpScheme(), server, tunnelID), nil)
 	if err != nil {
 		return fmt.Errorf("failed to build request: %w", err)
 	}

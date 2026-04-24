@@ -26,7 +26,7 @@ func runTunnelList(cmd *cobra.Command, args []string) error {
 	}
 	defer client.Close()
 
-	registry := internal.NewTunnelRegistry(client, domain)
+	registry := internal.NewTunnelRegistry(client, domain, viper.GetBool("tls"))
 	tunnels, err := registry.List(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to list tunnels: %w", err)

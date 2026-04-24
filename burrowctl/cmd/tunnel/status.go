@@ -22,7 +22,7 @@ func runTunnelStatus(cmd *cobra.Command, args []string) error {
 	server := viper.GetString("server")
 	token := resolveToken()
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/tunnels", server), nil)
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s/tunnels", httpScheme(), server), nil)
 	if err != nil {
 		return fmt.Errorf("failed to build request: %w", err)
 	}
