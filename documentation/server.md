@@ -123,7 +123,7 @@ burrowd stop
 └──────────────────┘         └──────────────────┘         └──────────────────┘
         │                            │                            │
         │ WebSocket + token auth     │ subdomain routing          │
-        │ ─────────────────────────►│ swiftly-silent-dragon.mawa.dev │
+        │ ─────────────────────────►│ swiftly-silent-dragon.burrow.mawa.dev │
         │                            │                             │
         │                            │ ┌───────────────────────────┴──► localhost:8080
         │◄───────────────────────── │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─► │
@@ -167,6 +167,34 @@ curl http://localhost:25701/health
 
 - **Auth**: Token via `X-Tunnel-Token` header or `token` query param
 - **Protocol**: yamux for stream multiplexing
+
+## Deployment (Dokku)
+
+### Nginx Configuration
+
+The `nginx.conf.sigil` template is used by Dokku to generate per-app nginx configs. Key points:
+
+- Uses `.DOKKU_APP_WEB_LISTENERS` for upstream generation (reliable for Dockerfile deploys)
+- Does NOT use `.PROXY_PORT_MAP` (empty/unreliable for Dockerfile deploys)
+- Single upstream named `{APP}-web` with all web listeners as servers
+- `proxy_pass` routes to `http://{APP}-web` in both HTTP and HTTPS server blocks
+- Supports WebSocket upgrades via `map $http_upgrade $connection_upgrade`
+- SSL block is conditionally rendered when `.SSL_INUSE` is set
+
+### SSL with Wildcard Domains
+
+`dokku letsencrypt:enable` uses HTTP-01 challenge which fails on wildcard domains. Instead:
+
+1. Install `certbot` + `certbot-dns-cloudflare` on the Dokku host
+2. Obtain wildcard cert: `certbot certonly --dns-cloudflare -d "burrow.mawa.dev" -d "*.burrow.mawa.dev"`
+3. Install via dokku: `dokku certs:add <app> /etc/letsencrypt/live/burrow.mawa.dev/fullchain.pem /etc/letsencrypt/live/burrow.mawa.dev/privkey.pem`
+
+### App Configuration
+
+| App | Domain | Port | SSL |
+|-----|--------|------|-----|
+| burrowd | burrow.mawa.dev | 25701 | Wildcard cert |
+| burrowd-preview | burrow-preview.mawa.dev | 25702 | Wildcard cert |
 
 ## Docker Compose
 
