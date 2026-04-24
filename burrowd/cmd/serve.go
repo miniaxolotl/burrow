@@ -24,7 +24,7 @@ var serveCmd = &cobra.Command{
 
 func init() {
 	serveCmd.Flags().String("port", "25701", "Port to listen on")
-	serveCmd.Flags().String("domain", "inkspire.one", "Domain for tunnel URLs")
+	serveCmd.Flags().String("domain", "mawa.dev", "Domain for tunnel URLs")
 	serveCmd.Flags().String("redis-url", "localhost:6379", "Redis connection URL")
 	serveCmd.Flags().String("secret", "", "Authentication secret")
 	serveCmd.Flags().Bool("tls", false, "Generate tunnel URLs with https:// (set when server is behind HTTPS)")

@@ -27,7 +27,7 @@ var TunnelCmd = &cobra.Command{
 
 func init() {
 	TunnelCmd.PersistentFlags().String("redis-url", "localhost:6379", "Redis connection URL")
-	TunnelCmd.PersistentFlags().String("domain", "inkspire.one", "Domain for tunnel URLs")
+	TunnelCmd.PersistentFlags().String("domain", "mawa.dev", "Domain for tunnel URLs")
 	viper.BindPFlag("redis-url", TunnelCmd.PersistentFlags().Lookup("redis-url"))
 	viper.BindPFlag("domain", TunnelCmd.PersistentFlags().Lookup("domain"))
 

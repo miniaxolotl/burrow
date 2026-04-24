@@ -59,8 +59,8 @@ burrowctl tunnel create --port 3000 --port 8080 --server burrow.example.com:2570
 Creating tunnels to burrow.example.com:25701...
 
 Tunnels established:
-    https://swiftly-ancient-silent-dragon.inkspire.one -> localhost:3000
-    https://darkly-shadow-umbral-wraith.inkspire.one -> localhost:8080
+    https://swiftly-ancient-silent-dragon.mawa.dev -> localhost:3000
+    https://darkly-shadow-umbral-wraith.mawa.dev -> localhost:8080
 
 Press Ctrl+C to close tunnels
 ```
@@ -84,8 +84,8 @@ burrowctl tunnel list
 **Example output:**
 ```
 TUNNEL ID                               PORT    URL                                                           STATUS
-swiftly-ancient-silent-dragon          3000    https://swiftly-ancient-silent-dragon.inkspire.one          active
-darkly-shadow-umbral-wraith            8080    https://darkly-shadow-umbral-wraith.inkspire.one             active
+swiftly-ancient-silent-dragon          3000    https://swiftly-ancient-silent-dragon.mawa.dev          active
+darkly-shadow-umbral-wraith            8080    https://darkly-shadow-umbral-wraith.mawa.dev             active
 ```
 
 ### `burrowctl tunnel status`
@@ -125,7 +125,7 @@ burrowctl tunnel inspect swiftly-ancient-silent-dragon
 [10:30:15] Incoming request:
   Method: GET
   URL: /
-  Headers: Host=swiftly-ancient-silent-dragon.inkspire.one
+  Headers: Host=swiftly-ancient-silent-dragon.mawa.dev
 
 [10:30:15] Outgoing response:
   Status: 200 OK

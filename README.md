@@ -2,7 +2,7 @@
 
 Expose local services to the internet via HTTPS subdomains.
 
-Tunnel URLs look like: `https://mighty-arcane-dragon.inkspire.one`
+Tunnel URLs look like: `https://mighty-arcane-dragon.mawa.dev`
 
 ## Quick Start (Docker Compose)
 
@@ -44,7 +44,7 @@ go build -o bin/burrowctl ./burrowctl
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `BURROW_SECRET` | required | Shared auth secret |
-| `BURROW_DOMAIN` | `inkspire.one` | Tunnel subdomain base |
+| `BURROW_DOMAIN` | `mawa.dev` | Tunnel subdomain base |
 | `BURROW_PORT` | `25701` | Listen port |
 | `BURROW_REDIS_URL` | `redis://localhost:6379` | Redis URL |
 | `BURROW_TLS` | `false` | Generate `https://` tunnel URLs (set `true` when behind HTTPS proxy) |
@@ -59,7 +59,7 @@ Also accepts `PORT` and `REDIS_URL` as fallbacks (Dokku convention).
 | `BURROW_SECRET` | — | Shared secret (auto-generates token) |
 | `BURROW_TOKEN` | — | Pre-generated token (alternative to secret) |
 | `BURROW_TLS` | `false` | Use `wss://` and `https://` when connecting to the server |
-| `BURROW_DOMAIN` | `inkspire.one` | Fallback domain for tunnel URL display |
+| `BURROW_DOMAIN` | `mawa.dev` | Fallback domain for tunnel URL display |
 
 ## API
 
@@ -76,8 +76,8 @@ Also accepts `PORT` and `REDIS_URL` as fallbacks (Dokku convention).
 dokku apps:create burrowd
 dokku plugin:install https://github.com/dokku/dokku-redis.git
 dokku redis:create burrowd-redis && dokku redis:link burrowd-redis burrowd
-dokku domains:set burrowd inkspire.one '*.inkspire.one'
-dokku config:set burrowd BURROW_SECRET=xxx BURROW_DOMAIN=inkspire.one BURROW_TLS=true
+dokku domains:set burrowd mawa.dev '*.mawa.dev'
+dokku config:set burrowd BURROW_SECRET=xxx BURROW_DOMAIN=mawa.dev BURROW_TLS=true
 git push dokku production:main
 dokku letsencrypt:enable burrowd
 ```

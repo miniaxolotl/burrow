@@ -20,7 +20,7 @@ func init() {
 	TunnelCmd.PersistentFlags().String("server", "localhost:25701", "Burrow server address")
 	TunnelCmd.PersistentFlags().String("token", "", "Authentication token")
 	TunnelCmd.PersistentFlags().String("secret", "", "Shared secret (generates a token)")
-	TunnelCmd.PersistentFlags().String("domain", "inkspire.one", "Domain for tunnel URLs")
+	TunnelCmd.PersistentFlags().String("domain", "mawa.dev", "Domain for tunnel URLs")
 	TunnelCmd.PersistentFlags().Bool("tls", false, "Use TLS (wss:// and https://) when connecting to the server")
 	viper.BindPFlag("server", TunnelCmd.PersistentFlags().Lookup("server"))
 	viper.BindPFlag("token", TunnelCmd.PersistentFlags().Lookup("token"))
