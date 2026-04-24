@@ -52,18 +52,21 @@ func (c *wsConn) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
+const tunnelGracePeriod = 20 * time.Second
+
 type Server struct {
-	registry    *TunnelRegistry
-	upgrader    websocket.Upgrader
-	mux         *http.ServeMux
-	domain      string
-	secret      string
-	secure      bool
-	startTime   time.Time
-	mu          sync.RWMutex
-	connections map[string]*yamux.Session
-	httpServer  *http.Server
-	closeOnce   sync.Once
+	registry       *TunnelRegistry
+	upgrader       websocket.Upgrader
+	mux            *http.ServeMux
+	domain         string
+	secret         string
+	secure         bool
+	startTime      time.Time
+	mu             sync.RWMutex
+	connections    map[string]*yamux.Session
+	pendingRemoves map[string]chan struct{}
+	httpServer     *http.Server
+	closeOnce      sync.Once
 }
 
 func NewServer(registry *TunnelRegistry, domain, secret string, secure bool) *Server {
@@ -73,7 +76,8 @@ func NewServer(registry *TunnelRegistry, domain, secret string, secure bool) *Se
 		secret:      secret,
 		secure:      secure,
 		startTime:   time.Now(),
-		connections: make(map[string]*yamux.Session),
+		connections:    make(map[string]*yamux.Session),
+		pendingRemoves: make(map[string]chan struct{}),
 	}
 
 	// CheckOrigin is intentionally permissive: clients connect from arbitrary
@@ -209,6 +213,15 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Cancel any pending grace-period removal — the client is reconnecting.
+	s.mu.Lock()
+	if cancel, ok := s.pendingRemoves[tunnelID]; ok {
+		close(cancel)
+		delete(s.pendingRemoves, tunnelID)
+		log.Printf("Tunnel %s reconnected, grace period cancelled", tunnelID)
+	}
+	s.mu.Unlock()
+
 	scheme := "http"
 	if s.secure {
 		scheme = "https"
@@ -234,7 +247,29 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Failed to register tunnel %s: %v", tunnelID, err)
 		return
 	}
-	defer s.registry.Remove(tunnelID)
+
+	// On disconnect, keep the registry entry for tunnelGracePeriod before removing.
+	// This allows the client to reconnect and restore the tunnel without a URL change.
+	// Defers run LIFO; keepalive (registered later) stops first, so no Register call
+	// can race with the grace-period Remove.
+	defer func() {
+		cancel := make(chan struct{})
+		s.mu.Lock()
+		s.pendingRemoves[tunnelID] = cancel
+		s.mu.Unlock()
+		go func() {
+			select {
+			case <-time.After(tunnelGracePeriod):
+				s.mu.Lock()
+				delete(s.pendingRemoves, tunnelID)
+				s.mu.Unlock()
+				s.registry.Remove(tunnelID)
+				log.Printf("Tunnel %s grace period expired", tunnelID)
+			case <-cancel:
+				// Cancelled by reconnect or shutdown.
+			}
+		}()
+	}()
 
 	s.mu.Lock()
 	s.connections[tunnelID] = session
@@ -264,9 +299,6 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-	// Stop keepalive before deferred Remove runs (defers are LIFO; this is
-	// registered after Remove so it runs first, ensuring no Register call
-	// can race with Remove).
 	defer func() {
 		close(done)
 		keepaliveWg.Wait()
@@ -404,10 +436,12 @@ func (s *Server) Shutdown(ctx context.Context) error {
 			session.Close()
 			delete(s.connections, id)
 		}
-		s.mu.Unlock()
-		s.mu.RLock()
+		for _, cancel := range s.pendingRemoves {
+			close(cancel)
+		}
+		s.pendingRemoves = make(map[string]chan struct{})
 		srv := s.httpServer
-		s.mu.RUnlock()
+		s.mu.Unlock()
 		if srv != nil {
 			err = srv.Shutdown(ctx)
 		}
