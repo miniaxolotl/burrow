@@ -19,6 +19,9 @@ Configuration is loaded from (in order of precedence):
 | `BURROW_DOMAIN` | Domain for tunnel URLs | `inkspire.one` |
 | `BURROW_PORT` | Server port | `25701` |
 | `BURROW_REDIS_URL` | Redis connection URL | `localhost:6379` |
+| `BURROW_TLS` | Generate `https://` tunnel URLs | `false` |
+
+Also accepts `PORT` and `REDIS_URL` as fallbacks (Dokku convention).
 
 ### .env Example
 ```
@@ -26,6 +29,7 @@ BURROW_REDIS_URL=redis://redis:6379
 BURROW_SECRET=your-secret-key
 BURROW_DOMAIN=inkspire.one
 BURROW_PORT=25701
+BURROW_TLS=true
 ```
 
 ## Commands
@@ -43,6 +47,7 @@ burrowd serve --secret mysecret --domain inkspire.one --port 25701
 - `--domain` - Domain for tunnel URLs (default: `inkspire.one`)
 - `--redis-url` - Redis connection URL (default: `localhost:6379`)
 - `--secret` - Authentication secret (required)
+- `--tls` - Generate `https://` tunnel URLs (set when server is behind HTTPS proxy)
 
 **Example:**
 ```bash
@@ -118,7 +123,7 @@ burrowd stop
 └──────────────────┘         └──────────────────┘         └──────────────────┘
         │                            │                            │
         │ WebSocket + token auth     │ subdomain routing          │
-        │ ─────────────────────────►│ arcane-dragon-xorn.inkspire.one │
+        │ ─────────────────────────►│ swiftly-silent-dragon.inkspire.one │
         │                            │                             │
         │                            │ ┌───────────────────────────┴──► localhost:8080
         │◄───────────────────────── │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─► │
@@ -135,9 +140,9 @@ https://{tunnel_id}.{domain}
 ```
 
 Examples:
-- `https://arcane-dragon-xorn.inkspire.one`
-- `https://shadow-lich-umbra.inkspire.one`
-- `https://brave-moon-peace.inkspire.one`
+- `https://swiftly-silent-dragon.inkspire.one`
+- `https://darkly-shadow-wraith.inkspire.one`
+- `https://keenly-mighty-phoenix.inkspire.one`
 
 ## API Endpoints
 

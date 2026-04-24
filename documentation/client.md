@@ -18,8 +18,9 @@ Configuration is loaded from (in order of precedence):
 |----------|-------------|
 | `BURROW_SERVER` | Server address (host:port) |
 | `BURROW_TOKEN` | Authentication token |
-| `BURROW_PORT` | Default server port |
-| `BURROW_HOSTNAME` | Default server hostname |
+| `BURROW_SECRET` | Shared secret (auto-generates token if token not set) |
+| `BURROW_TLS` | Use TLS (`wss://` and `https://`) when connecting to the server |
+| `BURROW_DOMAIN` | Fallback domain for tunnel URL display |
 
 ### Config File
 
@@ -44,6 +45,9 @@ burrowctl tunnel create --port 3000 --port 8080
 - `--port` - Local port to tunnel (can be specified multiple times, required)
 - `--server` - Burrow server address (default: `localhost:25701`)
 - `--token` - Authentication token
+- `--secret` - Shared secret (auto-generates token)
+- `--tls` - Use TLS (`wss://` and `https://`) when connecting to the server
+- `--domain` - Fallback domain for tunnel URL display
 
 **Example:**
 ```bash
@@ -55,8 +59,8 @@ burrowctl tunnel create --port 3000 --port 8080 --server burrow.example.com:2570
 Creating tunnels to burrow.example.com:25701...
 
 Tunnels established:
-    https://arcane-dragon-xorn.inkspire.one -> localhost:3000
-    https://shadow-lich-umbra.inkspire.one -> localhost:8080
+    https://swiftly-silent-dragon.inkspire.one -> localhost:3000
+    https://darkly-shadow-wraith.inkspire.one -> localhost:8080
 
 Press Ctrl+C to close tunnels
 ```
@@ -79,9 +83,9 @@ burrowctl tunnel list
 
 **Example output:**
 ```
-TUNNEL ID              PORT    URL                                           STATUS
-arcane-dragon-xorn     3000    https://arcane-dragon-xorn.inkspire.one       active
-shadow-lich-umbra      8080    https://shadow-lich-umbra.inkspire.one       active
+TUNNEL ID                      PORT    URL                                                  STATUS
+swiftly-silent-dragon         3000    https://swiftly-silent-dragon.inkspire.one         active
+darkly-shadow-wraith          8080    https://darkly-shadow-wraith.inkspire.one          active
 ```
 
 ### `burrowctl tunnel status`
@@ -94,9 +98,9 @@ burrowctl tunnel status
 
 **Example output:**
 ```
-TUNNEL ID              PORT    LATENCY    RECONNECTS
-arcane-dragon-xorn     3000    12ms       0
-shadow-lich-umbra      8080    8ms        1
+TUNNEL ID                      PORT    LATENCY    RECONNECTS
+swiftly-silent-dragon         3000    12ms       0
+darkly-shadow-wraith          8080    8ms        1
 ```
 
 ### `burrowctl tunnel inspect`
@@ -109,7 +113,7 @@ burrowctl tunnel inspect {tunnel_id}
 
 **Example:**
 ```bash
-burrowctl tunnel inspect arcane-dragon-xorn
+burrowctl tunnel inspect swiftly-silent-dragon
 ```
 
 **Flags:**
@@ -121,7 +125,7 @@ burrowctl tunnel inspect arcane-dragon-xorn
 [10:30:15] Incoming request:
   Method: GET
   URL: /
-  Headers: Host=arcane-dragon-xorn.inkspire.one
+  Headers: Host=swiftly-silent-dragon.inkspire.one
 
 [10:30:15] Outgoing response:
   Status: 200 OK
@@ -156,22 +160,25 @@ burrowctl tunnel create --port 3000 --token my-secret-token
 Tunnel IDs are generated using a fantasy/D&D-themed format:
 
 ```
-{adjective}-{noun}-{creature}
+{adverb}-{adjective}-{adjective}-{noun}
 ```
 
 Examples:
-- `arcane-dragon-xorn`
-- `shadow-lich-umbra`
-- `ethereal-phoenix-void`
-- `mystic-wyrm-zephyr`
+- `swiftly-ancient-silent-dragon`
+- `darkly-shadow-umbral-wraith`
+- `keenly-mighty-radiant-phoenix`
+- `ghostly-silent-ethereal-void`
 
-Fantasy word lists:
-- **Adjectives**: arcane, ancient, astral, bold, brave, chaotic, cryptic, dark, elder, ethereal, fierce, frozen, hidden, icy, jade, keen, liquid, mystic, noble, obscure, potent, quick, radiant, shadow, swift, twilight, uncanny, vivid, wandering, wild
-- **Nouns**: amulet, basilisk, cipher, dragon, ember, fortress, gargoyle, helm, illusion, kraken, lich, mithril, nymph, oracle, phoenix, quest, rune, specter, talisman, umbral, void, wyrm, zephyr, amethyst, bramble, crypt, druid, forge, grimoire, haven, isle, knave, lava, moon, nexus, obsidian, prism, quill, shadow, tome, umbra, vestige, warden, xorn, zinc
+Generated with `crypto/rand` for uniqueness. Word lists:
+- **Adverbs** (90): arcaneily, blindly, boldly, brightly, calmly, chaotically, clearly, coldly, covertly, cruelly, cryptically, darkly, dauntlessly, deeply, deftly, dimly, distantly, divinely, dreadfully, dryly, eerily, eldritchly, endlessly, eternally, evilly, faintly, fearlessly, fiercely, firmly, forebodingly, freely, frostily, fully, ghostly, ghoulishly, gravelely, grimly, hauntingly, harshly, heavily, hellishly, hollowly, icily, infernally, keenly, lethally, lightly, liminally, lowly, magically, malevolently, menacingly, mercifully, mutely, mystically, nimbly, nobly, obscurely, ominously, openly, perilously, phantomly, proudly, quietly, rapidly, rarely, relentlessly, roughly, ruinously, savagely, sharply, silently, sinisterly, slowly, softly, solemnly, solidly, spectrally, starkly, stealthily, sternly, stolidly, strongly, subtly, swiftly, terribly, thinly, treacherously, truly, undyingly, unholy, vastly, vengefully, vividly, voraciously, wickedly, wildly, wisely, wrathfully, wryly
+- **Adjectives** (103): abyssal, accursed, ancient, arcane, ashen, astral, banished, battered, bewitched, bleak, blighted, bloodied, bold, bonded, brave, broken, burning, celestial, chaotic, charmed, chromatic, cold, corrupted, crimson, cryptic, cursed, dark, dead, deathly, defiled, demonic, destined, diabolical, distant, divine, doomed, draconic, dread, druidic, dry, dwarven, dying, elder, eldritch, elven, empty, enchanted, ethereal, exalted, fallen, feral, fierce, fiendish, flaming, forbidden, forgotten, forsaken, foul, frozen, furtive, ghostly, gilded, glowing, grim, hallowed, haunted, hellish, heretical, hidden, hollow, holy, hungry, icy, infernal, iron, jade, keen, legendary, lethal, liquid, lost, luminous, lurking, mad, malevolent, mighty, molten, moonlit, mournful, murky, mystic, necrotic, noble, obscure, ominous, pale, petrified, phantom, plagued, potent, primal, profane, quick, radiant, raging, ruined, runic, sacred, savage, scarlet, scorched, sepulchral, shadow, shattered, silent, silver, sinister, skeletal, smoldering, spectral, stark, still, stone, storming, sunken, swift, tainted, terrible, twilight, twisted, umbral, uncanny, unholy, unseen, veiled, vengeful, vivid, volatile, wandering, wicked, wild, withered, wrathful, wretched
+- **Nouns** (102): altar, amulet, anvil, arch, archmage, artefact, assassin, axe, banshee, basilisk, beacon, behemoth, blade, blight, bones, bramble, catacomb, centaur, chains, chimera, cipher, citadel, crypt, curse, cyclops, dagger, demon, depths, dirge, dragon, druid, dungeon, effigy, ember, enchantment, exile, familiar, fiend, forge, fortress, gargoyle, gate, ghost, ghoul, giant, goblin, golem, grave, grimoire, guardian, harbinger, haven, helm, heretic, hex, hydra, idol, illusion, inferno, isle, jailer, kraken, labyrinth, lair, lance, leviathan, lich, longbow, manticore, mausoleum, maze, minotaur, mithril, monolith, moon, necromancer, nexus, nightmare, nymph, obsidian, ogre, oracle, orc, overlord, paladin, phantom, phoenix, plague, portal, prism, prophet, quill, ravine, reaper, relic, revenant, rune, sanctum, sarcophagus, scroll, sentinel, serpent, shade, shard, shrine, siege, skeleton, skull, specter, spell, spire, staff, stalker, stronghold, sword, talisman, throne, tomb, tome, tower, troll, unicorn, urn, vampire, vault, vestige, void, vortex, warden, warlock, wasteland, witch, wizard, wraith, wyvern, xorn, zealot, zephyr, zombie
 
 ## Reconnection Behavior
 
 The client reconnects on connection loss with exponential backoff (1s doubling to 30s cap).
+
+When the client disconnects, the server keeps the tunnel registered for 20 seconds before removing it. This allows the client to reconnect and restore the tunnel without a URL change.
 
 ## Examples
 
