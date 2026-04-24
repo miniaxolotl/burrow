@@ -14,6 +14,8 @@ var inspectCmd = &cobra.Command{
 }
 
 func runTunnelInspect(cmd *cobra.Command, args []string) error {
-	fmt.Println("not implemented")
+	tunnelID := args[0]
+	fmt.Printf("Inspect functionality for tunnel %s is not yet implemented.\n", tunnelID)
+	fmt.Println("Coming soon: real-time request/response logging")
 	return nil
 }

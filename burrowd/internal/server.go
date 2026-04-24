@@ -1,12 +1,12 @@
 package internal
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -77,17 +77,27 @@ func NewServer(registry *TunnelRegistry, domain, secret string) *Server {
 	// locations and browser-based CSRF is not a concern for a tunnel service.
 	s.upgrader = websocket.Upgrader{
 		CheckOrigin:     func(r *http.Request) bool { return true },
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
+		ReadBufferSize:  32 * 1024,
+		WriteBufferSize: 32 * 1024,
 	}
 
 	s.mux = http.NewServeMux()
 	s.mux.HandleFunc("/health", s.handleHealth)
 	s.mux.HandleFunc("/tunnels", s.handleTunnelList)
 	s.mux.HandleFunc("/tunnel/", s.handleTunnel)
-	s.mux.HandleFunc("/", s.handleHTTP)
 
 	return s
+}
+
+// ServeHTTP dispatches tunnel-subdomain traffic to the proxy handler before
+// any path-based routing. This prevents admin endpoints from intercepting
+// requests destined for a client's local service.
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if ParseTunnelID(r.Host) != "" {
+		s.handleTCP(w, r)
+		return
+	}
+	s.mux.ServeHTTP(w, r)
 }
 
 func (s *Server) auth(r *http.Request) bool {
@@ -185,6 +195,15 @@ func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to remove tunnel", http.StatusInternalServerError)
 		return
 	}
+
+	// Close the live yamux session so the client is notified immediately.
+	s.mu.Lock()
+	if session, ok := s.connections[tunnelID]; ok {
+		session.Close()
+		delete(s.connections, tunnelID)
+	}
+	s.mu.Unlock()
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -215,7 +234,9 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	session, err := yamux.Server(&wsConn{Conn: conn}, nil)
+	cfg := yamux.DefaultConfig()
+	cfg.KeepAliveInterval = 30 * time.Second
+	session, err := yamux.Server(&wsConn{Conn: conn}, cfg)
 	if err != nil {
 		log.Printf("Yamux server failed: %v", err)
 		return
@@ -239,7 +260,23 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Tunnel %s connected (port %d)", tunnelID, port)
 
-	// Block until session closes. Close any unexpected client-initiated streams.
+	// Keep the Redis TTL alive for as long as the session is open.
+	done := make(chan struct{})
+	defer close(done)
+	go func() {
+		ticker := time.NewTicker(time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				s.registry.Register(context.Background(), tunnelID, uint16(port))
+			case <-done:
+				return
+			}
+		}
+	}()
+
+	// Block until session closes. Client-initiated streams are unexpected.
 	for {
 		stream, err := session.AcceptStream()
 		if err != nil {
@@ -250,9 +287,10 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleHTTP routes an incoming request through the yamux tunnel to the
-// client's local service and relays the response back.
-func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
+// handleTCP proxies an inbound request through the yamux tunnel to the client's
+// local service. Both WebSocket and plain HTTP are handled by writing the full
+// HTTP request into the tunnel stream and then relaying raw bytes bidirectionally.
+func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	tunnelID := ParseTunnelID(r.Host)
 	if tunnelID == "" {
 		http.Error(w, "Not Found", http.StatusNotFound)
@@ -268,47 +306,90 @@ func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	conn, err := session.Open()
+	stream, err := session.Open()
 	if err != nil {
 		http.Error(w, "Failed to open tunnel stream", http.StatusBadGateway)
 		return
 	}
-	defer conn.Close()
+	defer stream.Close()
 
-	proxyReq, err := http.NewRequest(r.Method, r.URL.String(), r.Body)
+	if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+		s.proxyWebSocket(w, r, stream)
+		return
+	}
+
+	hj, ok := w.(http.Hijacker)
+	if !ok {
+		http.Error(w, "Hijack not supported", http.StatusInternalServerError)
+		return
+	}
+	client, brw, err := hj.Hijack()
 	if err != nil {
-		http.Error(w, "Failed to create proxy request", http.StatusBadGateway)
+		log.Printf("Hijack failed: %v", err)
 		return
 	}
-	proxyReq.Header = r.Header.Clone()
+	defer client.Close()
 
-	if err := proxyReq.Write(conn); err != nil {
-		http.Error(w, "Failed to forward request", http.StatusBadGateway)
+	// Write the full HTTP request (headers + body) so the local service
+	// receives a complete request. Without this the hijacked connection only
+	// carries bytes after the point of hijacking — the request itself is lost.
+	if err := r.Write(stream); err != nil {
+		log.Printf("Failed to forward request: %v", err)
 		return
 	}
 
-	resp, err := http.ReadResponse(bufio.NewReader(conn), proxyReq)
+	// Flush any bytes the HTTP server already buffered from the client.
+	if brw.Reader.Buffered() > 0 {
+		buf := make([]byte, brw.Reader.Buffered())
+		brw.Reader.Read(buf)
+		stream.Write(buf)
+	}
+
+	done := make(chan struct{}, 2)
+	go func() { io.Copy(stream, client); done <- struct{}{} }()
+	go func() { io.Copy(client, stream); done <- struct{}{} }()
+	<-done
+}
+
+// proxyWebSocket hijacks the inbound connection and relays the WebSocket
+// upgrade and all subsequent frames through the tunnel stream.
+func (s *Server) proxyWebSocket(w http.ResponseWriter, r *http.Request, stream net.Conn) {
+	hj, ok := w.(http.Hijacker)
+	if !ok {
+		http.Error(w, "WebSocket proxy not supported", http.StatusInternalServerError)
+		return
+	}
+	client, brw, err := hj.Hijack()
 	if err != nil {
-		http.Error(w, "Failed to read response", http.StatusBadGateway)
+		log.Printf("WebSocket hijack failed: %v", err)
 		return
 	}
-	defer resp.Body.Close()
+	defer client.Close()
 
-	for k, vv := range resp.Header {
-		for _, v := range vv {
-			w.Header().Add(k, v)
-		}
+	// Forward the upgrade request to the local service.
+	if err := r.Write(stream); err != nil {
+		log.Printf("Failed to forward WebSocket handshake: %v", err)
+		return
 	}
-	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
+
+	// Drain any bytes the HTTP server already buffered from the client.
+	if brw.Reader.Buffered() > 0 {
+		buf := make([]byte, brw.Reader.Buffered())
+		brw.Reader.Read(buf)
+		stream.Write(buf)
+	}
+
+	done := make(chan struct{}, 2)
+	go func() { io.Copy(client, stream); done <- struct{}{} }()
+	go func() { io.Copy(stream, client); done <- struct{}{} }()
+	<-done
 }
 
 func (s *Server) Start(addr string) error {
 	srv := &http.Server{
-		Addr:         addr,
-		Handler:      s.mux,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
+		Addr:              addr,
+		Handler:           s,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 	s.mu.Lock()
 	s.httpServer = srv

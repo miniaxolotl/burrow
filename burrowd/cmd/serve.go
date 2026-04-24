@@ -46,6 +46,12 @@ func runServe(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("secret is required: set --secret flag or BURROW_SECRET env var")
 	}
 
+	pidFile := getConfigDir() + "/pid"
+	if err := os.MkdirAll(getConfigDir(), 0700); err == nil {
+		os.WriteFile(pidFile, []byte(fmt.Sprintf("%d", os.Getpid())), 0600)
+		defer os.Remove(pidFile)
+	}
+
 	redis, err := internal.NewRedisClient(redisURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to redis: %w", err)
