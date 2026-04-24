@@ -20,6 +20,7 @@ jobs:
         with:
           git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL_PREVIEW }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          branch: main
 
   deploy-production:
     runs-on: ubuntu-24.04
@@ -34,3 +35,4 @@ jobs:
         with:
           git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          branch: main
