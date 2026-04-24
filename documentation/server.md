@@ -140,9 +140,9 @@ https://{tunnel_id}.{domain}
 ```
 
 Examples:
-- `https://swiftly-silent-dragon.inkspire.one`
-- `https://darkly-shadow-wraith.inkspire.one`
-- `https://keenly-mighty-phoenix.inkspire.one`
+- `https://swiftly-ancient-silent-dragon.inkspire.one`
+- `https://darkly-shadow-umbral-wraith.inkspire.one`
+- `https://keenly-mighty-radiant-phoenix.inkspire.one`
 
 ## API Endpoints
 

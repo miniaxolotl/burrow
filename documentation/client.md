@@ -59,8 +59,8 @@ burrowctl tunnel create --port 3000 --port 8080 --server burrow.example.com:2570
 Creating tunnels to burrow.example.com:25701...
 
 Tunnels established:
-    https://swiftly-silent-dragon.inkspire.one -> localhost:3000
-    https://darkly-shadow-wraith.inkspire.one -> localhost:8080
+    https://swiftly-ancient-silent-dragon.inkspire.one -> localhost:3000
+    https://darkly-shadow-umbral-wraith.inkspire.one -> localhost:8080
 
 Press Ctrl+C to close tunnels
 ```
@@ -83,9 +83,9 @@ burrowctl tunnel list
 
 **Example output:**
 ```
-TUNNEL ID                      PORT    URL                                                  STATUS
-swiftly-silent-dragon         3000    https://swiftly-silent-dragon.inkspire.one         active
-darkly-shadow-wraith          8080    https://darkly-shadow-wraith.inkspire.one          active
+TUNNEL ID                               PORT    URL                                                           STATUS
+swiftly-ancient-silent-dragon          3000    https://swiftly-ancient-silent-dragon.inkspire.one          active
+darkly-shadow-umbral-wraith            8080    https://darkly-shadow-umbral-wraith.inkspire.one             active
 ```
 
 ### `burrowctl tunnel status`
@@ -98,9 +98,9 @@ burrowctl tunnel status
 
 **Example output:**
 ```
-TUNNEL ID                      PORT    LATENCY    RECONNECTS
-swiftly-silent-dragon         3000    12ms       0
-darkly-shadow-wraith          8080    8ms        1
+TUNNEL ID                               PORT    LATENCY    RECONNECTS
+swiftly-ancient-silent-dragon          3000    12ms       0
+darkly-shadow-umbral-wraith            8080    8ms        1
 ```
 
 ### `burrowctl tunnel inspect`
@@ -113,7 +113,7 @@ burrowctl tunnel inspect {tunnel_id}
 
 **Example:**
 ```bash
-burrowctl tunnel inspect swiftly-silent-dragon
+burrowctl tunnel inspect swiftly-ancient-silent-dragon
 ```
 
 **Flags:**
@@ -125,7 +125,7 @@ burrowctl tunnel inspect swiftly-silent-dragon
 [10:30:15] Incoming request:
   Method: GET
   URL: /
-  Headers: Host=swiftly-silent-dragon.inkspire.one
+  Headers: Host=swiftly-ancient-silent-dragon.inkspire.one
 
 [10:30:15] Outgoing response:
   Status: 200 OK
@@ -170,9 +170,9 @@ Examples:
 - `ghostly-silent-ethereal-void`
 
 Generated with `crypto/rand` for uniqueness. Word lists:
-- **Adverbs** (90): arcaneily, blindly, boldly, brightly, calmly, chaotically, clearly, coldly, covertly, cruelly, cryptically, darkly, dauntlessly, deeply, deftly, dimly, distantly, divinely, dreadfully, dryly, eerily, eldritchly, endlessly, eternally, evilly, faintly, fearlessly, fiercely, firmly, forebodingly, freely, frostily, fully, ghostly, ghoulishly, gravelely, grimly, hauntingly, harshly, heavily, hellishly, hollowly, icily, infernally, keenly, lethally, lightly, liminally, lowly, magically, malevolently, menacingly, mercifully, mutely, mystically, nimbly, nobly, obscurely, ominously, openly, perilously, phantomly, proudly, quietly, rapidly, rarely, relentlessly, roughly, ruinously, savagely, sharply, silently, sinisterly, slowly, softly, solemnly, solidly, spectrally, starkly, stealthily, sternly, stolidly, strongly, subtly, swiftly, terribly, thinly, treacherously, truly, undyingly, unholy, vastly, vengefully, vividly, voraciously, wickedly, wildly, wisely, wrathfully, wryly
-- **Adjectives** (103): abyssal, accursed, ancient, arcane, ashen, astral, banished, battered, bewitched, bleak, blighted, bloodied, bold, bonded, brave, broken, burning, celestial, chaotic, charmed, chromatic, cold, corrupted, crimson, cryptic, cursed, dark, dead, deathly, defiled, demonic, destined, diabolical, distant, divine, doomed, draconic, dread, druidic, dry, dwarven, dying, elder, eldritch, elven, empty, enchanted, ethereal, exalted, fallen, feral, fierce, fiendish, flaming, forbidden, forgotten, forsaken, foul, frozen, furtive, ghostly, gilded, glowing, grim, hallowed, haunted, hellish, heretical, hidden, hollow, holy, hungry, icy, infernal, iron, jade, keen, legendary, lethal, liquid, lost, luminous, lurking, mad, malevolent, mighty, molten, moonlit, mournful, murky, mystic, necrotic, noble, obscure, ominous, pale, petrified, phantom, plagued, potent, primal, profane, quick, radiant, raging, ruined, runic, sacred, savage, scarlet, scorched, sepulchral, shadow, shattered, silent, silver, sinister, skeletal, smoldering, spectral, stark, still, stone, storming, sunken, swift, tainted, terrible, twilight, twisted, umbral, uncanny, unholy, unseen, veiled, vengeful, vivid, volatile, wandering, wicked, wild, withered, wrathful, wretched
-- **Nouns** (102): altar, amulet, anvil, arch, archmage, artefact, assassin, axe, banshee, basilisk, beacon, behemoth, blade, blight, bones, bramble, catacomb, centaur, chains, chimera, cipher, citadel, crypt, curse, cyclops, dagger, demon, depths, dirge, dragon, druid, dungeon, effigy, ember, enchantment, exile, familiar, fiend, forge, fortress, gargoyle, gate, ghost, ghoul, giant, goblin, golem, grave, grimoire, guardian, harbinger, haven, helm, heretic, hex, hydra, idol, illusion, inferno, isle, jailer, kraken, labyrinth, lair, lance, leviathan, lich, longbow, manticore, mausoleum, maze, minotaur, mithril, monolith, moon, necromancer, nexus, nightmare, nymph, obsidian, ogre, oracle, orc, overlord, paladin, phantom, phoenix, plague, portal, prism, prophet, quill, ravine, reaper, relic, revenant, rune, sanctum, sarcophagus, scroll, sentinel, serpent, shade, shard, shrine, siege, skeleton, skull, specter, spell, spire, staff, stalker, stronghold, sword, talisman, throne, tomb, tome, tower, troll, unicorn, urn, vampire, vault, vestige, void, vortex, warden, warlock, wasteland, witch, wizard, wraith, wyvern, xorn, zealot, zephyr, zombie
+- **Adverbs** (100): arcaneily, blindly, boldly, brightly, calmly, chaotically, clearly, coldly, covertly, cruelly, cryptically, darkly, dauntlessly, deeply, deftly, dimly, distantly, divinely, dreadfully, dryly, eerily, eldritchly, endlessly, eternally, evilly, faintly, fearlessly, fiercely, firmly, forebodingly, freely, frostily, fully, ghostly, ghoulishly, gravelely, grimly, hauntingly, harshly, heavily, hellishly, hollowly, icily, infernally, keenly, lethally, lightly, liminally, lowly, magically, malevolently, menacingly, mercilessly, mutely, mystically, nimbly, nobly, obscurely, ominously, openly, perilously, phantomly, proudly, quietly, rapidly, rarely, relentlessly, roughly, ruinously, savagely, sharply, silently, sinisterly, slowly, softly, solemnly, solidly, spectrally, starkly, stealthily, sternly, stolidly, strongly, subtly, swiftly, terribly, thinly, treacherously, truly, undyingly, unholy, vastly, vengefully, vividly, voraciously, wickedly, wildly, wisely, wrathfully, wryly
+- **Adjectives** (144): abyssal, accursed, ancient, arcane, ashen, astral, banished, battered, bewitched, bleak, blighted, bloodied, bold, bonded, brave, broken, burning, celestial, chaotic, charmed, chromatic, cold, corrupted, crimson, cryptic, cursed, dark, dead, deathly, defiled, demonic, destined, diabolical, distant, divine, doomed, draconic, dread, druidic, dry, dwarven, dying, elder, eldritch, elven, empty, enchanted, ethereal, exalted, fallen, feral, fierce, fiendish, flaming, forbidden, forgotten, forsaken, foul, frozen, furtive, ghostly, gilded, glowing, grim, hallowed, haunted, hellish, heretical, hidden, hollow, holy, hungry, icy, infernal, iron, jade, keen, legendary, lethal, liquid, lost, luminous, lurking, mad, malevolent, mighty, molten, moonlit, mournful, murky, mystic, necrotic, noble, obscure, ominous, pale, petrified, phantom, plagued, potent, primal, profane, quick, radiant, raging, ruined, runic, sacred, savage, scarlet, scorched, sepulchral, shadow, shattered, silent, silver, sinister, skeletal, smoldering, spectral, stark, still, stone, storming, sunken, swift, tainted, terrible, twilight, twisted, umbral, uncanny, unholy, unseen, veiled, vengeful, vivid, volatile, wandering, wicked, wild, withered, wrathful, wretched
+- **Nouns** (139): altar, amulet, anvil, arch, archmage, artefact, assassin, axe, banshee, basilisk, beacon, behemoth, blade, blight, bones, bramble, catacomb, centaur, chains, chimera, cipher, citadel, crypt, curse, cyclops, dagger, demon, depths, dirge, dragon, druid, dungeon, effigy, ember, enchantment, exile, familiar, fiend, forge, fortress, gargoyle, gate, ghost, ghoul, giant, goblin, golem, grave, grimoire, guardian, harbinger, haven, helm, heretic, hex, hydra, idol, illusion, inferno, isle, jailer, kraken, labyrinth, lair, lance, leviathan, lich, longbow, manticore, mausoleum, maze, minotaur, mithril, monolith, moon, necromancer, nexus, nightmare, nymph, obsidian, ogre, oracle, orc, overlord, paladin, phantom, phoenix, plague, portal, prism, prophet, quill, ravine, reaper, relic, revenant, rune, sanctum, sarcophagus, scroll, sentinel, serpent, shade, shard, shrine, siege, skeleton, skull, specter, spell, spire, staff, stalker, stronghold, sword, talisman, throne, tomb, tome, tower, troll, unicorn, urn, vampire, vault, vestige, void, vortex, warden, warlock, wasteland, witch, wizard, wraith, wyvern, xorn, zealot, zephyr, zombie
 
 ## Reconnection Behavior
 
@@ -200,8 +200,6 @@ burrowctl tunnel create --port 3000 --server burrow.example.com:25701 --token my
 ```bash
 export BURROW_SERVER=burrow.example.com:25701
 export BURROW_TOKEN=my-secret-token
-export BURROW_PORT=25701
-export BURROW_HOSTNAME=burrow.example.com
 
 # Now just specify ports
 burrowctl tunnel create --port 3000 --port 8080
@@ -211,7 +209,7 @@ burrowctl tunnel create --port 3000 --port 8080
 
 ```bash
 # Monitor tunnel traffic in real-time
-burrowctl tunnel inspect arcane-dragon-xorn --follow
+burrowctl tunnel inspect swiftly-silent-dragon --follow
 
 # Check connection health
 burrowctl tunnel status
@@ -221,5 +219,5 @@ burrowctl tunnel status
 
 ```bash
 # Close specific tunnel
-burrowctl tunnel close arcane-dragon-xorn
+burrowctl tunnel close swiftly-silent-dragon
 ```
