@@ -127,7 +127,7 @@ func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
 	if s.secure {
 		scheme = "https"
 	}
-	fmt.Fprintf(w, "burrow\n\nExpose local services to the internet.\n\nTunnels: %s://<id>.%s\n", scheme, s.domain)
+	fmt.Fprintf(w, "burrow - network tunneling service\n%s://{tunnel-id}.%s\n", scheme, s.domain)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -209,7 +209,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	portStr := r.URL.Query().Get("port")
 	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil || port == 0 {
-		http.Error(w, "Valid port required: specify ?port=N", http.StatusBadRequest)
+		http.Error(w, "port required", http.StatusBadRequest)
 		return
 	}
 
