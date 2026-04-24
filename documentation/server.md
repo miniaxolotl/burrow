@@ -139,10 +139,13 @@ Tunnels are assigned human-readable IDs and served as subdomains:
 https://{tunnel_id}.{domain}
 ```
 
+The server extracts the tunnel ID by matching the host against the configured domain suffix. This supports any domain depth:
+
 Examples:
-- `https://swiftly-ancient-silent-dragon.mawa.dev`
-- `https://darkly-shadow-umbral-wraith.mawa.dev`
-- `https://keenly-mighty-radiant-phoenix.mawa.dev`
+- Domain `mawa.dev`: `https://swiftly-ancient-silent-dragon.mawa.dev`
+- Domain `burrow.mawa.dev`: `https://swiftly-ancient-silent-dragon.burrow.mawa.dev`
+- Domain `preview.burrow.mawa.dev`: `https://swiftly-ancient-silent-dragon.preview.burrow.mawa.dev`
+- Domain `tryburrow.dev`: `https://swiftly-ancient-silent-dragon.tryburrow.dev`
 
 ## API Endpoints
 
