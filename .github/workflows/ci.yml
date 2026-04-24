@@ -5,29 +5,10 @@ on:
     branches:
       - development
       - production
-
 jobs:
-  build:
+  deploy-preview:
     runs-on: ubuntu-24.04
-    steps:
-      - name: Cloning repo
-        uses: actions/checkout@v4
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-
-      - name: Build burrowctl
-        run: cd burrowctl && go build -o ../bin/burrowctl .
-
-      - name: Build burrowd
-        run: cd burrowd && go build -o ../bin/burrowd .
-
-  deploy-dev:
-    needs: build
-    runs-on: ubuntu-24.04
-    if: github.ref == 'refs/heads/development'
+    if: github.event_name == 'pull_request'
     steps:
       - name: Cloning repo
         uses: actions/checkout@v4
@@ -37,13 +18,12 @@ jobs:
       - name: Push to dokku
         uses: dokku/github-action@master
         with:
-          git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL_DEV }}
+          git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL_PREVIEW }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
   deploy-prod:
-    needs: build
     runs-on: ubuntu-24.04
-    if: github.ref == 'refs/heads/production'
+    if: github.event_name == 'push'
     steps:
       - name: Cloning repo
         uses: actions/checkout@v4
