@@ -209,7 +209,7 @@ burrowctl tunnel create --port 3000 --port 8080
 
 ```bash
 # Monitor tunnel traffic in real-time
-burrowctl tunnel inspect swiftly-silent-dragon --follow
+burrowctl tunnel inspect swiftly-ancient-silent-dragon --follow
 
 # Check connection health
 burrowctl tunnel status
@@ -219,5 +219,5 @@ burrowctl tunnel status
 
 ```bash
 # Close specific tunnel
-burrowctl tunnel close swiftly-silent-dragon
+burrowctl tunnel close swiftly-ancient-silent-dragon
 ```
