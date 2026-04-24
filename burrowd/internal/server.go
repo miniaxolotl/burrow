@@ -62,6 +62,8 @@ type Server struct {
 	mu          sync.RWMutex
 	connections map[string]*yamux.Session
 	httpServer  *http.Server
+	closeOnce   sync.Once
+	closed      chan struct{}
 }
 
 func NewServer(registry *TunnelRegistry, domain, secret string) *Server {
@@ -71,6 +73,7 @@ func NewServer(registry *TunnelRegistry, domain, secret string) *Server {
 		secret:      secret,
 		startTime:   time.Now(),
 		connections: make(map[string]*yamux.Session),
+		closed:      make(chan struct{}),
 	}
 
 	// CheckOrigin is intentionally permissive: clients connect from arbitrary
@@ -421,11 +424,21 @@ func (s *Server) Start(addr string) error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-	s.mu.RLock()
-	srv := s.httpServer
-	s.mu.RUnlock()
-	if srv == nil {
-		return nil
-	}
-	return srv.Shutdown(ctx)
+	var err error
+	s.closeOnce.Do(func() {
+		close(s.closed)
+		s.mu.Lock()
+		for id, session := range s.connections {
+			session.Close()
+			delete(s.connections, id)
+		}
+		s.mu.Unlock()
+		s.mu.RLock()
+		srv := s.httpServer
+		s.mu.RUnlock()
+		if srv != nil {
+			err = srv.Shutdown(ctx)
+		}
+	})
+	return err
 }

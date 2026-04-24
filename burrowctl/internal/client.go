@@ -58,11 +58,13 @@ type Client struct {
 }
 
 type TunnelConn struct {
-	ID      string
-	Port    uint16
-	URL     string
-	wsConn  *websocket.Conn
-	session *yamux.Session
+	ID       string
+	Port     uint16
+	URL      string
+	wsConn   *websocket.Conn
+	session  *yamux.Session
+	closed   bool
+	closeMu  sync.Mutex
 }
 
 func NewClient(server, token, domain string) *Client {
@@ -76,14 +78,27 @@ func NewClient(server, token, domain string) *Client {
 
 func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) {
 	tunnelID := protocol.RandomTunnelID()
+	tc, err := c.createTunnelSession(ctx, tunnelID, port)
+	if err != nil {
+		return "", err
+	}
 
-	// Send token as a header, not a query parameter, to avoid it appearing in logs.
+	c.mu.Lock()
+	c.tunnels[port] = tc
+	c.mu.Unlock()
+
+	go c.handleTunnel(tc, port)
+
+	return tc.URL, nil
+}
+
+func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port uint16) (*TunnelConn, error) {
 	header := http.Header{"X-Tunnel-Token": []string{c.token}}
 	wsURL := fmt.Sprintf("ws://%s/tunnel/ws?tunnel_id=%s&port=%d", c.server, tunnelID, port)
 
 	conn, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
 	if err != nil {
-		return "", fmt.Errorf("failed to connect to server: %w", err)
+		return nil, fmt.Errorf("failed to connect to server: %w", err)
 	}
 
 	tunnelURL := ""
@@ -98,28 +113,18 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 	session, err := yamux.Client(wrappedConn, nil)
 	if err != nil {
 		conn.Close()
-		return "", fmt.Errorf("failed to create yamux session: %w", err)
+		return nil, fmt.Errorf("failed to create yamux session: %w", err)
 	}
 
-	tc := &TunnelConn{
+	return &TunnelConn{
 		ID:      tunnelID,
 		Port:    port,
 		URL:     tunnelURL,
 		wsConn:  conn,
 		session: session,
-	}
-
-	c.mu.Lock()
-	c.tunnels[port] = tc
-	c.mu.Unlock()
-
-	go c.handleTunnel(tc, port)
-
-	return tc.URL, nil
+	}, nil
 }
 
-// handleTunnel accepts yamux streams opened by the server and pipes each one
-// to the client's local service at the given port.
 func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 	defer func() {
 		c.mu.Lock()
@@ -130,12 +135,32 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 	}()
 
 	localAddr := fmt.Sprintf("localhost:%d", port)
+	reconnectDelay := time.Second
 
 	for {
 		stream, err := tc.session.AcceptStream()
 		if err != nil {
-			log.Printf("Session closed for tunnel %s: %v", tc.ID, err)
-			return
+			tc.closeMu.Lock()
+			if tc.closed {
+				tc.closeMu.Unlock()
+				return
+			}
+			tc.closeMu.Unlock()
+
+			log.Printf("Tunnel %s lost, reconnecting in %v...", tc.ID, reconnectDelay)
+			time.Sleep(reconnectDelay)
+			if reconnectDelay < 30*time.Second {
+				reconnectDelay *= 2
+			}
+
+			newURL, err := c.createTunnelSession(context.Background(), tc.ID, port)
+			if err != nil {
+				log.Printf("Reconnect failed for tunnel %s: %v", tc.ID, err)
+				continue
+			}
+
+			tc.wsConn, tc.session, tc.URL = newURL.wsConn, newURL.session, newURL.URL
+			continue
 		}
 
 		go func(s *yamux.Stream) {
@@ -162,6 +187,9 @@ func (c *Client) CloseTunnel(port uint16) error {
 	defer c.mu.Unlock()
 
 	if tc, ok := c.tunnels[port]; ok {
+		tc.closeMu.Lock()
+		tc.closed = true
+		tc.closeMu.Unlock()
 		if tc.session != nil {
 			tc.session.Close()
 		}
@@ -178,6 +206,9 @@ func (c *Client) Close() error {
 	defer c.mu.Unlock()
 
 	for _, tc := range c.tunnels {
+		tc.closeMu.Lock()
+		tc.closed = true
+		tc.closeMu.Unlock()
 		if tc.session != nil {
 			tc.session.Close()
 		}
