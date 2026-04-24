@@ -1,37 +1,36 @@
-name: 'ci'
+name: ci
 
 on:
   push:
     branches:
       - development
       - production
+
 jobs:
   deploy-preview:
     runs-on: ubuntu-24.04
-    if: github.event_name == 'pull_request'
+    if: github.ref == 'refs/heads/development'
     steps:
-      - name: Cloning repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Push to dokku
+      - name: Deploy to preview
         uses: dokku/github-action@master
         with:
-          git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL_PREVIEW }}
+          git_remote_url: ${{ secrets.DOKKU_REMOTE_URL_PREVIEW }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-  deploy-prod:
+  deploy-production:
     runs-on: ubuntu-24.04
-    if: github.event_name == 'push'
+    if: github.ref == 'refs/heads/production'
     steps:
-      - name: Cloning repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Push to dokku
+      - name: Deploy to production
         uses: dokku/github-action@master
         with:
-          git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL }}
+          git_remote_url: ${{ secrets.DOKKU_REMOTE_URL }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
