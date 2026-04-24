@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/spf13/cobra"
 )
@@ -24,6 +26,31 @@ func runStop(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("failed to read PID file: %w", err)
 	}
-	fmt.Printf("Stopping server (PID: %s)\n", string(data))
+
+	pid := string(data)
+	fmt.Printf("Stopping server (PID: %s)\n", pid)
+
+	pidInt := 0
+	if _, err := fmt.Sscanf(pid, "%d", &pidInt); err != nil {
+		return fmt.Errorf("invalid PID in file: %w", err)
+	}
+
+	process, err := os.FindProcess(pidInt)
+	if err != nil {
+		return fmt.Errorf("failed to find process: %w", err)
+	}
+
+	if err := process.Signal(syscall.SIGTERM); err != nil {
+		return fmt.Errorf("failed to send SIGTERM: %w", err)
+	}
+
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGCHLD)
+	go func() {
+		<-ch
+		os.Remove(pidFile)
+	}()
+
+	fmt.Println("Server stopped")
 	return nil
 }
