@@ -1,0 +1,6 @@
+bin/
+
+.env
+!.env.example
+
+plans/

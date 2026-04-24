@@ -1,0 +1,37 @@
+services:
+  burrowd:
+    build:
+      context: .
+      dockerfile: burrowd/Dockerfile
+    command: >
+      serve
+      --port ${BURROW_PORT}
+      --hostname ${BURROW_HOSTNAME}
+      --domain ${BURROW_DOMAIN}
+      --redis-url ${BURROW_REDIS_URL}
+      --secret ${BURROW_SECRET}
+    ports:
+      - "${BURROW_PORT}:${BURROW_PORT}"
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+      - burrow-net
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - burrow-net
+    command: redis-server --appendonly yes
+
+networks:
+  burrow-net:
+    driver: bridge
+
+volumes:
+  redis_data:
