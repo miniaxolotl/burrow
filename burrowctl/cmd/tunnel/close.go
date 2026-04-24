@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -20,10 +19,7 @@ var closeCmd = &cobra.Command{
 func runTunnelClose(cmd *cobra.Command, args []string) error {
 	tunnelID := args[0]
 	server := viper.GetString("server")
-	token := viper.GetString("token")
-	if token == "" {
-		token = os.Getenv("BURROW_TOKEN")
-	}
+	token := resolveToken()
 
 	req, err := http.NewRequestWithContext(context.Background(), "DELETE",
 		fmt.Sprintf("http://%s/tunnel/%s", server, tunnelID), nil)

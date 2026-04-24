@@ -3,6 +3,7 @@ module burrow/burrowd
 go 1.26.2
 
 require (
+	burrow/protocol v0.0.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/spf13/cobra v1.10.2

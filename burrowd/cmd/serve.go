@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -24,7 +25,7 @@ var serveCmd = &cobra.Command{
 func init() {
 	serveCmd.Flags().String("port", "25701", "Port to listen on")
 	serveCmd.Flags().String("hostname", "localhost", "Hostname for tunnel URLs")
-	serveCmd.Flags().String("domain", "inkspire.app", "Domain for tunnel URLs")
+	serveCmd.Flags().String("domain", "inkspire.one", "Domain for tunnel URLs")
 	serveCmd.Flags().String("redis-url", "localhost:6379", "Redis connection URL")
 	serveCmd.Flags().String("secret", "", "Authentication secret")
 
@@ -35,9 +36,19 @@ func init() {
 	viper.BindPFlag("secret", serveCmd.Flags().Lookup("secret"))
 }
 
+func redactURL(raw string) string {
+	u, err := url.Parse(raw)
+	if err != nil || u.User == nil {
+		return raw
+	}
+	if _, hasPass := u.User.Password(); hasPass {
+		u.User = url.UserPassword(u.User.Username(), "***")
+	}
+	return u.String()
+}
+
 func runServe(cmd *cobra.Command, args []string) error {
 	port := viper.GetString("port")
-	// Dokku sets PORT; use it when neither --port flag nor BURROW_PORT env var was given.
 	if !cmd.Flags().Changed("port") {
 		if _, ok := os.LookupEnv("BURROW_PORT"); !ok {
 			if p := os.Getenv("PORT"); p != "" {
@@ -50,7 +61,6 @@ func runServe(cmd *cobra.Command, args []string) error {
 	domain := viper.GetString("domain")
 
 	redisURL := viper.GetString("redis-url")
-	// Dokku Redis plugin sets REDIS_URL; use it when BURROW_REDIS_URL is not configured.
 	if !cmd.Flags().Changed("redis-url") {
 		if _, ok := os.LookupEnv("BURROW_REDIS_URL"); !ok {
 			if u := os.Getenv("REDIS_URL"); u != "" {
@@ -85,7 +95,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Starting burrowd on %s\n", addr)
 	fmt.Printf("Hostname: %s\n", hostname)
 	fmt.Printf("Domain: %s\n", domain)
-	fmt.Printf("Redis: %s\n", redisURL)
+	fmt.Printf("Redis: %s\n", redactURL(redisURL))
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)

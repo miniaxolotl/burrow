@@ -7,7 +7,6 @@ import (
 	"burrow/burrowd/internal"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var revokeCmd = &cobra.Command{
@@ -19,7 +18,7 @@ var revokeCmd = &cobra.Command{
 
 func runTunnelRevoke(cmd *cobra.Command, args []string) error {
 	tunnelID := args[0]
-	redisURL := viper.GetString("redis-url")
+	redisURL := resolveRedisURL(cmd)
 
 	client, err := internal.NewRedisClient(redisURL)
 	if err != nil {

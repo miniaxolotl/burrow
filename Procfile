@@ -1,1 +1,1 @@
-web: burrowd serve
+web: serve

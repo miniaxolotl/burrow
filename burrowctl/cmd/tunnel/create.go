@@ -28,13 +28,7 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 	ports := viper.GetIntSlice("port")
 	server := viper.GetString("server")
 	domain := viper.GetString("domain")
-	token := viper.GetString("token")
-	if token == "" {
-		token = os.Getenv("BURROW_TOKEN")
-	}
-	if token == "" {
-		token = viper.GetString("stored_token")
-	}
+	token := resolveToken()
 
 	if len(ports) == 0 {
 		return fmt.Errorf("at least one port is required")

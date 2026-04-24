@@ -10,7 +10,7 @@ RUN go mod download -C burrowd
 COPY burrowd/ ./burrowd/
 COPY protocol/ ./protocol/
 
-ARG TARGETARCH=amd64
+ARG TARGETARCH=arm64
 WORKDIR /app/burrowd
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH} \
     go build -trimpath -ldflags="-s -w" -o /bin/burrowd .

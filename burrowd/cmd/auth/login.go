@@ -22,10 +22,6 @@ func runAuthLogin(cmd *cobra.Command, args []string) error {
 	secret := viper.GetString("secret")
 
 	if secret == "" {
-		secret = os.Getenv("BURROW_SECRET")
-	}
-
-	if secret == "" {
 		return fmt.Errorf("no secret configured: set --secret flag or BURROW_SECRET env var")
 	}
 

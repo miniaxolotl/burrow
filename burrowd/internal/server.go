@@ -82,6 +82,7 @@ func NewServer(registry *TunnelRegistry, domain, secret string) *Server {
 	}
 
 	s.mux = http.NewServeMux()
+	s.mux.HandleFunc("/", s.handleRoot)
 	s.mux.HandleFunc("/health", s.handleHealth)
 	s.mux.HandleFunc("/tunnels", s.handleTunnelList)
 	s.mux.HandleFunc("/tunnel/", s.handleTunnel)
@@ -106,6 +107,16 @@ func (s *Server) auth(r *http.Request) bool {
 		token = r.URL.Query().Get("token")
 	}
 	return protocol.ValidateToken(token, s.secret)
+}
+
+func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	if r.URL.Path != "/" {
+		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprintln(w, "404 not found")
+		return
+	}
+	fmt.Fprintf(w, "burrow\n\nExpose local services to the internet.\n\nTunnels: https://<id>.%s\n", s.domain)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {

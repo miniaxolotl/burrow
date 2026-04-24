@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"strings"
+
 	"burrow/burrowctl/cmd/tunnel"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var rootCmd = &cobra.Command{
@@ -17,5 +20,9 @@ func Execute() error {
 }
 
 func init() {
+	viper.SetEnvPrefix("BURROW")
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
+	viper.AutomaticEnv()
+
 	rootCmd.AddCommand(tunnel.TunnelCmd)
 }

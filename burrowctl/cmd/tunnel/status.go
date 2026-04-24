@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"burrow/protocol"
@@ -21,10 +20,7 @@ var statusCmd = &cobra.Command{
 
 func runTunnelStatus(cmd *cobra.Command, args []string) error {
 	server := viper.GetString("server")
-	token := viper.GetString("token")
-	if token == "" {
-		token = os.Getenv("BURROW_TOKEN")
-	}
+	token := resolveToken()
 
 	req, err := http.NewRequest("GET", fmt.Sprintf("http://%s/tunnels", server), nil)
 	if err != nil {

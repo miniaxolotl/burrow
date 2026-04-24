@@ -1,17 +1,16 @@
 {
   "name": "burrowd",
   "description": "Tunnel server for burrow",
-  "env": {
-    "BURROW_SECRET": {
-      "description": "Authentication secret for tunnel tokens. Generate with: openssl rand -hex 32",
-      "required": true
-    },
-    "BURROW_DOMAIN": {
-      "description": "Domain for tunnel URLs (wildcard DNS must point to this server)",
-      "value": "inkspire.app"
-    },
-    "BURROW_REDIS_URL": {
-      "description": "Redis connection URL (set automatically when linked via dokku redis:link)"
-    }
+  "healthchecks": {
+    "web": [
+      {
+        "type": "path",
+        "name": "web-health",
+        "path": "/health",
+        "attempts": 3,
+        "timeout": 5,
+        "wait": 5
+      }
+    ]
   }
 }

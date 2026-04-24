@@ -17,7 +17,7 @@ var listCmd = &cobra.Command{
 }
 
 func runTunnelList(cmd *cobra.Command, args []string) error {
-	redisURL := viper.GetString("redis-url")
+	redisURL := resolveRedisURL(cmd)
 	domain := viper.GetString("domain")
 
 	client, err := internal.NewRedisClient(redisURL)
