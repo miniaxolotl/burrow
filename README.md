@@ -1,97 +1,78 @@
-# Burrow
+# burrow
 
-Tunnel server for exposing local services via subdomains.
+Expose local services to the internet via HTTPS subdomains.
 
-## How it works
+Tunnel URLs look like: `https://mighty-arcane-dragon.inkspire.one`
 
-```
-Client → HTTPS → Nginx → burrowd (WebSocket/yamux) → local service
-```
+## Quick Start (Docker Compose)
 
-## Quick Start
-
-**Server:**
 ```bash
+cp .env.example .env
+# Edit .env — set BURROW_SECRET to a random value
+
+docker compose up -d
+
+# On your local machine, expose port 3000:
+BURROW_SECRET=your-secret burrowctl tunnel create --port 3000
+```
+
+## Local Development (no Docker)
+
+```bash
+# Start Redis
+docker compose up -d redis
+
+# Build and run server
 go build -o bin/burrowd ./burrowd
-./bin/burrowd serve --secret SECRET --domain example.com
-```
+./bin/burrowd serve --secret dev --domain localhost
 
-**Client:**
-```bash
+# In another terminal — connect a tunnel
 go build -o bin/burrowctl ./burrowctl
-./bin/burrowctl tunnel create --port 3000 --server example.com
+./bin/burrowctl tunnel create --server localhost:25701 --secret dev --port 3000
 ```
 
-## Components
+## Configuration
 
-| Component | Description |
-|-----------|-------------|
-| `burrowd` | Server daemon |
-| `burrowctl` | Client CLI |
-| `protocol` | Shared message types |
+**Server (`burrowd`)**
 
-## Environment Variables
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BURROW_SECRET` | required | Auth secret |
+| `BURROW_DOMAIN` | `inkspire.one` | Tunnel subdomain base |
+| `BURROW_PORT` | `25701` | Listen port |
+| `BURROW_REDIS_URL` | `redis://localhost:6379` | Redis URL |
 
-**Server:**
+Also accepts `PORT` and `REDIS_URL` as fallbacks (Dokku convention).
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `BURROW_PORT` | Listen port | `25701` |
-| `BURROW_REDIS_URL` | Redis URL | `localhost:6379` |
-| `BURROW_SECRET` | Auth secret | (required) |
-| `BURROW_DOMAIN` | Tunnel domain | `inkspire.app` |
+**Client (`burrowctl`)**
 
-`PORT` and `REDIS_URL` are also supported as fallbacks.
-
-**Client:**
-
-| Variable | Description |
-|----------|-------------|
-| `BURROW_TOKEN` | Auth token |
-
-## Tunnel URLs
-
-`https://{random-id}.{domain}` e.g. `https://arcane-dragon-42.inkspire.app`
-
-## Development
-
-```bash
-go build -o bin/burrowd ./burrowd
-go build -o bin/burrowctl ./burrowctl
-go test ./...
-```
-
-## Docker Compose
-
-```bash
-docker-compose up --build
-```
-
-## Dokku Deployment
-
-```bash
-dokku apps:create burrowd
-
-# Install Redis plugin if needed
-sudo dokku plugin:install https://github.com/dokku/dokku-redis.git
-
-dokku redis:create burrowd-redis
-dokku redis:link burrowd burrowd-redis
-dokku config:set burrowd BURROW_SECRET=xxx BURROW_DOMAIN=example.com
-
-git remote add dokku dokku@server:burrowd
-git push dokku main
-```
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `BURROW_SERVER` | `localhost:25701` | Server address |
+| `BURROW_SECRET` | — | Shared secret (generates token automatically) |
+| `BURROW_TOKEN` | — | Pre-generated token (alternative to secret) |
 
 ## API
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Health check |
-| `/tunnels` | GET | List tunnels (auth required) |
-| `/tunnel/ws` | GET | WebSocket |
-| `/tunnel/{id}` | POST | Create tunnel |
-| `/tunnel/{id}` | DELETE | Delete tunnel |
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/health` | GET | No | Status, uptime, active tunnel count |
+| `/tunnels` | GET | Yes | List active tunnels |
+| `/tunnel/ws` | GET | Yes | WebSocket — establish tunnel |
+| `/tunnel/{id}` | POST | Yes | Register tunnel |
+| `/tunnel/{id}` | DELETE | Yes | Close tunnel |
+
+## Deployment (Dokku)
+
+```bash
+dokku apps:create burrowd
+dokku plugin:install https://github.com/dokku/dokku-redis.git
+dokku redis:create burrowd-redis && dokku redis:link burrowd-redis burrowd
+dokku domains:set burrowd inkspire.one '*.inkspire.one'
+dokku config:set burrowd BURROW_SECRET=xxx BURROW_DOMAIN=inkspire.one
+git push dokku production:main
+dokku letsencrypt:enable burrowd
+```
 
 ## License
 
