@@ -55,8 +55,8 @@ burrowctl tunnel create --port 3000 --port 8080 --server burrow.example.com:2570
 Creating tunnels to burrow.example.com:25701...
 
 Tunnels established:
-  https://arcane-dragon-xorn.inkspire.app -> localhost:3000
-  https://shadow-lich-umbra.inkspire.app -> localhost:8080
+    https://arcane-dragon-xorn.inkspire.one -> localhost:3000
+    https://shadow-lich-umbra.inkspire.one -> localhost:8080
 
 Press Ctrl+C to close tunnels
 ```
@@ -80,8 +80,8 @@ burrowctl tunnel list
 **Example output:**
 ```
 TUNNEL ID              PORT    URL                                           STATUS
-arcane-dragon-xorn     3000    https://arcane-dragon-xorn.inkspire.app       active
-shadow-lich-umbra      8080    https://shadow-lich-umbra.inkspire.app       active
+arcane-dragon-xorn     3000    https://arcane-dragon-xorn.inkspire.one       active
+shadow-lich-umbra      8080    https://shadow-lich-umbra.inkspire.one       active
 ```
 
 ### `burrowctl tunnel status`
@@ -121,7 +121,7 @@ burrowctl tunnel inspect arcane-dragon-xorn
 [10:30:15] Incoming request:
   Method: GET
   URL: /
-  Headers: Host=arcane-dragon-xorn.inkspire.app
+  Headers: Host=arcane-dragon-xorn.inkspire.one
 
 [10:30:15] Outgoing response:
   Status: 200 OK
@@ -171,13 +171,7 @@ Fantasy word lists:
 
 ## Reconnection Behavior
 
-The client automatically reconnects on connection loss with exponential backoff:
-
-1. First retry: 1 second
-2. Second retry: 2 seconds
-3. Maximum retry: 60 seconds
-
-During reconnection, the tunnel URL remains active (for a limited time).
+The client reconnects on connection loss with exponential backoff (1s doubling to 30s cap).
 
 ## Examples
 

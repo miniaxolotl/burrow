@@ -16,7 +16,7 @@ Configuration is loaded from (in order of precedence):
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `BURROW_SECRET` | Authentication secret | (required) |
-| `BURROW_DOMAIN` | Domain for tunnel URLs | `inkspire.app` |
+| `BURROW_DOMAIN` | Domain for tunnel URLs | `inkspire.one` |
 | `BURROW_PORT` | Server port | `25701` |
 | `BURROW_REDIS_URL` | Redis connection URL | `localhost:6379` |
 
@@ -24,7 +24,7 @@ Configuration is loaded from (in order of precedence):
 ```
 BURROW_REDIS_URL=redis://redis:6379
 BURROW_SECRET=your-secret-key
-BURROW_DOMAIN=inkspire.app
+BURROW_DOMAIN=inkspire.one
 BURROW_PORT=25701
 ```
 
@@ -35,12 +35,12 @@ BURROW_PORT=25701
 Starts the tunnel server.
 
 ```bash
-burrowd serve --secret mysecret --domain inkspire.app --port 25701
+burrowd serve --secret mysecret --domain inkspire.one --port 25701
 ```
 
 **Flags:**
 - `--port` - Port to listen on (default: `25701`)
-- `--domain` - Domain for tunnel URLs (default: `inkspire.app`)
+- `--domain` - Domain for tunnel URLs (default: `inkspire.one`)
 - `--redis-url` - Redis connection URL (default: `localhost:6379`)
 - `--secret` - Authentication secret (required)
 
@@ -48,7 +48,7 @@ burrowd serve --secret mysecret --domain inkspire.app --port 25701
 ```bash
 docker compose up -d
 # Or manually:
-burrowd serve --port 25701 --domain inkspire.app --redis-url redis://redis:6379 --secret my-secret-key
+burrowd serve --port 25701 --domain inkspire.one --redis-url redis://redis:6379 --secret my-secret-key
 ```
 
 ### `burrowd auth login`
@@ -118,7 +118,7 @@ burrowd stop
 └──────────────────┘         └──────────────────┘         └──────────────────┘
         │                            │                            │
         │ WebSocket + token auth     │ subdomain routing          │
-        │ ─────────────────────────►│ arcane-dragon-xorn.inkspire.app │
+        │ ─────────────────────────►│ arcane-dragon-xorn.inkspire.one │
         │                            │                             │
         │                            │ ┌───────────────────────────┴──► localhost:8080
         │◄───────────────────────── │ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─► │
@@ -135,9 +135,9 @@ https://{tunnel_id}.{domain}
 ```
 
 Examples:
-- `https://arcane-dragon-xorn.inkspire.app`
-- `https://shadow-lich-umbra.inkspire.app`
-- `https://brave-moon-peace.inkspire.app`
+- `https://arcane-dragon-xorn.inkspire.one`
+- `https://shadow-lich-umbra.inkspire.one`
+- `https://brave-moon-peace.inkspire.one`
 
 ## API Endpoints
 
