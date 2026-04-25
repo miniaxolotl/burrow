@@ -59,7 +59,7 @@ Also accepts `PORT` and `REDIS_URL` as fallbacks (Dokku convention).
 | `BURROW_SECRET` | — | Shared secret (auto-generates token) |
 | `BURROW_TOKEN` | — | Pre-generated token (alternative to secret) |
 | `BURROW_TLS` | `false` | Use `wss://` and `https://` when connecting to the server |
-| `BURROW_DOMAIN` | `mawa.dev` | Fallback domain for tunnel URL display |
+| `BURROW_DOMAIN` | `burrow.mawa.dev` | Fallback domain for tunnel URL display |
 
 ## API
 
@@ -79,8 +79,9 @@ dokku redis:create burrowd-redis && dokku redis:link burrowd-redis burrowd
 dokku domains:set burrowd mawa.dev '*.mawa.dev'
 dokku config:set burrowd BURROW_SECRET=xxx BURROW_DOMAIN=mawa.dev BURROW_TLS=true
 git push dokku production:main
-dokku letsencrypt:enable burrowd
 ```
+
+**Note:** `dokku letsencrypt:enable` uses HTTP-01 challenge which fails on wildcard domains. Use `certbot` + `dns-cloudflare` instead — see `documentation/server.md` for details.
 
 ## License
 

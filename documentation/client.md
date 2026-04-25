@@ -24,12 +24,7 @@ Configuration is loaded from (in order of precedence):
 
 ### Config File
 
-Default location: `~/.burrowctl/config.yaml`
-
-```yaml
-server: localhost:25701
-token: your-auth-token
-```
+Token is stored at `~/.burrow/token` (written by `burrowd auth login`). No YAML config file is used.
 
 ## Commands
 
@@ -107,12 +102,13 @@ burrowctl tunnel status
 
 **Example output:**
 ```
-TUNNEL ID                               PORT    URL                                                      STATUS
-swiftly-ancient-silent-dragon          3000    https://swiftly-ancient-silent-dragon.burrow.mawa.dev   active
-darkly-shadow-umbral-wraith            8080    https://darkly-shadow-umbral-wraith.burrow.mawa.dev     active
+TUNNEL ID                       PORT     URL                                             STATUS
+---------------------------------------------------------------------------------------------
+swiftly-ancient-silent-dragon  3000     https://swiftly-ancient-silent-dragon.burrow.mawa.dev   active
+darkly-shadow-umbral-wraith    8080     https://darkly-shadow-umbral-wraith.burrow.mawa.dev     active
 ```
 
-**Note:** `tunnel status` and `tunnel list` use the same endpoint and produce similar output.
+**Note:** `tunnel status` and `tunnel list` use the same endpoint. `status` adds a separator line beneath the header. Neither shows latency or reconnect count (those are only visible in the TUI).
 
 ### `burrowctl tunnel inspect`
 

@@ -70,8 +70,8 @@ burrowd auth login my-secret-token
 ```
 
 **Behavior:**
-- Stores the token locally (encrypted in config)
 - Validates token against configured secret
+- Stores the token as plaintext in `~/.burrow/token` (0600 permissions)
 - Returns error if token is invalid
 
 ### `burrowd auth status`
