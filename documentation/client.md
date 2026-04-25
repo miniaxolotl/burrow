@@ -136,9 +136,28 @@ burrowctl tunnel close {tunnel_id}
 Before creating tunnels, authenticate with the server:
 
 ```bash
-export BURROW_TOKEN=my-secret-token
-burrowctl tunnel create --port 3000
+burrowctl auth login your-hmac-token
 ```
+
+Or with server validation:
+
+```bash
+burrowctl auth login your-hmac-token --server burrow.example.com:25701
+```
+
+Check auth status:
+
+```bash
+burrowctl auth status
+```
+
+Logout:
+
+```bash
+burrowctl auth logout
+```
+
+The token is stored in `~/.config/burrow/client.json`. It can also be set via `--token` flag or `BURROW_TOKEN` env var, which take priority over the stored config.
 
 Or inline:
 ```bash

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -102,9 +103,38 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 	c.tunnels[port] = tc
 	c.mu.Unlock()
 
+	go c.trackLatency(tc)
 	go c.handleTunnel(tc, port)
 
 	return tc.URL, nil
+}
+
+func (c *Client) trackLatency(tc *TunnelConn) {
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-tc.ctx.Done():
+			return
+		case <-ticker.C:
+			start := time.Now()
+			scheme := "http"
+			if c.secure {
+				scheme = "https"
+			}
+			req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s/health", scheme, c.server), nil)
+			if err != nil {
+				continue
+			}
+			req.Header.Set("X-Tunnel-Token", c.token)
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				continue
+			}
+			resp.Body.Close()
+			tc.latency = time.Since(start)
+		}
+	}
 }
 
 func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port uint16) (*TunnelConn, error) {
@@ -276,6 +306,9 @@ func (c *Client) ListTunnels() []*protocol.TunnelInfo {
 			Reconnects: tc.reconnects,
 		})
 	}
+	sort.Slice(tunnels, func(i, j int) bool {
+		return tunnels[i].Port < tunnels[j].Port
+	})
 	return tunnels
 }
 

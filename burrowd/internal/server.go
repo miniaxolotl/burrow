@@ -421,7 +421,7 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	var respSize int64
 	done := make(chan struct{}, 2)
 	go func() { io.Copy(stream, client); done <- struct{}{} }()
-	go func() { n, _ := io.Copy(client, stream); respSize = n; done <- struct{}{} }()
+	go func() { n, _ := io.Copy(client, stream); respSize = n; client.Close(); done <- struct{}{} }()
 	<-done
 	<-done
 
@@ -462,8 +462,8 @@ func (s *Server) proxyWebSocket(w http.ResponseWriter, r *http.Request, stream n
 
 	var size int64
 	done := make(chan struct{}, 2)
-	go func() { io.Copy(stream, client); done <- struct{}{} }()
-	go func() { n, _ := io.Copy(client, stream); size = n; done <- struct{}{} }()
+	go func() { io.Copy(stream, client); stream.Close(); done <- struct{}{} }()
+	go func() { n, _ := io.Copy(client, stream); size = n; client.Close(); done <- struct{}{} }()
 	<-done
 	<-done
 	return size

@@ -149,9 +149,27 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width, m.height = msg.Width, msg.Height
 
 	case tickMsg:
+		selectedID := ""
+		if len(m.tunnels) > 0 && m.cursor < len(m.tunnels) {
+			selectedID = m.tunnels[m.cursor].TunnelID
+		}
 		m.tunnels = m.client.ListTunnels()
-		if m.cursor >= len(m.tunnels) {
-			m.cursor = max(0, len(m.tunnels)-1)
+		if len(m.tunnels) == 0 {
+			m.cursor = 0
+		} else if selectedID != "" {
+			found := false
+			for i, t := range m.tunnels {
+				if t.TunnelID == selectedID {
+					m.cursor = i
+					found = true
+					break
+				}
+			}
+			if !found {
+				m.cursor = max(0, len(m.tunnels)-1)
+			}
+		} else {
+			m.cursor = max(0, min(m.cursor, len(m.tunnels)-1))
 		}
 		if m.state == stateLogs && len(m.tunnels) > 0 && m.cursor < len(m.tunnels) {
 			t := m.tunnels[m.cursor]

@@ -78,8 +78,9 @@ func wsScheme() string {
 
 // resolveToken returns the best available auth token. Priority:
 //  1. --token flag / BURROW_TOKEN env var
-//  2. ~/.burrow/token file (written by `burrowd auth login`)
-//  3. Generate from --secret / BURROW_SECRET env var
+//  2. ~/.config/burrow/client.json token field (written by `burrowctl auth login`)
+//  3. ~/.burrow/token file (legacy fallback, written by `burrowd auth login`)
+//  4. Generate from --secret / BURROW_SECRET env var
 func resolveToken() string {
 	if t := viper.GetString("token"); t != "" {
 		return t
