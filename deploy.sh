@@ -7,6 +7,7 @@ usage() {
 }
 
 ENV="${1:-preview}"
+shift || true
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 FORCE=0
