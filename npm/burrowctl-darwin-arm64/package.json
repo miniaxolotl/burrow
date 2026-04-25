@@ -1,0 +1,12 @@
+{
+  "name": "@miniaxolotl/burrowctl-darwin-arm64",
+  "version": "0.1.0",
+  "description": "macOS arm64 binary for burrowctl",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/miniaxolotl/burrow"
+  },
+  "os": ["darwin"],
+  "cpu": ["arm64"]
+}

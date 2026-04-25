@@ -10,3 +10,6 @@ logs/
 plans/
 .opencode/
 
+dist/
+npm/burrowctl-*/burrowctl
+

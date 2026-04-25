@@ -11,9 +11,10 @@ COPY burrowd/ ./burrowd/
 COPY protocol/ ./protocol/
 
 ARG TARGETARCH
+ARG VERSION=dev
 WORKDIR /app/burrowd
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-$(go env GOARCH)} \
-    go build -trimpath -ldflags="-s -w" -o /bin/burrowd .
+    go build -trimpath -ldflags="-s -w -X main.Version=${VERSION}" -o /bin/burrowd .
 
 FROM alpine:3.20
 
