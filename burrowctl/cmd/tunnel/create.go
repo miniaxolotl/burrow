@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
+	"burrow/burrowctl/cmd/tui"
 	"burrow/burrowctl/internal"
 
 	"github.com/spf13/cobra"
@@ -34,38 +33,18 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("at least one port is required")
 	}
 
-	fmt.Printf("Creating tunnels to %s...\n", server)
+	logLevel := parseLogLevel(viper.GetString("log-level"))
+	logger := internal.NewLogger(logLevel, "")
 
-	client := internal.NewClient(server, token, domain, viper.GetBool("tls"))
+	client := internal.NewClient(server, token, domain, secureTLS()).WithLogger(logger)
 	defer client.Close()
 
 	ctx := context.Background()
-	urls := make([]string, 0, len(ports))
-
 	for _, port := range ports {
-		url, err := client.CreateTunnel(ctx, uint16(port))
-		if err != nil {
+		if _, err := client.CreateTunnel(ctx, uint16(port)); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to create tunnel for port %d: %v\n", port, err)
-			continue
 		}
-		urls = append(urls, url)
-		fmt.Printf("  %s -> localhost:%d\n", url, port)
 	}
 
-	if len(urls) == 0 {
-		return fmt.Errorf("no tunnels could be created")
-	}
-
-	fmt.Println("\nPress Ctrl+C to close tunnels")
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	<-sigCh
-
-	fmt.Println("\nClosing tunnels...")
-	for _, port := range ports {
-		client.CloseTunnel(uint16(port))
-	}
-
-	return nil
+	return tui.RunWithClient(client, server)
 }

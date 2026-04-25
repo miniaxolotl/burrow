@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -53,6 +52,7 @@ func (c *wsConn) Write(b []byte) (int, error) {
 }
 
 const tunnelGracePeriod = 20 * time.Second
+const maxLogsPerTunnel = 200
 
 type Server struct {
 	registry       *TunnelRegistry
@@ -62,22 +62,27 @@ type Server struct {
 	secret         string
 	secure         bool
 	startTime      time.Time
+	logger         *Logger
 	mu             sync.RWMutex
 	connections    map[string]*yamux.Session
 	pendingRemoves map[string]chan struct{}
 	httpServer     *http.Server
 	closeOnce      sync.Once
+	logMu          sync.RWMutex
+	logs           map[string][]*protocol.TunnelLog
 }
 
-func NewServer(registry *TunnelRegistry, domain, secret string, secure bool) *Server {
+func NewServer(registry *TunnelRegistry, domain, secret string, secure bool, logger *Logger) *Server {
 	s := &Server{
 		registry:    registry,
 		domain:      domain,
 		secret:      secret,
 		secure:      secure,
 		startTime:   time.Now(),
+		logger:      logger,
 		connections:    make(map[string]*yamux.Session),
 		pendingRemoves: make(map[string]chan struct{}),
+		logs:           make(map[string][]*protocol.TunnelLog),
 	}
 
 	// CheckOrigin is intentionally permissive: clients connect from arbitrary
@@ -93,6 +98,7 @@ func NewServer(registry *TunnelRegistry, domain, secret string, secure bool) *Se
 	s.mux.HandleFunc("/health", s.handleHealth)
 	s.mux.HandleFunc("/tunnels", s.handleTunnelList)
 	s.mux.HandleFunc("/tunnel/", s.handleTunnel)
+	s.mux.HandleFunc("/logs/", s.handleLogs)
 
 	return s
 }
@@ -114,6 +120,40 @@ func (s *Server) auth(r *http.Request) bool {
 		token = r.URL.Query().Get("token")
 	}
 	return protocol.ValidateToken(token, s.secret)
+}
+
+func (s *Server) addLog(tunnelID string, entry *protocol.TunnelLog) {
+	s.logMu.Lock()
+	defer s.logMu.Unlock()
+	entries := s.logs[tunnelID]
+	if len(entries) >= maxLogsPerTunnel {
+		entries = entries[1:]
+	}
+	s.logs[tunnelID] = append(entries, entry)
+}
+
+func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.auth(r) {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+	tunnelID := strings.TrimPrefix(r.URL.Path, "/logs/")
+	if tunnelID == "" {
+		http.Error(w, "Tunnel ID required", http.StatusBadRequest)
+		return
+	}
+	s.logMu.RLock()
+	entries := s.logs[tunnelID]
+	s.logMu.RUnlock()
+	if entries == nil {
+		entries = []*protocol.TunnelLog{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(entries)
 }
 
 func (s *Server) handleRoot(w http.ResponseWriter, r *http.Request) {
@@ -218,7 +258,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if cancel, ok := s.pendingRemoves[tunnelID]; ok {
 		close(cancel)
 		delete(s.pendingRemoves, tunnelID)
-		log.Printf("Tunnel %s reconnected, grace period cancelled", tunnelID)
+		s.logger.Infof("Tunnel %s reconnected, grace period cancelled", tunnelID)
 	}
 	s.mu.Unlock()
 
@@ -229,7 +269,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	tunnelURL := fmt.Sprintf("%s://%s.%s", scheme, tunnelID, s.domain)
 	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Tunnel-URL": []string{tunnelURL}})
 	if err != nil {
-		log.Printf("WebSocket upgrade failed: %v", err)
+		s.logger.Errorf("WebSocket upgrade failed: %v", err)
 		return
 	}
 	defer conn.Close()
@@ -238,13 +278,13 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	cfg.KeepAliveInterval = 30 * time.Second
 	session, err := yamux.Server(&wsConn{Conn: conn}, cfg)
 	if err != nil {
-		log.Printf("Yamux server failed: %v", err)
+		s.logger.Errorf("Yamux server failed: %v", err)
 		return
 	}
 	defer session.Close()
 
 	if _, err := s.registry.Register(r.Context(), tunnelID, uint16(port)); err != nil {
-		log.Printf("Failed to register tunnel %s: %v", tunnelID, err)
+		s.logger.Errorf("Failed to register tunnel %s: %v", tunnelID, err)
 		return
 	}
 
@@ -264,7 +304,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				delete(s.pendingRemoves, tunnelID)
 				s.mu.Unlock()
 				s.registry.Remove(tunnelID)
-				log.Printf("Tunnel %s grace period expired", tunnelID)
+				s.logger.Infof("Tunnel %s grace period expired", tunnelID)
 			case <-cancel:
 				// Cancelled by reconnect or shutdown.
 			}
@@ -280,7 +320,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.mu.Unlock()
 	}()
 
-	log.Printf("Tunnel %s connected (port %d)", tunnelID, port)
+	s.logger.Infof("Tunnel %s connected (port %d)", tunnelID, port)
 
 	// Keep the Redis TTL alive for as long as the session is open.
 	done := make(chan struct{})
@@ -308,7 +348,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	for {
 		stream, err := session.AcceptStream()
 		if err != nil {
-			log.Printf("Tunnel %s disconnected: %v", tunnelID, err)
+			s.logger.Infof("Tunnel %s disconnected: %v", tunnelID, err)
 			return
 		}
 		stream.Close()
@@ -341,8 +381,17 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer stream.Close()
 
+	start := time.Now()
+
 	if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
-		s.proxyWebSocket(w, r, stream)
+		size := s.proxyWebSocket(w, r, stream)
+		s.addLog(tunnelID, &protocol.TunnelLog{
+			Timestamp: start,
+			Method:    "WS",
+			Path:      r.URL.Path,
+			Size:      size,
+			Duration:  time.Since(start).Round(time.Millisecond).String(),
+		})
 		return
 	}
 
@@ -353,66 +402,71 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	}
 	client, brw, err := hj.Hijack()
 	if err != nil {
-		log.Printf("Hijack failed: %v", err)
+		s.logger.Errorf("Hijack failed: %v", err)
 		return
 	}
 	defer client.Close()
 
-	// Write the full HTTP request (headers + body) so the local service
-	// receives a complete request. Without this the hijacked connection only
-	// carries bytes after the point of hijacking — the request itself is lost.
 	if err := r.Write(stream); err != nil {
-		log.Printf("Failed to forward request: %v", err)
+		s.logger.Errorf("Failed to forward request: %v", err)
 		return
 	}
 
-	// Flush any bytes the HTTP server already buffered from the client.
 	if brw.Reader.Buffered() > 0 {
 		buf := make([]byte, brw.Reader.Buffered())
 		brw.Reader.Read(buf)
 		stream.Write(buf)
 	}
 
+	var respSize int64
 	done := make(chan struct{}, 2)
 	go func() { io.Copy(stream, client); done <- struct{}{} }()
-	go func() { io.Copy(client, stream); done <- struct{}{} }()
+	go func() { n, _ := io.Copy(client, stream); respSize = n; done <- struct{}{} }()
 	<-done
 	<-done
+
+	s.addLog(tunnelID, &protocol.TunnelLog{
+		Timestamp: start,
+		Method:    r.Method,
+		Path:      r.URL.Path,
+		Size:      respSize,
+		Duration:  time.Since(start).Round(time.Millisecond).String(),
+	})
 }
 
 // proxyWebSocket hijacks the inbound connection and relays the WebSocket
 // upgrade and all subsequent frames through the tunnel stream.
-func (s *Server) proxyWebSocket(w http.ResponseWriter, r *http.Request, stream net.Conn) {
+func (s *Server) proxyWebSocket(w http.ResponseWriter, r *http.Request, stream net.Conn) int64 {
 	hj, ok := w.(http.Hijacker)
 	if !ok {
 		http.Error(w, "WebSocket proxy not supported", http.StatusInternalServerError)
-		return
+		return 0
 	}
 	client, brw, err := hj.Hijack()
 	if err != nil {
-		log.Printf("WebSocket hijack failed: %v", err)
-		return
+		s.logger.Errorf("WebSocket hijack failed: %v", err)
+		return 0
 	}
 	defer client.Close()
 
-	// Forward the upgrade request to the local service.
 	if err := r.Write(stream); err != nil {
-		log.Printf("Failed to forward WebSocket handshake: %v", err)
-		return
+		s.logger.Errorf("Failed to forward WebSocket handshake: %v", err)
+		return 0
 	}
 
-	// Drain any bytes the HTTP server already buffered from the client.
 	if brw.Reader.Buffered() > 0 {
 		buf := make([]byte, brw.Reader.Buffered())
 		brw.Reader.Read(buf)
 		stream.Write(buf)
 	}
 
+	var size int64
 	done := make(chan struct{}, 2)
-	go func() { io.Copy(client, stream); done <- struct{}{} }()
 	go func() { io.Copy(stream, client); done <- struct{}{} }()
+	go func() { n, _ := io.Copy(client, stream); size = n; done <- struct{}{} }()
 	<-done
 	<-done
+	return size
 }
 
 func (s *Server) Start(addr string) error {
@@ -424,7 +478,7 @@ func (s *Server) Start(addr string) error {
 	s.mu.Lock()
 	s.httpServer = srv
 	s.mu.Unlock()
-	log.Printf("Starting server on %s", addr)
+	s.logger.Infof("Starting server on %s", addr)
 	return srv.ListenAndServe()
 }
 

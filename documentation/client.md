@@ -72,6 +72,26 @@ Press Ctrl+C to close tunnels
 - Generates a human-readable tunnel ID
 - Prints the public URL(s)
 - Maintains connections and reconnects automatically
+- Press Ctrl+C to close all tunnels
+
+### `burrowctl tunnel tui`
+
+Launch an interactive terminal UI for managing tunnels. This is a separate command from `tunnel create`.
+
+```bash
+burrowctl tunnel tui
+```
+
+**Controls:**
+- `c` - Create a new tunnel
+- `x` or `d` - Close selected tunnel
+- `↑↓` or `j/k` - Navigate tunnel list
+- `q` - Quit
+
+**TUI Features:**
+- Real-time tunnel list with spinner during creation
+- Color-coded status display
+- Keyboard navigation
 
 ### `burrowctl tunnel list`
 
@@ -90,7 +110,7 @@ darkly-shadow-umbral-wraith            8080    https://darkly-shadow-umbral-wrai
 
 ### `burrowctl tunnel status`
 
-Show connection status and latency for all tunnels.
+Show connection status for all tunnels.
 
 ```bash
 burrowctl tunnel status
@@ -98,40 +118,30 @@ burrowctl tunnel status
 
 **Example output:**
 ```
-TUNNEL ID                               PORT    LATENCY    RECONNECTS
-swiftly-ancient-silent-dragon          3000    12ms       0
-darkly-shadow-umbral-wraith            8080    8ms        1
+TUNNEL ID                               PORT    URL                                                      STATUS
+swiftly-ancient-silent-dragon          3000    https://swiftly-ancient-silent-dragon.burrow.mawa.dev   active
+darkly-shadow-umbral-wraith            8080    https://darkly-shadow-umbral-wraith.burrow.mawa.dev     active
 ```
+
+**Note:** `tunnel status` and `tunnel list` use the same endpoint and produce similar output.
 
 ### `burrowctl tunnel inspect`
 
-View detailed tunnel traffic logs, requests, and responses.
+View tunnel traffic logs. **Note: This feature is not yet implemented.**
 
 ```bash
 burrowctl tunnel inspect {tunnel_id}
 ```
 
-**Example:**
-```bash
-burrowctl tunnel inspect swiftly-ancient-silent-dragon
+**Current behavior:**
+```
+Inspect functionality for tunnel swiftly-ancient-silent-dragon is not yet implemented.
+Coming soon: real-time request/response logging
 ```
 
-**Flags:**
+**Planned features:**
 - `--tail` - Number of recent entries to show (default: 50)
 - `--follow` - Stream logs in real-time (like `tail -f`)
-
-**Example output:**
-```
-[10:30:15] Incoming request:
-  Method: GET
-  URL: /
-  Headers: Host=swiftly-ancient-silent-dragon.burrow.mawa.dev
-
-[10:30:15] Outgoing response:
-  Status: 200 OK
-  Headers: Content-Type=text/html
-  Body: 52 bytes
-```
 
 ### `burrowctl tunnel close`
 

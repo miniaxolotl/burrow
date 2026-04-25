@@ -2,9 +2,9 @@ package internal
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"sync"
@@ -54,18 +54,26 @@ type Client struct {
 	token   string
 	domain  string
 	secure  bool
+	logger  *Logger
 	tunnels map[uint16]*TunnelConn
 	mu      sync.RWMutex
 }
 
+func (c *Client) WithLogger(l *Logger) *Client {
+	c.logger = l
+	return c
+}
+
 type TunnelConn struct {
-	ID      string
-	Port    uint16
-	URL     string
-	wsConn  *websocket.Conn
-	session *yamux.Session
-	ctx     context.Context
-	cancel  context.CancelFunc
+	ID         string
+	Port       uint16
+	URL        string
+	wsConn     *websocket.Conn
+	session    *yamux.Session
+	ctx        context.Context
+	cancel     context.CancelFunc
+	latency    time.Duration
+	reconnects int
 }
 
 func NewClient(server, token, domain string, secure bool) *Client {
@@ -74,6 +82,7 @@ func NewClient(server, token, domain string, secure bool) *Client {
 		token:   token,
 		domain:  domain,
 		secure:  secure,
+		logger:  NewLogger(LogLevelOff, ""),
 		tunnels: make(map[uint16]*TunnelConn),
 	}
 }
@@ -106,10 +115,12 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 	}
 	wsURL := fmt.Sprintf("%s://%s/tunnel/ws?tunnel_id=%s&port=%d", scheme, c.server, tunnelID, port)
 
+	start := time.Now()
 	conn, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to server: %w", err)
 	}
+	latency := time.Since(start)
 
 	tunnelURL := ""
 	if resp != nil {
@@ -132,6 +143,7 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 		URL:     tunnelURL,
 		wsConn:  conn,
 		session: session,
+		latency: latency,
 	}, nil
 }
 
@@ -161,7 +173,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 				return
 			}
 
-			log.Printf("Tunnel %s lost, reconnecting in %v...", tc.ID, reconnectDelay)
+			c.logger.Infof("Tunnel %s lost, reconnecting in %v...", tc.ID, reconnectDelay)
 			select {
 			case <-tc.ctx.Done():
 				return
@@ -182,18 +194,20 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 					return
 				}
 				failCount++
-				log.Printf("Reconnect failed for tunnel %s: %v", tc.ID, err)
+				c.logger.Errorf("Reconnect failed for tunnel %s: %v", tc.ID, err)
 				continue
 			}
 
 			tc.wsConn.Close()
 			tc.wsConn, tc.session = newTC.wsConn, newTC.session
+			tc.latency = newTC.latency
+			tc.reconnects++
 			if tunnelID != tc.ID {
 				tc.ID, tc.URL = tunnelID, newTC.URL
-				log.Printf("Tunnel resumed with new URL: %s", tc.URL)
+				c.logger.Infof("Tunnel resumed with new URL: %s", tc.URL)
 			} else {
 				tc.URL = newTC.URL
-				log.Printf("Tunnel %s reconnected", tc.ID)
+				c.logger.Infof("Tunnel %s reconnected", tc.ID)
 			}
 			reconnectDelay = time.Second
 			failCount = 0
@@ -207,7 +221,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 
 			conn, err := net.DialTimeout("tcp", localAddr, 5*time.Second)
 			if err != nil {
-				log.Printf("Failed to dial %s: %v", localAddr, err)
+				c.logger.Errorf("Failed to dial %s: %v", localAddr, err)
 				return
 			}
 			defer conn.Close()
@@ -254,11 +268,41 @@ func (c *Client) ListTunnels() []*protocol.TunnelInfo {
 	tunnels := make([]*protocol.TunnelInfo, 0, len(c.tunnels))
 	for port, tc := range c.tunnels {
 		tunnels = append(tunnels, &protocol.TunnelInfo{
-			TunnelID: tc.ID,
-			Port:     port,
-			URL:      tc.URL,
-			Status:   "active",
+			TunnelID:   tc.ID,
+			Port:       port,
+			URL:        tc.URL,
+			Status:     "active",
+			Latency:    tc.latency.Round(time.Millisecond).String(),
+			Reconnects: tc.reconnects,
 		})
 	}
 	return tunnels
+}
+
+func (c *Client) GetLogs(tunnelID string) ([]*protocol.TunnelLog, error) {
+	scheme := "http"
+	if c.secure {
+		scheme = "https"
+	}
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s/logs/%s", scheme, c.server, tunnelID), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build request: %w", err)
+	}
+	req.Header.Set("X-Tunnel-Token", c.token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to contact server: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("server returned %s", resp.Status)
+	}
+
+	var logs []*protocol.TunnelLog
+	if err := json.NewDecoder(resp.Body).Decode(&logs); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+	return logs, nil
 }

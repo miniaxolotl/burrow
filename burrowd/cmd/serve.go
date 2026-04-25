@@ -28,12 +28,14 @@ func init() {
 	serveCmd.Flags().String("redis-url", "localhost:6379", "Redis connection URL")
 	serveCmd.Flags().String("secret", "", "Authentication secret")
 	serveCmd.Flags().Bool("tls", false, "Generate tunnel URLs with https:// (set when server is behind HTTPS)")
+	serveCmd.Flags().String("log-level", "info", "Log level: off, info, debug")
 
 	viper.BindPFlag("port", serveCmd.Flags().Lookup("port"))
 	viper.BindPFlag("domain", serveCmd.Flags().Lookup("domain"))
 	viper.BindPFlag("redis-url", serveCmd.Flags().Lookup("redis-url"))
 	viper.BindPFlag("secret", serveCmd.Flags().Lookup("secret"))
 	viper.BindPFlag("tls", serveCmd.Flags().Lookup("tls"))
+	viper.BindPFlag("log-level", serveCmd.Flags().Lookup("log-level"))
 }
 
 func redactURL(raw string) string {
@@ -45,6 +47,17 @@ func redactURL(raw string) string {
 		u.User = url.UserPassword(u.User.Username(), "***")
 	}
 	return u.String()
+}
+
+func parseLogLevel(s string) internal.LogLevel {
+	switch s {
+	case "off":
+		return internal.LogLevelOff
+	case "debug":
+		return internal.LogLevelDebug
+	default:
+		return internal.LogLevelInfo
+	}
 }
 
 func runServe(cmd *cobra.Command, args []string) error {
@@ -75,6 +88,9 @@ func runServe(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("secret is required: set --secret flag or BURROW_SECRET env var")
 	}
 
+	logLevel := parseLogLevel(viper.GetString("log-level"))
+	logger := internal.NewLogger(logLevel, "burrowd")
+
 	pidFile := getConfigDir() + "/pid"
 	if err := os.MkdirAll(getConfigDir(), 0700); err == nil {
 		os.WriteFile(pidFile, []byte(fmt.Sprintf("%d", os.Getpid())), 0600)
@@ -89,7 +105,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	registry := internal.NewTunnelRegistry(redis, domain, secure)
 
-	server := internal.NewServer(registry, domain, secret, secure)
+	server := internal.NewServer(registry, domain, secret, secure, logger)
 
 	addr := fmt.Sprintf(":%s", port)
 	fmt.Printf("Starting burrowd on %s\n", addr)
