@@ -1,8 +1,12 @@
-bin/
+node_modules/
+/data/
+/bin/
 
 .env
 .env.*
 !.env.example
 
+logs/
 plans/
 .opencode/
+
