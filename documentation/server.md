@@ -71,19 +71,24 @@ Remove stored authentication token.
 
 ### `burrowd tunnel list`
 
-List all active tunnels on this server (reads from Redis).
+List all active tunnels by querying the running server's `GET /tunnels` API.
 
 ```bash
 burrowd tunnel list
+burrowd tunnel list --server burrow.example.com:25701 --token mytoken
 ```
+
+**Requires:** `burrowd serve` must be running. Use `--server` and `--token` (or `BURROW_SERVER` / `BURROW_TOKEN` env vars) to authenticate.
 
 ### `burrowd tunnel revoke`
 
-Force-close a specific tunnel (deletes from Redis only; live session stays open until client disconnects).
+Force-close a specific tunnel by calling the server's `DELETE /tunnel/{id}` API. Closes both the Redis record and the live yamux session.
 
 ```bash
 burrowd tunnel revoke {tunnel_id}
 ```
+
+**Requires:** `burrowd serve` must be running. Use `--server` and `--token` (or `BURROW_SERVER` / `BURROW_TOKEN` env vars) to authenticate.
 
 ### `burrowd stop`
 

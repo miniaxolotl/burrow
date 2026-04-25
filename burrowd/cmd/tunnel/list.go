@@ -2,9 +2,11 @@ package tunnel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 
-	"burrow/burrowd/internal"
+	"burrow/protocol"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,19 +19,35 @@ var listCmd = &cobra.Command{
 }
 
 func runTunnelList(cmd *cobra.Command, args []string) error {
-	redisURL := resolveRedisURL(cmd)
-	domain := viper.GetString("domain")
+	server := viper.GetString("server")
+	token := viper.GetString("token")
+	secure := viper.GetBool("tls")
 
-	client, err := internal.NewRedisClient(redisURL)
-	if err != nil {
-		return fmt.Errorf("failed to connect to redis: %w", err)
+	scheme := "http"
+	if secure {
+		scheme = "https"
 	}
-	defer client.Close()
 
-	registry := internal.NewTunnelRegistry(client, domain, false)
-	tunnels, err := registry.List(context.Background())
+	req, err := http.NewRequestWithContext(context.Background(), "GET",
+		fmt.Sprintf("%s://%s/tunnels", scheme, server), nil)
 	if err != nil {
-		return fmt.Errorf("failed to list tunnels: %w", err)
+		return fmt.Errorf("failed to build request: %w", err)
+	}
+	req.Header.Set("X-Tunnel-Token", token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to contact server: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("server returned %s", resp.Status)
+	}
+
+	var tunnels []*protocol.TunnelInfo
+	if err := json.NewDecoder(resp.Body).Decode(&tunnels); err != nil {
+		return fmt.Errorf("failed to decode response: %w", err)
 	}
 
 	if len(tunnels) == 0 {

@@ -394,7 +394,6 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	defer client.Close()
 
 	if err := r.Write(stream); err != nil {
 		return

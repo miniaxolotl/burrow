@@ -3,10 +3,10 @@ package tunnel
 import (
 	"context"
 	"fmt"
-
-	"burrow/burrowd/internal"
+	"net/http"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var revokeCmd = &cobra.Command{
@@ -18,16 +18,30 @@ var revokeCmd = &cobra.Command{
 
 func runTunnelRevoke(cmd *cobra.Command, args []string) error {
 	tunnelID := args[0]
-	redisURL := resolveRedisURL(cmd)
+	server := viper.GetString("server")
+	token := viper.GetString("token")
+	secure := viper.GetBool("tls")
 
-	client, err := internal.NewRedisClient(redisURL)
-	if err != nil {
-		return fmt.Errorf("failed to connect to redis: %w", err)
+	scheme := "http"
+	if secure {
+		scheme = "https"
 	}
-	defer client.Close()
 
-	if err := client.DeleteTunnel(context.Background(), tunnelID); err != nil {
-		return fmt.Errorf("failed to revoke tunnel %s: %w", tunnelID, err)
+	req, err := http.NewRequestWithContext(context.Background(), "DELETE",
+		fmt.Sprintf("%s://%s/tunnel/%s", scheme, server, tunnelID), nil)
+	if err != nil {
+		return fmt.Errorf("failed to build request: %w", err)
+	}
+	req.Header.Set("X-Tunnel-Token", token)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to contact server: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNoContent {
+		return fmt.Errorf("server returned %s", resp.Status)
 	}
 
 	fmt.Printf("Tunnel %s revoked\n", tunnelID)

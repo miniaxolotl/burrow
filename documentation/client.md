@@ -61,7 +61,7 @@ burrowctl tunnel create --port 3000 --port 8080
 | `c` | Copy selected tunnel URL to clipboard |
 | `o` | Open selected tunnel URL in browser |
 | `d` | Close (delete) selected tunnel |
-| `l` | View request logs for selected tunnel |
+| `l` | View request logs for selected tunnel / return to list from log view |
 | `↑↓` / `j k` | Navigate tunnel list |
 | `esc` | Back (from log view or port input) |
 | `q` / `Ctrl+C` | Quit |
@@ -98,15 +98,21 @@ Show connection status for all tunnels. Same output as `list` but with a separat
 burrowctl tunnel status
 ```
 
-**Note:** Neither `list` nor `status` shows latency or reconnect count — those are only visible in the TUI.
+**Note:** Neither `list` nor `status` shows latency or reconnect count — those are only visible in the TUI. Both commands produce identical output except `status` adds a separator line beneath the table.
 
 ### `burrowctl tunnel inspect`
 
-View tunnel traffic logs. **Note: This CLI command is a stub.** Use the TUI (`l` key) for request logs.
+View tunnel traffic logs from the command line.
 
 ```bash
 burrowctl tunnel inspect {tunnel_id}
+burrowctl tunnel inspect {tunnel_id} --tail 20
+burrowctl tunnel inspect {tunnel_id} --follow
 ```
+
+**Flags:**
+- `--tail N` — Show only the last N log entries (default: all)
+- `--follow` — Poll every second and print new entries as they arrive (continuous tail)
 
 ### `burrowctl tunnel close`
 
@@ -125,7 +131,7 @@ burrowctl auth login your-hmac-token
 burrowctl auth login your-hmac-token --server burrow.example.com:25701
 ```
 
-With `--server`, validates the token against the server after storing. Token saved to `~/.config/burrow/client.json`.
+Stores the token in `~/.config/burrow/client.json`, then validates it against the configured server. The `--server` flag overrides which server to validate against. If the server rejects the token (401), a warning is printed but the token is still saved — run `burrowctl auth login` again with a valid token to fix.
 
 ### `burrowctl auth logout`
 

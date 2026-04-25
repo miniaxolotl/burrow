@@ -55,17 +55,6 @@ func (t *TunnelRegistry) List(ctx context.Context) ([]*protocol.TunnelInfo, erro
 	return result, nil
 }
 
-func (t *TunnelRegistry) HandleWildcardTunnelID(ctx context.Context) (string, error) {
-	for range 100 {
-		id := protocol.RandomTunnelID()
-		existing, _ := t.redis.GetTunnel(ctx, id)
-		if existing == nil {
-			return id, nil
-		}
-	}
-	return "", fmt.Errorf("failed to generate unique tunnel ID after 100 attempts")
-}
-
 func ParseTunnelID(host, domain string) string {
 	suffix := "." + domain
 	if !strings.HasSuffix(host, suffix) {
