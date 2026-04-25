@@ -21,7 +21,7 @@ echo ""
 
 # --- platform packages ---
 for PLATFORM in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
-  PKG_DIR="${ROOT}/npm/burrowctl-${PLATFORM}"
+  PKG_DIR="${ROOT}/packages/burrowctl-${PLATFORM}"
   BIN_SRC="${ROOT}/${GORELEASER_DIRS[$PLATFORM]}/burrowctl"
 
   echo "--- ${PLATFORM} ---"
@@ -48,7 +48,7 @@ done
 echo ""
 
 # --- main package ---
-MAIN_DIR="${ROOT}/npm/burrowctl"
+MAIN_DIR="${ROOT}/packages/burrowctl"
 
 node -e "
   const fs = require('fs');

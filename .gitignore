@@ -11,5 +11,5 @@ plans/
 .opencode/
 
 dist/
-npm/burrowctl-*/burrowctl
+packages/burrowctl-*/burrowctl
 
