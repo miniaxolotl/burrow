@@ -16,6 +16,16 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=${TARGETARCH:-$(go env GOARCH)} \
     go build -trimpath -ldflags="-s -w" -o /bin/burrowd .
 
 FROM alpine:3.20
+
+LABEL org.opencontainers.image.source="https://github.com/miniaxolotl/burrow" \
+      org.opencontainers.image.url="https://github.com/miniaxolotl/burrow" \
+      org.opencontainers.image.documentation="https://github.com/miniaxolotl/burrow#readme" \
+      org.opencontainers.image.title="burrowd" \
+      org.opencontainers.image.description="Self-hosted tunnel server" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.vendor="Elias Mawa" \
+      org.opencontainers.image.authors="Elias Mawa <elias@mawa.dev>"
+
 RUN apk add --no-cache ca-certificates tzdata wget
 COPY --from=builder /bin/burrowd /usr/local/bin/
 EXPOSE 25701
