@@ -15,17 +15,17 @@ import (
 	"burrow/protocol"
 
 	"github.com/gorilla/websocket"
-	"github.com/xtaci/yamux"
+	"github.com/hashicorp/yamux"
 )
 
 type countWriter struct {
 	w io.Writer
-	n *int64
+	n int64
 }
 
 func (cw *countWriter) Write(p []byte) (int, error) {
 	n, err := cw.w.Write(p)
-	atomic.AddInt64(cw.n, int64(n))
+	atomic.AddInt64(&cw.n, int64(n))
 	return n, err
 }
 
@@ -228,8 +228,22 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			defer conn.Close()
 
 			done := make(chan struct{}, 2)
-			go func() { io.Copy(&countWriter{conn, &tc.totalSize}, s); conn.Close(); done <- struct{}{} }()
-			go func() { io.Copy(&countWriter{s, &tc.totalSize}, conn); s.Close(); done <- struct{}{} }()
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				n, _ := io.Copy(conn, s)
+				atomic.AddInt64(&tc.totalSize, n)
+				conn.Close()
+				wg.Done()
+				done <- struct{}{}
+			}()
+			go func() {
+				n, _ := io.Copy(s, conn)
+				atomic.AddInt64(&tc.totalSize, n)
+				s.Close()
+				wg.Done()
+				done <- struct{}{}
+			}()
 			<-done
 			<-done
 		}(stream)

@@ -15,7 +15,7 @@ import (
 	"burrow/protocol"
 
 	"github.com/gorilla/websocket"
-	"github.com/xtaci/yamux"
+	"github.com/hashicorp/yamux"
 )
 
 
@@ -87,6 +87,8 @@ func (s *Server) auth(r *http.Request) bool {
 	token := r.Header.Get("X-Tunnel-Token")
 	if token == "" {
 		token = r.URL.Query().Get("token")
+		// WARNING: Accepting token from query params is insecure as tokens may
+		// appear in server access logs. Prefer X-Tunnel-Token header.
 	}
 	return protocol.ValidateToken(token, s.secret)
 }

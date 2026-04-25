@@ -5,10 +5,10 @@ go 1.26.2
 require (
 	burrow/protocol v0.0.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/hashicorp/yamux v0.1.1
 	github.com/redis/go-redis/v9 v9.18.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
-	github.com/xtaci/yamux v0.0.0-20160826044249-106e720e03a8
 )
 
 require (

@@ -2,7 +2,6 @@ package tunnel
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -23,6 +22,6 @@ func runTunnelStatus(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 	printTunnels(tunnels)
-	fmt.Println(strings.Repeat("-", 95))
+	fmt.Println("-----------------------------------------------------------------------------------------------------------------------------")
 	return nil
 }

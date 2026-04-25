@@ -9,9 +9,9 @@ require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/hashicorp/yamux v0.1.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
-	github.com/xtaci/yamux v0.0.0-20160826044249-106e720e03a8
 )
 
 replace burrow/protocol => ../protocol

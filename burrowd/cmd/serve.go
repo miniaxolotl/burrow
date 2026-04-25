@@ -38,11 +38,16 @@ func init() {
 
 func redactURL(raw string) string {
 	u, err := url.Parse(raw)
-	if err != nil || u.User == nil {
+	if err != nil {
+		return "***"
+	}
+	if u.User == nil {
 		return raw
 	}
 	if _, hasPass := u.User.Password(); hasPass {
 		u.User = url.UserPassword(u.User.Username(), "***")
+	} else {
+		u.User = url.User(u.User.Username())
 	}
 	return u.String()
 }
