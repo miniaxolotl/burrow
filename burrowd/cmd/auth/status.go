@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"burrow/burrowd/internal"
+
 	"github.com/spf13/cobra"
 )
 
@@ -15,7 +17,7 @@ var statusCmd = &cobra.Command{
 }
 
 func runAuthStatus(cmd *cobra.Command, args []string) error {
-	tokenFile := getConfigDir() + "/token"
+	tokenFile := internal.ConfigDir() + "/token"
 	data, err := os.ReadFile(tokenFile)
 	if os.IsNotExist(err) {
 		fmt.Println("Not authenticated")

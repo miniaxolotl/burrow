@@ -110,8 +110,3 @@ func (r *RedisClient) ListTunnels(ctx context.Context) ([]*TunnelData, error) {
 	}
 	return tunnels, nil
 }
-
-func (r *RedisClient) RefreshTunnel(ctx context.Context, id string, ttl time.Duration) error {
-	key := fmt.Sprintf("tunnel:%s", id)
-	return r.client.Expire(ctx, key, ttl).Err()
-}

@@ -12,9 +12,10 @@ type TunnelInfo struct {
 }
 
 type TunnelLog struct {
-	Timestamp time.Time `json:"timestamp"`
-	Method    string    `json:"method"`
-	Path      string    `json:"path"`
-	Size      int64     `json:"size"`
-	Duration  string    `json:"duration"`
+	Timestamp   time.Time `json:"timestamp"`
+	Method      string    `json:"method"`
+	Path        string    `json:"path"`
+	StatusCode  int       `json:"status_code"`
+	Size        int64     `json:"size"`
+	Duration    string    `json:"duration"`
 }

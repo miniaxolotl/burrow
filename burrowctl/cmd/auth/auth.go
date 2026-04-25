@@ -21,7 +21,7 @@ func init() {
 	AuthCmd.AddCommand(statusCmd)
 }
 
-func configDir() string {
+func ConfigDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return ".config/burrow"
@@ -30,16 +30,15 @@ func configDir() string {
 }
 
 type clientConfig struct {
-	Server   string `json:"server"`
-	Token    string `json:"token"`
-	Secret   string `json:"secret"`
-	Domain   string `json:"domain"`
-	TLS      bool   `json:"tls"`
-	LogLevel string `json:"log-level"`
+	Server string `json:"server"`
+	Token  string `json:"token"`
+	Secret string `json:"secret"`
+	Domain string `json:"domain"`
+	TLS    bool   `json:"tls"`
 }
 
 func readConfig() (*clientConfig, string, error) {
-	dir := configDir()
+	dir := ConfigDir()
 	cfgFile := filepath.Join(dir, "client.json")
 	data, err := os.ReadFile(cfgFile)
 	if err != nil {

@@ -55,7 +55,6 @@ type Client struct {
 	token   string
 	domain  string
 	secure  bool
-	logger  *Logger
 	tunnels map[uint16]*TunnelConn
 	mu      sync.RWMutex
 }
@@ -78,7 +77,6 @@ func NewClient(server, token, domain string, secure bool) *Client {
 		token:   token,
 		domain:  domain,
 		secure:  secure,
-		logger:  NewLogger(LogLevelOff, ""),
 		tunnels: make(map[uint16]*TunnelConn),
 	}
 }
@@ -198,8 +196,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 				return
 			}
 
-			c.logger.Infof("Tunnel %s lost, reconnecting in %v...", tc.ID, reconnectDelay)
-			select {
+		select {
 			case <-tc.ctx.Done():
 				return
 			case <-time.After(reconnectDelay):
@@ -219,7 +216,6 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 					return
 				}
 				failCount++
-				c.logger.Errorf("Reconnect failed for tunnel %s: %v", tc.ID, err)
 				continue
 			}
 
@@ -229,10 +225,8 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			tc.reconnects++
 			if tunnelID != tc.ID {
 				tc.ID, tc.URL = tunnelID, newTC.URL
-				c.logger.Infof("Tunnel resumed with new URL: %s", tc.URL)
 			} else {
 				tc.URL = newTC.URL
-				c.logger.Infof("Tunnel %s reconnected", tc.ID)
 			}
 			reconnectDelay = time.Second
 			failCount = 0
@@ -246,7 +240,6 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 
 			conn, err := net.DialTimeout("tcp", localAddr, 5*time.Second)
 			if err != nil {
-				c.logger.Errorf("Failed to dial %s: %v", localAddr, err)
 				return
 			}
 			defer conn.Close()

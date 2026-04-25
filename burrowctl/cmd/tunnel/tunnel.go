@@ -23,13 +23,11 @@ func init() {
 	TunnelCmd.PersistentFlags().String("secret", "", "Shared secret (generates a token)")
 	TunnelCmd.PersistentFlags().String("domain", "burrow.mawa.dev", "Domain for tunnel URLs")
 	TunnelCmd.PersistentFlags().Bool("tls", false, "Use TLS (wss:// and https://) when connecting to the server")
-	TunnelCmd.PersistentFlags().String("log-level", "info", "Log level: off, info, debug")
 	viper.BindPFlag("server", TunnelCmd.PersistentFlags().Lookup("server"))
 	viper.BindPFlag("token", TunnelCmd.PersistentFlags().Lookup("token"))
 	viper.BindPFlag("secret", TunnelCmd.PersistentFlags().Lookup("secret"))
 	viper.BindPFlag("domain", TunnelCmd.PersistentFlags().Lookup("domain"))
 	viper.BindPFlag("tls", TunnelCmd.PersistentFlags().Lookup("tls"))
-	viper.BindPFlag("log-level", TunnelCmd.PersistentFlags().Lookup("log-level"))
 
 	TunnelCmd.AddCommand(createCmd)
 	TunnelCmd.AddCommand(listCmd)
@@ -65,14 +63,6 @@ func httpScheme() string {
 		return "https"
 	}
 	return "http"
-}
-
-// wsScheme returns "wss" or "ws" based on secureTLS.
-func wsScheme() string {
-	if secureTLS() {
-		return "wss"
-	}
-	return "ws"
 }
 
 // resolveToken returns the best available auth token. Priority:

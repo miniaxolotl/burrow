@@ -34,16 +34,8 @@ func init() {
 	rootCmd.AddCommand(auth.AuthCmd)
 }
 
-func configDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".config/burrow"
-	}
-	return filepath.Join(home, ".config", "burrow")
-}
-
 func loadClientConfig() {
-	dir := configDir()
+	dir := auth.ConfigDir()
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return
 	}
@@ -51,12 +43,11 @@ func loadClientConfig() {
 	cfgFile := filepath.Join(dir, "client.json")
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
 		defaults := map[string]any{
-			"server":    "localhost:25701",
-			"token":     "",
-			"secret":    "",
-			"domain":    "burrow.mawa.dev",
-			"tls":       false,
-			"log-level": "info",
+			"server": "localhost:25701",
+			"token":  "",
+			"secret": "",
+			"domain": "burrow.mawa.dev",
+			"tls":    false,
 		}
 		if b, err := json.MarshalIndent(defaults, "", "  "); err == nil {
 			os.WriteFile(cfgFile, append(b, '\n'), 0600)

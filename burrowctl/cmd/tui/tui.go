@@ -3,8 +3,6 @@ package tui
 import (
 	"context"
 	"fmt"
-	"net"
-	"os"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -19,19 +17,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
-
-var Cmd = &cobra.Command{
-	Use:   "tui",
-	Short: "Interactive tunnel manager",
-	RunE:  run,
-}
-
-func init() {
-	Cmd.Flags().IntSlice("port", []int{}, "Ports to open on start (repeatable)")
-}
 
 // ── styles ────────────────────────────────────────────────────────────────────
 
@@ -56,9 +42,7 @@ var (
 	rowPortStyle   = bg.Foreground(clrDimGray)
 	activeStyle    = bg.Foreground(clrGreen)
 
-	selRowStyle  = lipgloss.NewStyle().Foreground(clrWhite).Background(clrSelected).Bold(true)
-	selPortStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("#d4e4c8")).Background(clrSelected)
-	selCursor    = lipgloss.NewStyle().Foreground(clrGreen).Background(clrSelected).Bold(true)
+	selRowStyle = lipgloss.NewStyle().Foreground(clrWhite).Background(clrSelected).Bold(true)
 
 	urlStyle    = bg.Foreground(clrGreen).Underline(true)
 	statusStyle = bg.Foreground(clrDimGray)
@@ -559,7 +543,7 @@ func formatSize(n int64) string {
 	if n < 1024*1024 {
 		return fmt.Sprintf("%.1fKB", float64(n)/1024)
 	}
-return fmt.Sprintf("%.1fMB", float64(n)/(1024*1024))
+	return fmt.Sprintf("%.1fMB", float64(n)/(1024*1024))
 }
 
 func openURL(url string) error {
@@ -592,64 +576,9 @@ func truncate(s string, n int) string {
 	return s[:n-1] + "…"
 }
 
-// ── command ───────────────────────────────────────────────────────────────────
-
-func autoTLS(server string) bool {
-	if viper.GetBool("tls") {
-		return true
-	}
-	host := server
-	if h, _, err := net.SplitHostPort(server); err == nil {
-		host = h
-	}
-	switch host {
-	case "localhost", "127.0.0.1", "::1":
-		return false
-	}
-	return true
-}
-
-func resolveToken() string {
-	if t := viper.GetString("token"); t != "" {
-		return t
-	}
-	if home, err := os.UserHomeDir(); err == nil {
-		if data, err := os.ReadFile(home + "/.burrow/token"); err == nil {
-			if t := strings.TrimSpace(string(data)); t != "" {
-				return t
-			}
-		}
-	}
-	if secret := viper.GetString("secret"); secret != "" {
-		return protocol.GenerateToken(secret)
-	}
-	return ""
-}
-
 // RunWithClient starts the TUI using an already-initialized client.
 // Called by tunnel create after tunnels are established.
 func RunWithClient(client *internal.Client, server string) error {
-	m := newModel(client, server)
-	_, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
-	return err
-}
-
-func run(cmd *cobra.Command, _ []string) error {
-	ports, _ := cmd.Flags().GetIntSlice("port")
-	server := viper.GetString("server")
-	domain := viper.GetString("domain")
-	token  := resolveToken()
-
-	client := internal.NewClient(server, token, domain, autoTLS(server))
-	defer client.Close()
-
-	ctx := context.Background()
-	for _, p := range ports {
-		if _, err := client.CreateTunnel(ctx, uint16(p)); err != nil {
-			return fmt.Errorf("port %d: %w", p, err)
-		}
-	}
-
 	m := newModel(client, server)
 	_, err := tea.NewProgram(m, tea.WithAltScreen()).Run()
 	return err

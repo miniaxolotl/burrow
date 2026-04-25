@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"burrow/burrowd/internal"
 	"burrow/protocol"
 
 	"github.com/spf13/cobra"
@@ -29,7 +30,7 @@ func runAuthLogin(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid token")
 	}
 
-	configDir := getConfigDir()
+	configDir := internal.ConfigDir()
 	if err := os.MkdirAll(configDir, 0700); err != nil {
 		return fmt.Errorf("failed to create config dir: %w", err)
 	}
@@ -41,12 +42,4 @@ func runAuthLogin(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("Authentication successful")
 	return nil
-}
-
-func getConfigDir() string {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ".burrow"
-	}
-	return home + "/.burrow"
 }

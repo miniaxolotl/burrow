@@ -62,7 +62,6 @@ type Server struct {
 	secret         string
 	secure         bool
 	startTime      time.Time
-	logger         *Logger
 	mu             sync.RWMutex
 	connections    map[string]*yamux.Session
 	pendingRemoves map[string]chan struct{}
@@ -72,14 +71,13 @@ type Server struct {
 	logs           map[string][]*protocol.TunnelLog
 }
 
-func NewServer(registry *TunnelRegistry, domain, secret string, secure bool, logger *Logger) *Server {
+func NewServer(registry *TunnelRegistry, domain, secret string, secure bool) *Server {
 	s := &Server{
 		registry:    registry,
 		domain:      domain,
 		secret:      secret,
 		secure:      secure,
 		startTime:   time.Now(),
-		logger:      logger,
 		connections:    make(map[string]*yamux.Session),
 		pendingRemoves: make(map[string]chan struct{}),
 		logs:           make(map[string][]*protocol.TunnelLog),
@@ -258,7 +256,6 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if cancel, ok := s.pendingRemoves[tunnelID]; ok {
 		close(cancel)
 		delete(s.pendingRemoves, tunnelID)
-		s.logger.Infof("Tunnel %s reconnected, grace period cancelled", tunnelID)
 	}
 	s.mu.Unlock()
 
@@ -269,7 +266,6 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	tunnelURL := fmt.Sprintf("%s://%s.%s", scheme, tunnelID, s.domain)
 	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Tunnel-URL": []string{tunnelURL}})
 	if err != nil {
-		s.logger.Errorf("WebSocket upgrade failed: %v", err)
 		return
 	}
 	defer conn.Close()
@@ -278,13 +274,11 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	cfg.KeepAliveInterval = 30 * time.Second
 	session, err := yamux.Server(&wsConn{Conn: conn}, cfg)
 	if err != nil {
-		s.logger.Errorf("Yamux server failed: %v", err)
 		return
 	}
 	defer session.Close()
 
 	if _, err := s.registry.Register(r.Context(), tunnelID, uint16(port)); err != nil {
-		s.logger.Errorf("Failed to register tunnel %s: %v", tunnelID, err)
 		return
 	}
 
@@ -304,7 +298,6 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				delete(s.pendingRemoves, tunnelID)
 				s.mu.Unlock()
 				s.registry.Remove(tunnelID)
-				s.logger.Infof("Tunnel %s grace period expired", tunnelID)
 			case <-cancel:
 				// Cancelled by reconnect or shutdown.
 			}
@@ -319,8 +312,6 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		delete(s.connections, tunnelID)
 		s.mu.Unlock()
 	}()
-
-	s.logger.Infof("Tunnel %s connected (port %d)", tunnelID, port)
 
 	// Keep the Redis TTL alive for as long as the session is open.
 	done := make(chan struct{})
@@ -348,7 +339,6 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	for {
 		stream, err := session.AcceptStream()
 		if err != nil {
-			s.logger.Infof("Tunnel %s disconnected: %v", tunnelID, err)
 			return
 		}
 		stream.Close()
@@ -402,13 +392,11 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	}
 	client, brw, err := hj.Hijack()
 	if err != nil {
-		s.logger.Errorf("Hijack failed: %v", err)
 		return
 	}
 	defer client.Close()
 
 	if err := r.Write(stream); err != nil {
-		s.logger.Errorf("Failed to forward request: %v", err)
 		return
 	}
 
@@ -444,13 +432,11 @@ func (s *Server) proxyWebSocket(w http.ResponseWriter, r *http.Request, stream n
 	}
 	client, brw, err := hj.Hijack()
 	if err != nil {
-		s.logger.Errorf("WebSocket hijack failed: %v", err)
 		return 0
 	}
 	defer client.Close()
 
 	if err := r.Write(stream); err != nil {
-		s.logger.Errorf("Failed to forward WebSocket handshake: %v", err)
 		return 0
 	}
 
@@ -478,7 +464,6 @@ func (s *Server) Start(addr string) error {
 	s.mu.Lock()
 	s.httpServer = srv
 	s.mu.Unlock()
-	s.logger.Infof("Starting server on %s", addr)
 	return srv.ListenAndServe()
 }
 

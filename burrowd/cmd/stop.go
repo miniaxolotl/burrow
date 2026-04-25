@@ -6,6 +6,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"burrow/burrowd/internal"
+
 	"github.com/spf13/cobra"
 )
 
@@ -18,7 +20,7 @@ var stopCmd = &cobra.Command{
 func init() {}
 
 func runStop(cmd *cobra.Command, args []string) error {
-	pidFile := getConfigDir() + "/pid"
+	pidFile := internal.ConfigDir() + "/pid"
 	data, err := os.ReadFile(pidFile)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("server not running (no PID file found)")

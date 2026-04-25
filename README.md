@@ -53,6 +53,11 @@ go build -o bin/burrowctl ./burrowctl
 
 See `documentation/server.md` for Dokku deployment, wildcard SSL, and nginx config.
 
+## Documentation
+
+- [Client CLI reference](documentation/client.md)
+- [Server setup & deployment](documentation/server.md)
+
 ## License
 
 MIT

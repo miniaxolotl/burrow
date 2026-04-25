@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"burrow/burrowd/internal"
+
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +16,7 @@ var logoutCmd = &cobra.Command{
 }
 
 func runAuthLogout(cmd *cobra.Command, args []string) error {
-	tokenFile := getConfigDir() + "/token"
+	tokenFile := internal.ConfigDir() + "/token"
 	if _, err := os.Stat(tokenFile); os.IsNotExist(err) {
 		fmt.Println("No token stored")
 		return nil

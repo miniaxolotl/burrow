@@ -1,4 +1,4 @@
-package internal
+package protocol
 
 import (
 	"fmt"
@@ -26,6 +26,17 @@ func NewLogger(level LogLevel, prefix string) *Logger {
 		level:  level,
 		prefix: prefix,
 		std:    log.New(os.Stderr, "", 0),
+	}
+}
+
+func ParseLogLevel(s string) LogLevel {
+	switch s {
+	case "off":
+		return LogLevelOff
+	case "debug":
+		return LogLevelDebug
+	default:
+		return LogLevelInfo
 	}
 }
 
