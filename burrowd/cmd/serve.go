@@ -76,8 +76,11 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 
 	pidFile := internal.ConfigDir() + "/pid"
-	if err := os.MkdirAll(internal.ConfigDir(), 0700); err == nil {
-		os.WriteFile(pidFile, []byte(fmt.Sprintf("%d", os.Getpid())), 0600)
+	if err := os.MkdirAll(internal.ConfigDir(), 0700); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to create config directory: %v\n", err)
+	} else if err := os.WriteFile(pidFile, []byte(fmt.Sprintf("%d", os.Getpid())), 0600); err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to write PID file: %v\n", err)
+	} else {
 		defer os.Remove(pidFile)
 	}
 

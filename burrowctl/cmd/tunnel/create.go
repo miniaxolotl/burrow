@@ -37,10 +37,16 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 	defer client.Close()
 
 	ctx := context.Background()
+	failures := 0
 	for _, port := range ports {
 		if _, err := client.CreateTunnel(ctx, uint16(port)); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to create tunnel for port %d: %v\n", port, err)
+			failures++
 		}
+	}
+
+	if failures == len(ports) {
+		return fmt.Errorf("all %d tunnel(s) failed to create", len(ports))
 	}
 
 	return tui.RunWithClient(client, server)

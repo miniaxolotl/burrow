@@ -274,6 +274,8 @@ func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	s.mu.Unlock()
 
+	s.cleanupTunnel(tunnelID)
+
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -343,6 +345,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				delete(s.pendingRemoves, tunnelID)
 				s.mu.Unlock()
 				s.registry.Remove(tunnelID)
+				s.cleanupTunnel(tunnelID)
 			case <-cancel:
 				// Cancelled by reconnect or shutdown.
 			}
