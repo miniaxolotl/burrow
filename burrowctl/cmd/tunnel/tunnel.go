@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 
-	"burrow/burrowctl/internal"
 	"burrow/protocol"
 
 	"github.com/spf13/cobra"
@@ -96,15 +95,4 @@ func resolveToken() string {
 		return protocol.GenerateToken(secret)
 	}
 	return ""
-}
-
-func parseLogLevel(s string) internal.LogLevel {
-	switch s {
-	case "off":
-		return internal.LogLevelOff
-	case "debug":
-		return internal.LogLevelDebug
-	default:
-		return internal.LogLevelInfo
-	}
 }

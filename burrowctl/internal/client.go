@@ -60,11 +60,6 @@ type Client struct {
 	mu      sync.RWMutex
 }
 
-func (c *Client) WithLogger(l *Logger) *Client {
-	c.logger = l
-	return c
-}
-
 type TunnelConn struct {
 	ID         string
 	Port       uint16

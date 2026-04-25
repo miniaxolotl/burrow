@@ -2,86 +2,56 @@
 
 Expose local services to the internet via HTTPS subdomains.
 
-Tunnel URLs look like: `https://mighty-arcane-dragon.mawa.dev`
+```
+https://swiftly-ancient-silent-dragon.burrow.mawa.dev → localhost:3000
+```
 
-## Quick Start (Docker Compose)
+## Server
 
 ```bash
-cp .env.example .env
-# Edit .env — set BURROW_SECRET
-
+cp .env.example .env   # set BURROW_SECRET
 docker compose up -d
 ```
 
-Then on your local machine:
+## Client
 
 ```bash
-BURROW_SERVER=your-server.example.com BURROW_SECRET=xxx BURROW_TLS=true \
-  burrowctl tunnel create --port 3000
+burrowctl auth login <token> --server your-server:25701
+burrowctl tunnel create --port 3000
 ```
 
-## Local Development (no Docker)
+Or one-off:
 
 ```bash
-# Start Redis
-docker compose up -d redis
+BURROW_SERVER=your-server:25701 BURROW_SECRET=xxx burrowctl tunnel create --port 3000
+```
 
-# Build
+## TUI
+
+`create` launches an interactive manager:
+
+| Key | Action |
+|-----|--------|
+| `n` | New tunnel |
+| `c` | Copy URL |
+| `o` | Open in browser |
+| `d` | Close tunnel |
+| `l` | View request logs |
+| `q` | Quit |
+
+## Local Dev
+
+```bash
+docker compose up -d redis
 go build -o bin/burrowd ./burrowd
 go build -o bin/burrowctl ./burrowctl
-
-# Run server
 ./bin/burrowd serve --secret dev --domain localhost
-
-# Create tunnel (separate terminal)
 ./bin/burrowctl tunnel create --server localhost:25701 --secret dev --port 3000
 ```
 
-## Configuration
+## Deploy
 
-**Server (`burrowd`)**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BURROW_SECRET` | required | Shared auth secret |
-| `BURROW_DOMAIN` | `mawa.dev` | Tunnel subdomain base |
-| `BURROW_PORT` | `25701` | Listen port |
-| `BURROW_REDIS_URL` | `redis://localhost:6379` | Redis URL |
-| `BURROW_TLS` | `false` | Generate `https://` tunnel URLs (set `true` when behind HTTPS proxy) |
-
-Also accepts `PORT` and `REDIS_URL` as fallbacks (Dokku convention).
-
-**Client (`burrowctl`)**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `BURROW_SERVER` | `localhost:25701` | Server address |
-| `BURROW_SECRET` | — | Shared secret (auto-generates token) |
-| `BURROW_TOKEN` | — | Pre-generated token (alternative to secret) |
-| `BURROW_TLS` | `false` | Use `wss://` and `https://` when connecting to the server |
-| `BURROW_DOMAIN` | `burrow.mawa.dev` | Fallback domain for tunnel URL display |
-
-## API
-
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/health` | GET | No | Status, uptime, active tunnel count |
-| `/tunnels` | GET | Yes | List active tunnels |
-| `/tunnel/ws` | GET | Yes | WebSocket — establish tunnel |
-| `/tunnel/{id}` | DELETE | Yes | Close tunnel |
-
-## Deployment (Dokku)
-
-```bash
-dokku apps:create burrowd
-dokku plugin:install https://github.com/dokku/dokku-redis.git
-dokku redis:create burrowd-redis && dokku redis:link burrowd-redis burrowd
-dokku domains:set burrowd mawa.dev '*.mawa.dev'
-dokku config:set burrowd BURROW_SECRET=xxx BURROW_DOMAIN=mawa.dev BURROW_TLS=true
-git push dokku production:main
-```
-
-**Note:** `dokku letsencrypt:enable` uses HTTP-01 challenge which fails on wildcard domains. Use `certbot` + `dns-cloudflare` instead — see `documentation/server.md` for details.
+See `documentation/server.md` for Dokku deployment, wildcard SSL, and nginx config.
 
 ## License
 

@@ -33,10 +33,7 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("at least one port is required")
 	}
 
-	logLevel := parseLogLevel(viper.GetString("log-level"))
-	logger := internal.NewLogger(logLevel, "")
-
-	client := internal.NewClient(server, token, domain, secureTLS()).WithLogger(logger)
+	client := internal.NewClient(server, token, domain, secureTLS())
 	defer client.Close()
 
 	ctx := context.Background()
