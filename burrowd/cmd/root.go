@@ -16,6 +16,10 @@ var rootCmd = &cobra.Command{
 	Long:  `burrowd is the server component that handles tunnel requests from clients.`,
 }
 
+func SetVersion(v string) {
+	rootCmd.Version = v
+}
+
 func Execute() error {
 	return rootCmd.Execute()
 }
