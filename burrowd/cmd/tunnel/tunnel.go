@@ -1,23 +1,9 @@
 package tunnel
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-func resolveRedisURL(cmd *cobra.Command) string {
-	url := viper.GetString("redis-url")
-	if !cmd.Flags().Changed("redis-url") {
-		if _, ok := os.LookupEnv("BURROW_REDIS_URL"); !ok {
-			if u := os.Getenv("REDIS_URL"); u != "" {
-				return u
-			}
-		}
-	}
-	return url
-}
 
 var TunnelCmd = &cobra.Command{
 	Use:   "tunnel",
@@ -26,13 +12,9 @@ var TunnelCmd = &cobra.Command{
 }
 
 func init() {
-	TunnelCmd.PersistentFlags().String("redis-url", "localhost:6379", "Redis connection URL")
-	TunnelCmd.PersistentFlags().String("domain", "mawa.dev", "Domain for tunnel URLs")
 	TunnelCmd.PersistentFlags().String("server", "localhost:25701", "Burrow server address")
 	TunnelCmd.PersistentFlags().String("token", "", "Authentication token")
 	TunnelCmd.PersistentFlags().Bool("tls", false, "Use TLS (https://) when connecting to the server")
-	viper.BindPFlag("redis-url", TunnelCmd.PersistentFlags().Lookup("redis-url"))
-	viper.BindPFlag("domain", TunnelCmd.PersistentFlags().Lookup("domain"))
 	viper.BindPFlag("server", TunnelCmd.PersistentFlags().Lookup("server"))
 	viper.BindPFlag("token", TunnelCmd.PersistentFlags().Lookup("token"))
 	viper.BindPFlag("tls", TunnelCmd.PersistentFlags().Lookup("tls"))

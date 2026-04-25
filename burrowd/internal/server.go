@@ -123,6 +123,12 @@ func (s *Server) auth(r *http.Request) bool {
 	return protocol.ValidateToken(token, s.secret)
 }
 
+func jsonError(w http.ResponseWriter, message string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(map[string]string{"error": message})
+}
+
 func clientIP(r *http.Request) string {
 	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
 		if i := strings.Index(xff, ","); i > 0 {
@@ -154,18 +160,28 @@ func (s *Server) addLog(tunnelID string, entry *protocol.TunnelLog) {
 	s.sizeMu.Unlock()
 }
 
+func (s *Server) cleanupTunnel(tunnelID string) {
+	s.logMu.Lock()
+	delete(s.logs, tunnelID)
+	s.logMu.Unlock()
+
+	s.sizeMu.Lock()
+	delete(s.totalSize, tunnelID)
+	s.sizeMu.Unlock()
+}
+
 func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	if !s.auth(r) {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		jsonError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	tunnelID := strings.TrimPrefix(r.URL.Path, "/logs/")
 	if tunnelID == "" {
-		http.Error(w, "Tunnel ID required", http.StatusBadRequest)
+		jsonError(w, "Tunnel ID required", http.StatusBadRequest)
 		return
 	}
 	s.logMu.RLock()
@@ -203,16 +219,16 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleTunnelList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	if !s.auth(r) {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		jsonError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	tunnels, err := s.registry.List(r.Context())
 	if err != nil {
-		http.Error(w, "Failed to list tunnels", http.StatusInternalServerError)
+		jsonError(w, "Failed to list tunnels", http.StatusInternalServerError)
 		return
 	}
 	s.sizeMu.RLock()
@@ -231,22 +247,22 @@ func (s *Server) handleTunnel(w http.ResponseWriter, r *http.Request) {
 	case r.Method == "DELETE":
 		s.handleTunnelDelete(w, r)
 	default:
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
 
 func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
 	if !s.auth(r) {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		jsonError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	tunnelID := strings.TrimPrefix(r.URL.Path, "/tunnel/")
 	if tunnelID == "" {
-		http.Error(w, "Tunnel ID required", http.StatusBadRequest)
+		jsonError(w, "Tunnel ID required", http.StatusBadRequest)
 		return
 	}
 	if err := s.registry.Remove(tunnelID); err != nil {
-		http.Error(w, "Failed to remove tunnel", http.StatusInternalServerError)
+		jsonError(w, "Failed to remove tunnel", http.StatusInternalServerError)
 		return
 	}
 
@@ -269,14 +285,14 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	tunnelID := r.URL.Query().Get("tunnel_id")
 	if tunnelID == "" {
-		http.Error(w, "Tunnel ID required", http.StatusBadRequest)
+		jsonError(w, "Tunnel ID required", http.StatusBadRequest)
 		return
 	}
 
 	portStr := r.URL.Query().Get("port")
 	port, err := strconv.ParseUint(portStr, 10, 16)
 	if err != nil || port == 0 {
-		http.Error(w, "port required", http.StatusBadRequest)
+		jsonError(w, "port required", http.StatusBadRequest)
 		return
 	}
 
@@ -389,13 +405,13 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	s.mu.RUnlock()
 
 	if !ok {
-		http.Error(w, "Tunnel not connected", http.StatusServiceUnavailable)
+		jsonError(w, "Tunnel not connected", http.StatusServiceUnavailable)
 		return
 	}
 
 	stream, err := session.Open()
 	if err != nil {
-		http.Error(w, "Failed to open tunnel stream", http.StatusBadGateway)
+		jsonError(w, "Failed to open tunnel stream", http.StatusBadGateway)
 		return
 	}
 	defer stream.Close()
@@ -417,7 +433,6 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 
 	hj, ok := w.(http.Hijacker)
 	if !ok {
-		http.Error(w, "Hijack not supported", http.StatusInternalServerError)
 		return
 	}
 	client, brw, err := hj.Hijack()
@@ -437,8 +452,19 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 
 	var respSize int64
 	done := make(chan struct{}, 2)
-	go func() { io.Copy(stream, client); done <- struct{}{} }()
-	go func() { n, _ := io.Copy(client, stream); respSize = n; client.Close(); done <- struct{}{} }()
+	go func() {
+		if _, err := io.Copy(stream, client); err != nil {
+			return
+		}
+		done <- struct{}{}
+	}()
+	go func() {
+		n, err := io.Copy(client, stream)
+		respSize = n
+		_ = err
+		client.Close()
+		done <- struct{}{}
+	}()
 	<-done
 	<-done
 
@@ -457,7 +483,6 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 func (s *Server) proxyWebSocket(w http.ResponseWriter, r *http.Request, stream net.Conn) int64 {
 	hj, ok := w.(http.Hijacker)
 	if !ok {
-		http.Error(w, "WebSocket proxy not supported", http.StatusInternalServerError)
 		return 0
 	}
 	client, brw, err := hj.Hijack()
@@ -478,8 +503,19 @@ func (s *Server) proxyWebSocket(w http.ResponseWriter, r *http.Request, stream n
 
 	var size int64
 	done := make(chan struct{}, 2)
-	go func() { io.Copy(stream, client); stream.Close(); done <- struct{}{} }()
-	go func() { n, _ := io.Copy(client, stream); size = n; client.Close(); done <- struct{}{} }()
+	go func() {
+		if _, err := io.Copy(stream, client); err != nil {
+			return
+		}
+		stream.Close()
+		done <- struct{}{}
+	}()
+	go func() {
+		n, _ := io.Copy(client, stream)
+		size = n
+		client.Close()
+		done <- struct{}{}
+	}()
 	<-done
 	<-done
 	return size

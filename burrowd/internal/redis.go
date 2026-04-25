@@ -97,16 +97,29 @@ func (r *RedisClient) ListTunnels(ctx context.Context) ([]*TunnelData, error) {
 		}
 	}
 
+	if len(keys) == 0 {
+		return nil, nil
+	}
+
+	vals, err := r.client.MGet(ctx, keys...).Result()
+	if err != nil {
+		return nil, err
+	}
+
 	tunnels := make([]*TunnelData, 0, len(keys))
-	for _, key := range keys {
-		id := key[7:]
-		data, err := r.GetTunnel(ctx, id)
-		if err != nil {
+	for _, v := range vals {
+		if v == nil {
 			continue
 		}
-		if data != nil {
-			tunnels = append(tunnels, data)
+		s, ok := v.(string)
+		if !ok {
+			continue
 		}
+		var data TunnelData
+		if err := json.Unmarshal([]byte(s), &data); err != nil {
+			continue
+		}
+		tunnels = append(tunnels, &data)
 	}
 	return tunnels, nil
 }

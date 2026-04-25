@@ -463,6 +463,22 @@ const (
 	colSizeWidth   = 10
 )
 
+func (m model) banner(rightText string) string {
+	ind := bg.Render("  ")
+	sep := bg.Render("  ")
+	titleW := lipgloss.Width(titleStyle.Render("BURROW"))
+	rightW := lipgloss.Width(serverStyle.Render(rightText))
+	contentW := m.width - 4
+	dashW := contentW - titleW - 4 - rightW
+	if dashW < 1 {
+		dashW = 0
+	}
+	return ind +
+		titleStyle.Render("BURROW") + sep +
+		divStyle.Render(strings.Repeat("─", dashW)) + sep +
+		serverStyle.Render(truncate(rightText, max(1, contentW-titleW-4))) + "\n\n"
+}
+
 func (m model) View() string {
 	if m.width == 0 {
 		return ""
@@ -481,15 +497,8 @@ func (m model) View() string {
 	ind := bg.Render("  ")  // 2-space indent with background
 	sep := bg.Render("  ")  // 2-space column separator with background
 
-	// header
-	titleW  := lipgloss.Width(titleStyle.Render("BURROW"))
-	serverW := lipgloss.Width(serverStyle.Render(m.server))
-	dashW   := max(0, m.width-titleW-serverW-6)
 	b.WriteString(bg.Render("\n"))
-	b.WriteString(ind +
-		titleStyle.Render("BURROW") + sep +
-		divStyle.Render(strings.Repeat("─", dashW)) + sep +
-		serverStyle.Render(m.server) + "\n\n")
+	b.WriteString(m.banner(m.server))
 
 	// table header
 	tableW := min(m.width-4, colIDWidth+colPortWidth+colLatWidth+colReconWidth+colSizeWidth+24)
@@ -601,19 +610,12 @@ func (m model) viewLogs() string {
 		tunnelID = m.tunnels[m.cursor].TunnelID
 	}
 
-	// header — same structure as list view
-	titleW := lipgloss.Width(titleStyle.Render("BURROW"))
-	serverW := lipgloss.Width(serverStyle.Render(m.server))
-	dashW := max(0, m.width-titleW-serverW-6)
 	logsLabel := "logs — " + tunnelID
 	if m.logAutoFollow {
 		logsLabel += " [follow]"
 	}
 	b.WriteString(bg.Render("\n"))
-	b.WriteString(ind +
-		titleStyle.Render("BURROW") + sep +
-		divStyle.Render(strings.Repeat("─", dashW)) + sep +
-		serverStyle.Render(logsLabel) + "\n\n")
+	b.WriteString(m.banner(logsLabel))
 
 	if m.logsErr != "" {
 		b.WriteString(ind + errStyle.Render(m.logsErr) + "\n\n")
@@ -699,15 +701,8 @@ func (m model) viewHelp() string {
 	ind := bg.Render("  ")
 	sep := bg.Render("  ")
 
-	// header — same structure as list view
-	titleW := lipgloss.Width(titleStyle.Render("BURROW"))
-	serverW := lipgloss.Width(serverStyle.Render(m.server))
-	dashW := max(0, m.width-titleW-serverW-6)
 	b.WriteString(bg.Render("\n"))
-	b.WriteString(ind +
-		titleStyle.Render("BURROW") + sep +
-		divStyle.Render(strings.Repeat("─", dashW)) + sep +
-		serverStyle.Render("keyboard shortcuts") + "\n\n")
+	b.WriteString(m.banner("keyboard shortcuts"))
 
 	type helpSection struct {
 		title string
