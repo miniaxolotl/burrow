@@ -35,7 +35,7 @@ token: your-auth-token
 
 ### `burrowctl tunnel create`
 
-Create tunnels for one or more local ports.
+Create tunnels for one or more local ports. After tunnels are established, launches the interactive TUI.
 
 ```bash
 burrowctl tunnel create --port 3000 --port 8080
@@ -48,50 +48,39 @@ burrowctl tunnel create --port 3000 --port 8080
 - `--secret` - Shared secret (auto-generates token)
 - `--tls` - Use TLS (`wss://` and `https://`) when connecting to the server
 - `--domain` - Fallback domain for tunnel URL display
+- `--log-level` - Log verbosity: `off`, `info`, `debug` (default: `info`)
 
 **Example:**
 ```bash
 burrowctl tunnel create --port 3000 --port 8080 --server burrow.example.com:25701 --token my-token
 ```
 
-**Output:**
-```
-Creating tunnels to burrow.example.com:25701...
-
-Tunnels established:
-    https://swiftly-ancient-silent-dragon.burrow.mawa.dev -> localhost:3000
-    https://darkly-shadow-umbral-wraith.burrow.mawa.dev -> localhost:8080
-
-Press Ctrl+C to close tunnels
-```
-
 **Behavior:**
-- Connects to the burrow server
+- Connects to the burrow server via WebSocket
 - Authenticates with token
-- For each port, opens a WebSocket connection
-- Generates a human-readable tunnel ID
-- Prints the public URL(s)
-- Maintains connections and reconnects automatically
-- Press Ctrl+C to close all tunnels
+- For each port, opens a tunnel and registers it
+- Launches the interactive TUI — all tunnel management happens there
+- TLS is auto-enabled for non-localhost servers (no `--tls` flag needed for production)
+- Press `q` or `Ctrl+C` in the TUI to close all tunnels and exit
 
-### `burrowctl tunnel tui`
+**TUI controls:**
 
-Launch an interactive terminal UI for managing tunnels. This is a separate command from `tunnel create`.
+| Key | Action |
+|-----|--------|
+| `n` | New tunnel (prompts for port) |
+| `c` | Copy selected tunnel URL to clipboard |
+| `o` | Open selected tunnel URL in browser |
+| `d` | Close (delete) selected tunnel |
+| `l` | View request logs for selected tunnel |
+| `↑↓` / `j k` | Navigate tunnel list |
+| `esc` | Back (from log view or port input) |
+| `q` / `Ctrl+C` | Quit |
 
-```bash
-burrowctl tunnel tui
-```
-
-**Controls:**
-- `c` - Create a new tunnel
-- `x` or `d` - Close selected tunnel
-- `↑↓` or `j/k` - Navigate tunnel list
-- `q` - Quit
-
-**TUI Features:**
-- Real-time tunnel list with spinner during creation
-- Color-coded status display
-- Keyboard navigation
+**TUI features:**
+- Real-time tunnel list updated every second (tunnel ID, port, latency, reconnect count)
+- Spinner during tunnel creation
+- Request log view: time, method, path, response size, duration
+- Dark background with keyboard-driven navigation
 
 ### `burrowctl tunnel list`
 
@@ -127,7 +116,7 @@ darkly-shadow-umbral-wraith            8080    https://darkly-shadow-umbral-wrai
 
 ### `burrowctl tunnel inspect`
 
-View tunnel traffic logs. **Note: This feature is not yet implemented.**
+View tunnel traffic logs. **Note: This CLI command is a stub.** Use the TUI (`l` key) for request logs.
 
 ```bash
 burrowctl tunnel inspect {tunnel_id}
@@ -136,12 +125,7 @@ burrowctl tunnel inspect {tunnel_id}
 **Current behavior:**
 ```
 Inspect functionality for tunnel swiftly-ancient-silent-dragon is not yet implemented.
-Coming soon: real-time request/response logging
 ```
-
-**Planned features:**
-- `--tail` - Number of recent entries to show (default: 50)
-- `--follow` - Stream logs in real-time (like `tail -f`)
 
 ### `burrowctl tunnel close`
 

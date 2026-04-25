@@ -2,14 +2,11 @@
 set -euo pipefail
 
 usage() {
-  echo "Usage: $0 {production|development} [-f|--force] [-b|--branch <branch>]" >&2
+  echo "Usage: $0 {production|preview} [-f|--force] [-b|--branch <branch>]" >&2
   exit 1
 }
 
-[[ $# -eq 0 ]] && usage
-
-ENV="$1"
-shift
+ENV="${1:-preview}"
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 FORCE=0
@@ -24,7 +21,7 @@ done
 
 case "$ENV" in
   production)  REMOTE="dokku" ;;
-  development) REMOTE="dokku-preview" ;;
+  preview) REMOTE="dokku-preview" ;;
   *)           usage ;;
 esac
 
