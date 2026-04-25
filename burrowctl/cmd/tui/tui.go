@@ -562,9 +562,9 @@ func openURL(url string) error {
 func renderHelp(pairs [][2]string) string {
 	parts := make([]string, len(pairs))
 	for i, p := range pairs {
-		parts[i] = helpKeyStyle.Render(p[0]) + " " + helpDescStyle.Render(p[1])
+		parts[i] = helpKeyStyle.Render(p[0]) + bg.Render(" ") + helpDescStyle.Render(p[1])
 	}
-	return strings.Join(parts, helpDescStyle.Render("  ·  "))
+	return strings.Join(parts, bg.Render("  ·  "))
 }
 
 func truncate(s string, n int) string {
