@@ -130,14 +130,17 @@ func jsonError(w http.ResponseWriter, message string, code int) {
 }
 
 func clientIP(r *http.Request) string {
-	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
-		if i := strings.Index(xff, ","); i > 0 {
-			return strings.TrimSpace(xff[:i])
-		}
-		return strings.TrimSpace(xff)
-	}
+	// X-Real-IP is set by nginx directly to $remote_addr — it's the actual
+	// public IP and cannot be spoofed by the downstream client.
 	if xri := r.Header.Get("X-Real-IP"); xri != "" {
 		return strings.TrimSpace(xri)
+	}
+	// Fallback: use the last entry nginx appended via $proxy_add_x_forwarded_for.
+	// The last entry is always the IP of the most recent trusted proxy, not a
+	// client-controlled value.
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		parts := strings.Split(xff, ",")
+		return strings.TrimSpace(parts[len(parts)-1])
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {

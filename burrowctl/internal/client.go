@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"burrow/protocol"
@@ -16,6 +17,17 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/xtaci/yamux"
 )
+
+type countWriter struct {
+	w io.Writer
+	n *int64
+}
+
+func (cw *countWriter) Write(p []byte) (int, error) {
+	n, err := cw.w.Write(p)
+	atomic.AddInt64(cw.n, int64(n))
+	return n, err
+}
 
 type wsConn struct {
 	*websocket.Conn
@@ -69,6 +81,7 @@ type TunnelConn struct {
 	cancel     context.CancelFunc
 	latency    time.Duration
 	reconnects int
+	totalSize  int64
 }
 
 func NewClient(server, token, domain string, secure bool) *Client {
@@ -245,8 +258,8 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			defer conn.Close()
 
 			done := make(chan struct{}, 2)
-			go func() { io.Copy(conn, s); conn.Close(); done <- struct{}{} }()
-			go func() { io.Copy(s, conn); s.Close(); done <- struct{}{} }()
+			go func() { io.Copy(&countWriter{conn, &tc.totalSize}, s); conn.Close(); done <- struct{}{} }()
+			go func() { io.Copy(&countWriter{s, &tc.totalSize}, conn); s.Close(); done <- struct{}{} }()
 			<-done
 			<-done
 		}(stream)
@@ -292,6 +305,7 @@ func (c *Client) ListTunnels() []*protocol.TunnelInfo {
 			Status:     "active",
 			Latency:    tc.latency.Round(time.Millisecond).String(),
 			Reconnects: tc.reconnects,
+			TotalSize:  atomic.LoadInt64(&tc.totalSize),
 		})
 	}
 	sort.Slice(tunnels, func(i, j int) bool {
