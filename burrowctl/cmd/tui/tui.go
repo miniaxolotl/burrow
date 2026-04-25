@@ -629,14 +629,16 @@ func (m model) viewLogs() string {
 
 	// table header
 	const colTimeW = 10
+	const colIPW = 15
 	const colMethodW = 6
-	const colPathW = 30
+	const colPathW = 26
 	const colSizeW = 8
 	const colDurW = 10
-	logTableW := min(m.width-4, colTimeW+colMethodW+colPathW+colSizeW+colDurW+20)
+	logTableW := min(m.width-4, colTimeW+colIPW+colMethodW+colPathW+colSizeW+colDurW+24)
 	b.WriteString(ind + colHeaderStyle.Render(
-		fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %s",
+		fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %-*s  %s",
 			colTimeW, "TIME",
+			colIPW, "IP",
 			colMethodW, "METHOD",
 			colPathW, "PATH",
 			colSizeW, "SIZE",
@@ -655,18 +657,20 @@ func (m model) viewLogs() string {
 	for i := start; i < end; i++ {
 		l := m.logs[i]
 		ts := l.Timestamp.Format("15:04:05")
+		ip := truncate(l.IP, colIPW)
 		method := truncate(l.Method, colMethodW)
 		path := truncate(l.Path, colPathW)
 		size := formatSize(l.Size)
 		dur := truncate(l.Duration, colDurW)
 
 		if i == m.logCursor {
-			line := fmt.Sprintf("▶ %-*s  %-*s  %-*s  %-*s  %s",
-				colTimeW, ts, colMethodW, method, colPathW, path, colSizeW, size, dur)
+			line := fmt.Sprintf("▶ %-*s  %-*s  %-*s  %-*s  %-*s  %s",
+				colTimeW, ts, colIPW, ip, colMethodW, method, colPathW, path, colSizeW, size, dur)
 			b.WriteString(selRowStyle.Render(line) + "\n")
 		} else {
 			b.WriteString(ind +
 				rowPortStyle.Render(fmt.Sprintf("%-*s", colTimeW, ts)) + sep +
+				rowPortStyle.Render(fmt.Sprintf("%-*s", colIPW, ip)) + sep +
 				rowPortStyle.Render(fmt.Sprintf("%-*s", colMethodW, method)) + sep +
 				rowIDStyle.Render(fmt.Sprintf("%-*s", colPathW, path)) + sep +
 				rowPortStyle.Render(fmt.Sprintf("%-*s", colSizeW, size)) + sep +
@@ -705,24 +709,65 @@ func (m model) viewHelp() string {
 		divStyle.Render(strings.Repeat("─", dashW)) + sep +
 		serverStyle.Render("keyboard shortcuts") + "\n\n")
 
-	b.WriteString(ind + helpKeyStyle.Render("TUNNEL LIST") + "\n")
-	b.WriteString(renderHelp([][2]string{
-		{"n", "new tunnel"}, {"c", "copy URL"}, {"o", "open URL"},
-		{"d", "close tunnel"}, {"l", "view logs"}, {"s", "cycle sort"},
-		{"g/G", "top/bottom"}, {"pgup/dn", "page"}, {"↑↓ jk", "navigate"},
-		{"?", "this help"}, {"q", "quit"},
-	}) + "\n\n")
+	type helpSection struct {
+		title string
+		keys  [][2]string
+	}
 
-	b.WriteString(ind + helpKeyStyle.Render("LOG VIEW") + "\n")
-	b.WriteString(renderHelp([][2]string{
-		{"g/G", "top/bottom"}, {"pgup/dn", "page"}, {"↑↓ jk", "scroll"},
-		{"f", "toggle auto-follow"}, {"r", "refresh"}, {"esc/l", "back"}, {"q", "quit"},
-	}) + "\n\n")
+	sections := []helpSection{
+		{
+			title: "TUNNEL LIST",
+			keys: [][2]string{
+				{"n", "New tunnel (prompts for port)"},
+				{"c", "Copy selected tunnel URL to clipboard"},
+				{"o", "Open selected tunnel URL in browser"},
+				{"d", "Close selected tunnel (with confirmation)"},
+				{"l", "View request logs for selected tunnel"},
+				{"s", "Cycle sort mode (port → latency → reconnects)"},
+			},
+		},
+		{
+			title: "NAVIGATION",
+			keys: [][2]string{
+				{"↑ / k", "Move cursor up"},
+				{"↓ / j", "Move cursor down"},
+				{"g / Home", "Jump to top"},
+				{"G / End", "Jump to bottom"},
+				{"PgUp / PgDn", "Page up/down (10 entries)"},
+			},
+		},
+		{
+			title: "LOG VIEW",
+			keys: [][2]string{
+				{"f", "Toggle auto-follow (auto-scroll to new entries)"},
+				{"r", "Manually refresh logs"},
+				{"esc / l", "Return to tunnel list"},
+			},
+		},
+		{
+			title: "GENERAL",
+			keys: [][2]string{
+				{"q / Ctrl+C", "Quit (closes all tunnels)"},
+				{"esc", "Cancel input or go back"},
+				{"?", "Show/hide this help screen"},
+			},
+		},
+	}
 
-	b.WriteString(ind + helpKeyStyle.Render("GENERAL") + "\n")
-	b.WriteString(renderHelp([][2]string{
-		{"ctrl+c", "quit"}, {"esc", "cancel/back"}, {"home/end", "top/bottom"},
-	}) + "\n\n")
+	const colKeyW = 14
+	const colDescW = 42
+
+	for _, sec := range sections {
+		b.WriteString(ind + colHeaderStyle.Render(sec.title) + "\n")
+		for _, k := range sec.keys {
+			b.WriteString(ind +
+				helpKeyStyle.Render(fmt.Sprintf("  %-*s", colKeyW, k[0])) + sep +
+				helpDescStyle.Render(k[1]) + "\n")
+		}
+		b.WriteString("\n")
+	}
+
+	b.WriteString(ind + helpDescStyle.Render("press any key to dismiss") + "\n\n")
 
 	return lipgloss.NewStyle().
 		Background(clrBg).
