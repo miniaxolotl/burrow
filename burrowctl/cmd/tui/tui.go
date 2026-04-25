@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"burrow/burrowctl/internal"
 	"burrow/protocol"
@@ -28,8 +30,14 @@ var (
 	clrDimGray  = lipgloss.Color("#c8c8c0")
 	clrFaint    = lipgloss.Color("#8a9a80")
 	clrRed      = lipgloss.Color("#e8a598")
+	clrOrange   = lipgloss.Color("#e8c98a")
 	clrSelected = lipgloss.Color("#4a6b4a")
 	clrWhite    = lipgloss.Color("#e8e8e0")
+
+	clrStatus2xx = lipgloss.Color("#a8d5a2")
+	clrStatus3xx = lipgloss.Color("#c8c8a0")
+	clrStatus4xx = lipgloss.Color("#e8c98a")
+	clrStatus5xx = lipgloss.Color("#e8a598")
 
 	bg = lipgloss.NewStyle().Background(clrBg)
 
@@ -41,6 +49,7 @@ var (
 	rowIDStyle     = bg.Foreground(clrWhite)
 	rowPortStyle   = bg.Foreground(clrDimGray)
 	activeStyle    = bg.Foreground(clrGreen)
+	reconStyle     = bg.Foreground(clrOrange)
 
 	selRowStyle = lipgloss.NewStyle().Foreground(clrWhite).Background(clrSelected).Bold(true)
 
@@ -51,6 +60,8 @@ var (
 
 	helpKeyStyle  = bg.Foreground(clrDimGray)
 	helpDescStyle = bg.Foreground(clrFaint)
+
+	overlayBg = lipgloss.NewStyle().Background(clrBg).Foreground(clrWhite).Padding(1, 2)
 )
 
 // ── state ─────────────────────────────────────────────────────────────────────
@@ -62,6 +73,16 @@ const (
 	stateInput              // entering a port number
 	stateCreating           // tunnel creation in flight
 	stateLogs               // viewing request logs
+	stateConfirm            // confirmation prompt (close tunnel)
+	stateHelp               // help overlay
+)
+
+type sortMode int
+
+const (
+	sortPort sortMode = iota
+	sortLatency
+	sortReconnects
 )
 
 // ── messages ──────────────────────────────────────────────────────────────────
@@ -91,6 +112,9 @@ type model struct {
 	logs         []*protocol.TunnelLog
 	logCursor    int
 	logsErr      string
+	logAutoFollow bool
+	sortMode     sortMode
+	confirmTarget *protocol.TunnelInfo
 }
 
 func newModel(client *internal.Client, server string) model {
@@ -138,6 +162,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			selectedID = m.tunnels[m.cursor].TunnelID
 		}
 		m.tunnels = m.client.ListTunnels()
+		m.sortTunnels()
 		if len(m.tunnels) == 0 {
 			m.cursor = 0
 		} else if selectedID != "" {
@@ -163,7 +188,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			} else {
 				m.logs = logs
 				m.logsErr = ""
-				if m.logCursor >= len(m.logs) {
+				if m.logAutoFollow {
+					m.logCursor = max(0, len(m.logs)-1)
+				} else if m.logCursor >= len(m.logs) {
 					m.logCursor = max(0, len(m.logs)-1)
 				}
 			}
@@ -206,14 +233,19 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case stateLogs:
 		return m.handleLogsKey(msg)
+	case stateConfirm:
+		return m.handleConfirmKey(msg)
+	case stateHelp:
+		if msg.String() == "?" || msg.String() == "esc" || msg.String() == "q" {
+			m.state = stateList
+		}
+		return m, nil
 	default:
 		return m.handleListKey(msg)
 	}
 }
 
 func (m model) handleListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
-	m.status = ""
-
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
@@ -247,14 +279,8 @@ func (m model) handleListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "d":
 		if len(m.tunnels) > 0 {
-			t := m.tunnels[m.cursor]
-			m.client.CloseTunnel(t.Port)
-			m.status = fmt.Sprintf("closed :%d", t.Port)
-			m.statusIsErr = false
-			m.tunnels = m.client.ListTunnels()
-			if m.cursor >= len(m.tunnels) {
-				m.cursor = max(0, len(m.tunnels)-1)
-			}
+			m.confirmTarget = m.tunnels[m.cursor]
+			m.state = stateConfirm
 		}
 
 	case "l":
@@ -276,8 +302,40 @@ func (m model) handleListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.statusIsErr = false
 			}
 		}
+
+	case "s":
+		m.sortMode = (m.sortMode + 1) % 3
+		m.sortTunnels()
+		m.status = "sorted by " + [...]string{"port", "latency", "reconnects"}[m.sortMode]
+		m.statusIsErr = false
+
+	case "?":
+		m.state = stateHelp
 	}
 
+	return m, nil
+}
+
+func (m model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "y", "enter":
+		if m.confirmTarget != nil {
+			m.client.CloseTunnel(m.confirmTarget.Port)
+			m.status = fmt.Sprintf("closed :%d", m.confirmTarget.Port)
+			m.statusIsErr = false
+			m.tunnels = m.client.ListTunnels()
+			m.sortTunnels()
+			if m.cursor >= len(m.tunnels) {
+				m.cursor = max(0, len(m.tunnels)-1)
+			}
+		}
+		m.confirmTarget = nil
+		m.state = stateList
+
+	case "n", "esc":
+		m.confirmTarget = nil
+		m.state = stateList
+	}
 	return m, nil
 }
 
@@ -295,6 +353,27 @@ func (m model) handleLogsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "down", "j":
 		if m.logCursor < len(m.logs)-1 {
 			m.logCursor++
+		}
+	case "f":
+		m.logAutoFollow = !m.logAutoFollow
+		if m.logAutoFollow {
+			m.logCursor = max(0, len(m.logs)-1)
+		}
+		m.status = "auto-follow " + map[bool]string{true: "on", false: "off"}[m.logAutoFollow]
+		m.statusIsErr = false
+	case "r":
+		if len(m.tunnels) > 0 && m.cursor < len(m.tunnels) {
+			t := m.tunnels[m.cursor]
+			logs, err := m.client.GetLogs(t.TunnelID)
+			if err != nil {
+				m.logsErr = err.Error()
+			} else {
+				m.logs = logs
+				m.logsErr = ""
+				if m.logAutoFollow {
+					m.logCursor = max(0, len(m.logs)-1)
+				}
+			}
 		}
 	}
 	return m, nil
@@ -337,6 +416,22 @@ func (m model) openTunnel(port uint16) tea.Cmd {
 	}
 }
 
+func (m *model) sortTunnels() {
+	sort.SliceStable(m.tunnels, func(i, j int) bool {
+		a, b := m.tunnels[i], m.tunnels[j]
+		switch m.sortMode {
+		case sortLatency:
+			ai, _ := time.ParseDuration(a.Latency)
+			bi, _ := time.ParseDuration(b.Latency)
+			return ai < bi
+		case sortReconnects:
+			return a.Reconnects < b.Reconnects
+		default:
+			return a.Port < b.Port
+		}
+	})
+}
+
 // ── view ──────────────────────────────────────────────────────────────────────
 
 const (
@@ -349,6 +444,10 @@ const (
 func (m model) View() string {
 	if m.width == 0 {
 		return ""
+	}
+
+	if m.state == stateHelp {
+		return m.viewHelp()
 	}
 
 	if m.state == stateLogs {
@@ -372,13 +471,14 @@ func (m model) View() string {
 
 	// table header
 	tableW := min(m.width-4, colIDWidth+colPortWidth+colLatWidth+colReconWidth+20)
+	sortLabel := [...]string{"port", "latency", "reconnects"}[m.sortMode]
 	b.WriteString(ind + colHeaderStyle.Render(
-		fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %s",
+		fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %s  [%s]",
 			colIDWidth, "TUNNEL ID",
 			colPortWidth, "PORT",
 			colLatWidth, "LATENCY",
 			colReconWidth, "RECONNECTS",
-			"STATUS"),
+			"STATUS", sortLabel),
 	) + "\n")
 	b.WriteString(ind + divStyle.Render(strings.Repeat("─", tableW)) + "\n")
 
@@ -393,17 +493,26 @@ func (m model) View() string {
 		recons := strconv.Itoa(t.Reconnects)
 
 		if i == m.cursor {
-			// Render entire row as one block to avoid selection-highlight gaps.
-			line := fmt.Sprintf("▶ %-*s  %-*s  %-*s  %-*s  ● active",
-				colIDWidth, id, colPortWidth, port, colLatWidth, lat, colReconWidth, recons)
+			statusText := "● active"
+			if t.Reconnects > 0 {
+				statusText = fmt.Sprintf("● active (%d recon)", t.Reconnects)
+			}
+			line := fmt.Sprintf("▶ %-*s  %-*s  %-*s  %-*s  %s",
+				colIDWidth, id, colPortWidth, port, colLatWidth, lat, colReconWidth, recons, statusText)
 			b.WriteString(selRowStyle.Render(line) + "\n")
 		} else {
+			statusText := "● active"
+			statusSty := activeStyle
+			if t.Reconnects > 0 {
+				statusText = fmt.Sprintf("● active (%d)", t.Reconnects)
+				statusSty = reconStyle
+			}
 			b.WriteString(ind +
 				rowIDStyle.Render(fmt.Sprintf("%-*s", colIDWidth, id)) + sep +
 				rowPortStyle.Render(fmt.Sprintf("%-*s", colPortWidth, port)) + sep +
 				rowPortStyle.Render(fmt.Sprintf("%-*s", colLatWidth, lat)) + sep +
 				rowPortStyle.Render(fmt.Sprintf("%-*s", colReconWidth, recons)) + sep +
-				activeStyle.Render("● active") + "\n")
+				statusSty.Render(statusText) + "\n")
 		}
 	}
 	b.WriteString(ind + divStyle.Render(strings.Repeat("─", tableW)) + "\n\n")
@@ -416,7 +525,7 @@ func (m model) View() string {
 	}
 	b.WriteString("\n")
 
-	// status / input / spinner — fixed height of 2 lines to prevent layout shifts
+	// status / input / spinner / confirmation — fixed height of 2 lines to prevent layout shifts
 	switch m.state {
 	case stateInput:
 		b.WriteString(ind + helpKeyStyle.Render("port ›") + bg.Render(" ") + m.input.View() + "\n")
@@ -425,6 +534,12 @@ func (m model) View() string {
 	case stateCreating:
 		b.WriteString(ind + m.spinner.View() + bg.Render(" ") +
 			statusStyle.Render(fmt.Sprintf("opening :%d…", m.creatingPort)) + "\n")
+		b.WriteString("\n")
+
+	case stateConfirm:
+		if m.confirmTarget != nil {
+			b.WriteString(ind + errStyle.Render(fmt.Sprintf("close :%d? [y/n]", m.confirmTarget.Port)) + "\n")
+		}
 		b.WriteString("\n")
 
 	default:
@@ -438,7 +553,7 @@ func (m model) View() string {
 			b.WriteString("\n")
 		}
 		b.WriteString(ind + renderHelp([][2]string{
-			{"n", "new"}, {"c", "copy"}, {"o", "open"}, {"d", "close"}, {"l", "logs"}, {"↑↓ jk", "select"}, {"q", "quit"},
+			{"n", "new"}, {"c", "copy"}, {"o", "open"}, {"d", "close"}, {"l", "logs"}, {"s", "sort"}, {"?", "help"}, {"↑↓ jk", "select"}, {"q", "quit"},
 		}) + "\n")
 	}
 
@@ -527,7 +642,45 @@ func (m model) viewLogs() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(ind + renderHelp([][2]string{{"esc", "back"}, {"↑↓ jk", "scroll"}, {"q", "quit"}}) + "\n\n")
+	autoFollowLabel := "f"
+	if m.logAutoFollow {
+		autoFollowLabel = "f:follow"
+	}
+	b.WriteString(ind + renderHelp([][2]string{{"esc", "back"}, {"↑↓ jk", "scroll"}, {autoFollowLabel, ""}, {"r", "refresh"}, {"q", "quit"}}) + "\n\n")
+
+	return lipgloss.NewStyle().
+		Background(clrBg).
+		Width(m.width).
+		Height(m.height).
+		Render(b.String())
+}
+
+func (m model) viewHelp() string {
+	var b strings.Builder
+	ind := bg.Render("  ")
+
+	b.WriteString(bg.Render("\n"))
+	b.WriteString(ind + titleStyle.Render("KEYBOARD SHORTCUTS") + "\n\n")
+
+	b.WriteString(ind + helpKeyStyle.Render("TUNNEL LIST") + "\n")
+	b.WriteString(renderHelp([][2]string{
+		{"n", "new tunnel"}, {"c", "copy URL"}, {"o", "open URL"},
+		{"d", "close tunnel"}, {"l", "view logs"}, {"s", "cycle sort"},
+		{"↑↓ jk", "navigate"}, {"?", "this help"}, {"q", "quit"},
+	}) + "\n\n")
+
+	b.WriteString(ind + helpKeyStyle.Render("LOG VIEW") + "\n")
+	b.WriteString(renderHelp([][2]string{
+		{"↑↓ jk", "scroll"}, {"f", "toggle auto-follow"},
+		{"r", "refresh"}, {"esc/l", "back"}, {"q", "quit"},
+	}) + "\n\n")
+
+	b.WriteString(ind + helpKeyStyle.Render("GENERAL") + "\n")
+	b.WriteString(renderHelp([][2]string{
+		{"ctrl+c", "quit"}, {"esc", "cancel/back"},
+	}) + "\n\n")
+
+	b.WriteString(ind + helpDescStyle.Render("press any key to dismiss") + "\n\n")
 
 	return lipgloss.NewStyle().
 		Background(clrBg).
@@ -570,10 +723,11 @@ func renderHelp(pairs [][2]string) string {
 }
 
 func truncate(s string, n int) string {
-	if len(s) <= n {
+	if utf8.RuneCountInString(s) <= n {
 		return s
 	}
-	return s[:n-1] + "…"
+	runes := []rune(s)
+	return string(runes[:n-1]) + "…"
 }
 
 // RunWithClient starts the TUI using an already-initialized client.

@@ -60,19 +60,34 @@ burrowctl tunnel create --port 3000 --port 8080
 | `n` | New tunnel (prompts for port) |
 | `c` | Copy selected tunnel URL to clipboard |
 | `o` | Open selected tunnel URL in browser |
-| `d` | Close (delete) selected tunnel |
+| `d` | Close (delete) selected tunnel (with confirmation) |
 | `l` | View request logs for selected tunnel / return to list from log view |
+| `s` | Cycle sort mode (port → latency → reconnects) |
+| `?` | Show keyboard shortcuts help overlay |
 | `↑↓` / `j k` | Navigate tunnel list |
-| `esc` | Back (from log view or port input) |
+| `esc` | Back (from log view, port input, or confirmation) |
 | `q` / `Ctrl+C` | Quit |
+
+**Log view controls:**
+
+| Key | Action |
+|-----|--------|
+| `↑↓` / `j k` | Scroll through log entries |
+| `f` | Toggle auto-follow mode (auto-scroll to new entries) |
+| `r` | Manually refresh logs |
+| `esc` / `l` | Return to tunnel list |
 
 **TUI features:**
 - Real-time tunnel list updated every second (tunnel ID, port, latency, reconnect count)
 - Latency tracked in real-time via `/health` ping every second
 - Spinner during tunnel creation
 - Request log view: time, method, path, response size, duration
-- Tunnel list sorted by port (stable order across refreshes)
+- Tunnel list sorted by port (default), toggle with `s` to sort by latency or reconnects
 - Cursor tracks selected tunnel ID across list refreshes
+- Auto-follow mode in log view (`f` key) for `tail -f`-style behavior
+- Confirmation prompt before closing tunnels
+- Help overlay with `?` showing all keyboard shortcuts
+- Visual indicator for tunnels with reconnects (orange status text)
 - Dark background with keyboard-driven navigation
 
 ### `burrowctl tunnel list`
