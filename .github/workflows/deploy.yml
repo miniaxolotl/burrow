@@ -70,6 +70,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.tags.outputs.TAGS }}
+          build-args: |
+            VERSION=${{ steps.version.outputs.VERSION }}
           labels: |
             org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
             org.opencontainers.image.revision=${{ github.sha }}
