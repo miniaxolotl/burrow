@@ -261,6 +261,20 @@ func (m model) handleListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.cursor++
 		}
 
+	case "g", "home":
+		m.cursor = 0
+
+	case "G", "end":
+		if len(m.tunnels) > 0 {
+			m.cursor = len(m.tunnels) - 1
+		}
+
+	case "pgup":
+		m.cursor = max(0, m.cursor-10)
+
+	case "pgdown":
+		m.cursor = min(len(m.tunnels)-1, m.cursor+10)
+
 	case "n":
 		m.state = stateInput
 		m.input.SetValue("")
@@ -355,6 +369,14 @@ func (m model) handleLogsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.logCursor < len(m.logs)-1 {
 			m.logCursor++
 		}
+	case "g", "home":
+		m.logCursor = 0
+	case "G", "end":
+		m.logCursor = max(0, len(m.logs)-1)
+	case "pgup":
+		m.logCursor = max(0, m.logCursor-10)
+	case "pgdown":
+		m.logCursor = min(len(m.logs)-1, m.logCursor+10)
 	case "f":
 		m.logAutoFollow = !m.logAutoFollow
 		if m.logAutoFollow {
@@ -437,7 +459,8 @@ const (
 	colIDWidth     = 34
 	colPortWidth   = 6
 	colLatWidth    = 10
-	colReconWidth  = 12
+	colReconWidth  = 10
+	colSizeWidth   = 10
 )
 
 func (m model) View() string {
@@ -469,14 +492,15 @@ func (m model) View() string {
 		serverStyle.Render(m.server) + "\n\n")
 
 	// table header
-	tableW := min(m.width-4, colIDWidth+colPortWidth+colLatWidth+colReconWidth+20)
+	tableW := min(m.width-4, colIDWidth+colPortWidth+colLatWidth+colReconWidth+colSizeWidth+24)
 	sortLabel := [...]string{"port", "latency", "reconnects"}[m.sortMode]
 	b.WriteString(ind + colHeaderStyle.Render(
-		fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %s  [%s]",
+		fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %-*s  %s  [%s]",
 			colIDWidth, "TUNNEL ID",
 			colPortWidth, "PORT",
 			colLatWidth, "LATENCY",
 			colReconWidth, "RECONNECTS",
+			colSizeWidth, "SIZE",
 			"STATUS", sortLabel),
 	) + "\n")
 	b.WriteString(ind + divStyle.Render(strings.Repeat("─", tableW)) + "\n")
@@ -490,14 +514,15 @@ func (m model) View() string {
 		port   := strconv.Itoa(int(t.Port))
 		lat    := truncate(t.Latency, colLatWidth)
 		recons := strconv.Itoa(t.Reconnects)
+		size   := formatSize(t.TotalSize)
 
 		if i == m.cursor {
 			statusText := "● active"
 			if t.Reconnects > 0 {
 				statusText = fmt.Sprintf("● active (%d recon)", t.Reconnects)
 			}
-			line := fmt.Sprintf("▶ %-*s  %-*s  %-*s  %-*s  %s",
-				colIDWidth, id, colPortWidth, port, colLatWidth, lat, colReconWidth, recons, statusText)
+			line := fmt.Sprintf("▶ %-*s  %-*s  %-*s  %-*s  %-*s  %s",
+				colIDWidth, id, colPortWidth, port, colLatWidth, lat, colReconWidth, recons, colSizeWidth, size, statusText)
 			b.WriteString(selRowStyle.Render(line) + "\n")
 		} else {
 			statusText := "● active"
@@ -511,6 +536,7 @@ func (m model) View() string {
 				rowPortStyle.Render(fmt.Sprintf("%-*s", colPortWidth, port)) + sep +
 				rowPortStyle.Render(fmt.Sprintf("%-*s", colLatWidth, lat)) + sep +
 				rowPortStyle.Render(fmt.Sprintf("%-*s", colReconWidth, recons)) + sep +
+				rowPortStyle.Render(fmt.Sprintf("%-*s", colSizeWidth, size)) + sep +
 				statusSty.Render(statusText) + "\n")
 		}
 	}
@@ -552,7 +578,7 @@ func (m model) View() string {
 			b.WriteString("\n")
 		}
 		b.WriteString(ind + renderHelp([][2]string{
-			{"n", "new"}, {"c", "copy"}, {"o", "open"}, {"d", "close"}, {"l", "logs"}, {"s", "sort"}, {"?", "help"}, {"↑↓ jk", "select"}, {"q", "quit"},
+			{"n", "new"}, {"c", "copy"}, {"o", "open"}, {"d", "close"}, {"l", "logs"}, {"s", "sort"}, {"g/G", "top/bot"}, {"?", "help"}, {"q", "quit"},
 		}) + "\n")
 	}
 
@@ -575,15 +601,19 @@ func (m model) viewLogs() string {
 		tunnelID = m.tunnels[m.cursor].TunnelID
 	}
 
-	// header
-	b.WriteString(bg.Render("\n"))
-	logsTitle := " logs — " + tunnelID
+	// header — same structure as list view
+	titleW := lipgloss.Width(titleStyle.Render("BURROW"))
+	serverW := lipgloss.Width(serverStyle.Render(m.server))
+	dashW := max(0, m.width-titleW-serverW-6)
+	logsLabel := "logs — " + tunnelID
 	if m.logAutoFollow {
-		logsTitle += " [follow]"
+		logsLabel += " [follow]"
 	}
+	b.WriteString(bg.Render("\n"))
 	b.WriteString(ind +
 		titleStyle.Render("BURROW") + sep +
-		statusStyle.Render(logsTitle) + "\n\n")
+		divStyle.Render(strings.Repeat("─", dashW)) + sep +
+		serverStyle.Render(logsLabel) + "\n\n")
 
 	if m.logsErr != "" {
 		b.WriteString(ind + errStyle.Render(m.logsErr) + "\n\n")
@@ -645,7 +675,7 @@ func (m model) viewLogs() string {
 	}
 
 	b.WriteString("\n")
-	autoFollowPairs := [][2]string{{"esc", "back"}, {"↑↓ jk", "scroll"}, {"r", "refresh"}, {"q", "quit"}}
+	autoFollowPairs := [][2]string{{"esc", "back"}, {"g/G", "top/bot"}, {"↑↓ jk", "scroll"}, {"r", "refresh"}, {"q", "quit"}}
 	if m.logAutoFollow {
 		autoFollowPairs = append([][2]string{{"f", "follow on"}}, autoFollowPairs...)
 	} else {
@@ -663,29 +693,36 @@ func (m model) viewLogs() string {
 func (m model) viewHelp() string {
 	var b strings.Builder
 	ind := bg.Render("  ")
+	sep := bg.Render("  ")
 
+	// header — same structure as list view
+	titleW := lipgloss.Width(titleStyle.Render("BURROW"))
+	serverW := lipgloss.Width(serverStyle.Render(m.server))
+	dashW := max(0, m.width-titleW-serverW-6)
 	b.WriteString(bg.Render("\n"))
-	b.WriteString(ind + titleStyle.Render("KEYBOARD SHORTCUTS") + "\n\n")
+	b.WriteString(ind +
+		titleStyle.Render("BURROW") + sep +
+		divStyle.Render(strings.Repeat("─", dashW)) + sep +
+		serverStyle.Render("keyboard shortcuts") + "\n\n")
 
 	b.WriteString(ind + helpKeyStyle.Render("TUNNEL LIST") + "\n")
 	b.WriteString(renderHelp([][2]string{
 		{"n", "new tunnel"}, {"c", "copy URL"}, {"o", "open URL"},
 		{"d", "close tunnel"}, {"l", "view logs"}, {"s", "cycle sort"},
-		{"↑↓ jk", "navigate"}, {"?", "this help"}, {"q", "quit"},
+		{"g/G", "top/bottom"}, {"pgup/dn", "page"}, {"↑↓ jk", "navigate"},
+		{"?", "this help"}, {"q", "quit"},
 	}) + "\n\n")
 
 	b.WriteString(ind + helpKeyStyle.Render("LOG VIEW") + "\n")
 	b.WriteString(renderHelp([][2]string{
-		{"↑↓ jk", "scroll"}, {"f", "toggle auto-follow"},
-		{"r", "refresh"}, {"esc/l", "back"}, {"q", "quit"},
+		{"g/G", "top/bottom"}, {"pgup/dn", "page"}, {"↑↓ jk", "scroll"},
+		{"f", "toggle auto-follow"}, {"r", "refresh"}, {"esc/l", "back"}, {"q", "quit"},
 	}) + "\n\n")
 
 	b.WriteString(ind + helpKeyStyle.Render("GENERAL") + "\n")
 	b.WriteString(renderHelp([][2]string{
-		{"ctrl+c", "quit"}, {"esc", "cancel/back"},
+		{"ctrl+c", "quit"}, {"esc", "cancel/back"}, {"home/end", "top/bottom"},
 	}) + "\n\n")
-
-	b.WriteString(ind + helpDescStyle.Render("press any key to dismiss") + "\n\n")
 
 	return lipgloss.NewStyle().
 		Background(clrBg).
