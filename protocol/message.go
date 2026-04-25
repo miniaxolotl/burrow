@@ -19,4 +19,5 @@ type TunnelLog struct {
 	StatusCode  int       `json:"status_code"`
 	Size        int64     `json:"size"`
 	Duration    string    `json:"duration"`
+	IP          string    `json:"ip"`
 }

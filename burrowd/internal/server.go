@@ -123,6 +123,23 @@ func (s *Server) auth(r *http.Request) bool {
 	return protocol.ValidateToken(token, s.secret)
 }
 
+func clientIP(r *http.Request) string {
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if i := strings.Index(xff, ","); i > 0 {
+			return strings.TrimSpace(xff[:i])
+		}
+		return strings.TrimSpace(xff)
+	}
+	if xri := r.Header.Get("X-Real-IP"); xri != "" {
+		return strings.TrimSpace(xri)
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
 func (s *Server) addLog(tunnelID string, entry *protocol.TunnelLog) {
 	s.logMu.Lock()
 	entries := s.logs[tunnelID]
@@ -393,6 +410,7 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 			Path:      r.URL.Path,
 			Size:      size,
 			Duration:  time.Since(start).Round(time.Millisecond).String(),
+			IP:        clientIP(r),
 		})
 		return
 	}
@@ -430,6 +448,7 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 		Path:      r.URL.Path,
 		Size:      respSize,
 		Duration:  time.Since(start).Round(time.Millisecond).String(),
+		IP:        clientIP(r),
 	})
 }
 

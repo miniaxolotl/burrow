@@ -88,12 +88,12 @@ burrowctl tunnel create --port 3000 --port 8080
 - Latency tracked in real-time via `/health` ping every second
 - Total bytes transferred across all requests per tunnel
 - Spinner during tunnel creation
-- Request log view: time, method, path, response size, duration
+- Request log view: time, client IP, method, path, response size, duration
 - Tunnel list sorted by port (default), toggle with `s` to sort by latency or reconnects
 - Cursor tracks selected tunnel ID across list refreshes
 - Auto-follow mode in log view (`f` key) for `tail -f`-style behavior
 - Confirmation prompt before closing tunnels
-- Help overlay with `?` showing all keyboard shortcuts
+- Full-screen help overlay (`?`) with structured key reference
 - Visual indicator for tunnels with reconnects (orange status text)
 - Fast navigation: `g`/`G` for top/bottom, `PgUp`/`PgDn` for paging, `Home`/`End` keys
 - Consistent header layout across all views
