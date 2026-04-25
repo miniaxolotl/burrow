@@ -182,13 +182,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if m.state == stateLogs && len(m.tunnels) > 0 && m.cursor < len(m.tunnels) {
 			t := m.tunnels[m.cursor]
+			wasAtBottom := m.logCursor >= len(m.logs)-1
 			logs, err := m.client.GetLogs(t.TunnelID)
 			if err != nil {
 				m.logsErr = err.Error()
 			} else {
 				m.logs = logs
 				m.logsErr = ""
-				if m.logAutoFollow {
+				if m.logAutoFollow || wasAtBottom {
 					m.logCursor = max(0, len(m.logs)-1)
 				} else if m.logCursor >= len(m.logs) {
 					m.logCursor = max(0, len(m.logs)-1)
@@ -359,8 +360,6 @@ func (m model) handleLogsKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.logAutoFollow {
 			m.logCursor = max(0, len(m.logs)-1)
 		}
-		m.status = "auto-follow " + map[bool]string{true: "on", false: "off"}[m.logAutoFollow]
-		m.statusIsErr = false
 	case "r":
 		if len(m.tunnels) > 0 && m.cursor < len(m.tunnels) {
 			t := m.tunnels[m.cursor]
@@ -578,9 +577,13 @@ func (m model) viewLogs() string {
 
 	// header
 	b.WriteString(bg.Render("\n"))
+	logsTitle := " logs — " + tunnelID
+	if m.logAutoFollow {
+		logsTitle += " [follow]"
+	}
 	b.WriteString(ind +
 		titleStyle.Render("BURROW") + sep +
-		statusStyle.Render(" logs — "+tunnelID) + "\n\n")
+		statusStyle.Render(logsTitle) + "\n\n")
 
 	if m.logsErr != "" {
 		b.WriteString(ind + errStyle.Render(m.logsErr) + "\n\n")
@@ -642,11 +645,13 @@ func (m model) viewLogs() string {
 	}
 
 	b.WriteString("\n")
-	autoFollowLabel := "f"
+	autoFollowPairs := [][2]string{{"esc", "back"}, {"↑↓ jk", "scroll"}, {"r", "refresh"}, {"q", "quit"}}
 	if m.logAutoFollow {
-		autoFollowLabel = "f:follow"
+		autoFollowPairs = append([][2]string{{"f", "follow on"}}, autoFollowPairs...)
+	} else {
+		autoFollowPairs = append([][2]string{{"f", "follow off"}}, autoFollowPairs...)
 	}
-	b.WriteString(ind + renderHelp([][2]string{{"esc", "back"}, {"↑↓ jk", "scroll"}, {autoFollowLabel, ""}, {"r", "refresh"}, {"q", "quit"}}) + "\n\n")
+	b.WriteString(ind + renderHelp(autoFollowPairs) + "\n\n")
 
 	return lipgloss.NewStyle().
 		Background(clrBg).
