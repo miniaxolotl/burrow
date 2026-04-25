@@ -5,6 +5,7 @@
       "release-type": "go",
       "package-name": "burrowd",
       "version-file": "burrowd/version.go",
+      "extra-files": ["burrowctl/version.go"],
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true

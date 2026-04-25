@@ -36,11 +36,13 @@ archives:
     builds: [burrowd]
     name_template: "burrowd_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format: tar.gz
+    wrap_in_directory: false
 
   - id: burrowctl
     builds: [burrowctl]
     name_template: "burrowctl_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     format: tar.gz
+    wrap_in_directory: false
 
 checksum:
   name_template: checksums.txt

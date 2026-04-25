@@ -17,20 +17,6 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: go.work
-          cache: true
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          registry-url: https://registry.npmjs.org
-
       - name: Resolve version
         id: version
         run: |
@@ -41,6 +27,21 @@ jobs:
           fi
           echo "TAG=$TAG" >> $GITHUB_OUTPUT
           echo "VERSION=${TAG#v}" >> $GITHUB_OUTPUT
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ steps.version.outputs.TAG }}
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
 
       - name: Run goreleaser
         uses: goreleaser/goreleaser-action@v6
