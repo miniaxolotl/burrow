@@ -9,8 +9,9 @@
 Configuration is loaded from (in order of precedence):
 1. Command-line flags
 2. Environment variables
-3. Stored auth token
-4. Default values
+3. `~/.config/burrow/client.json` (written by `burrowctl auth login`)
+4. `~/.burrow/token` (legacy fallback, written by `burrowd auth login`)
+5. Generate from `--secret` / `BURROW_SECRET`
 
 ### Environment Variables
 
@@ -24,7 +25,7 @@ Configuration is loaded from (in order of precedence):
 
 ### Config File
 
-Token is stored at `~/.burrow/token` (written by `burrowd auth login`). No YAML config file is used.
+`~/.config/burrow/client.json` — created on first run. Fields: `server`, `token`, `secret`, `domain`, `tls`.
 
 ## Commands
 
@@ -43,12 +44,6 @@ burrowctl tunnel create --port 3000 --port 8080
 - `--secret` - Shared secret (auto-generates token)
 - `--tls` - Use TLS (`wss://` and `https://`) when connecting to the server
 - `--domain` - Fallback domain for tunnel URL display
-- `--log-level` - Log verbosity: `off`, `info`, `debug` (default: `info`)
-
-**Example:**
-```bash
-burrowctl tunnel create --port 3000 --port 8080 --server burrow.example.com:25701 --token my-token
-```
 
 **Behavior:**
 - Connects to the burrow server via WebSocket
@@ -73,8 +68,11 @@ burrowctl tunnel create --port 3000 --port 8080 --server burrow.example.com:2570
 
 **TUI features:**
 - Real-time tunnel list updated every second (tunnel ID, port, latency, reconnect count)
+- Latency tracked in real-time via `/health` ping every second
 - Spinner during tunnel creation
 - Request log view: time, method, path, response size, duration
+- Tunnel list sorted by port (stable order across refreshes)
+- Cursor tracks selected tunnel ID across list refreshes
 - Dark background with keyboard-driven navigation
 
 ### `burrowctl tunnel list`
@@ -87,28 +85,20 @@ burrowctl tunnel list
 
 **Example output:**
 ```
-TUNNEL ID                               PORT    URL
-swiftly-ancient-silent-dragon          3000    https://swiftly-ancient-silent-dragon.burrow.mawa.dev
-darkly-shadow-umbral-wraith            8080    https://darkly-shadow-umbral-wraith.burrow.mawa.dev
+TUNNEL ID                       PORT     URL                                             STATUS
+swiftly-ancient-silent-dragon  3000     https://swiftly-ancient-silent-dragon.burrow.mawa.dev   active
+darkly-shadow-umbral-wraith    8080     https://darkly-shadow-umbral-wraith.burrow.mawa.dev     active
 ```
 
 ### `burrowctl tunnel status`
 
-Show connection status for all tunnels.
+Show connection status for all tunnels. Same output as `list` but with a separator line beneath the header.
 
 ```bash
 burrowctl tunnel status
 ```
 
-**Example output:**
-```
-TUNNEL ID                       PORT     URL                                             STATUS
----------------------------------------------------------------------------------------------
-swiftly-ancient-silent-dragon  3000     https://swiftly-ancient-silent-dragon.burrow.mawa.dev   active
-darkly-shadow-umbral-wraith    8080     https://darkly-shadow-umbral-wraith.burrow.mawa.dev     active
-```
-
-**Note:** `tunnel status` and `tunnel list` use the same endpoint. `status` adds a separator line beneath the header. Neither shows latency or reconnect count (those are only visible in the TUI).
+**Note:** Neither `list` nor `status` shows latency or reconnect count — those are only visible in the TUI.
 
 ### `burrowctl tunnel inspect`
 
@@ -116,11 +106,6 @@ View tunnel traffic logs. **Note: This CLI command is a stub.** Use the TUI (`l`
 
 ```bash
 burrowctl tunnel inspect {tunnel_id}
-```
-
-**Current behavior:**
-```
-Inspect functionality for tunnel swiftly-ancient-silent-dragon is not yet implemented.
 ```
 
 ### `burrowctl tunnel close`
@@ -131,37 +116,31 @@ Close a specific tunnel.
 burrowctl tunnel close {tunnel_id}
 ```
 
-## Authentication
+### `burrowctl auth login`
 
-Before creating tunnels, authenticate with the server:
+Store an authentication token for future use.
 
 ```bash
 burrowctl auth login your-hmac-token
-```
-
-Or with server validation:
-
-```bash
 burrowctl auth login your-hmac-token --server burrow.example.com:25701
 ```
 
-Check auth status:
+With `--server`, validates the token against the server after storing. Token saved to `~/.config/burrow/client.json`.
 
-```bash
-burrowctl auth status
-```
+### `burrowctl auth logout`
 
-Logout:
+Remove stored authentication token.
 
 ```bash
 burrowctl auth logout
 ```
 
-The token is stored in `~/.config/burrow/client.json`. It can also be set via `--token` flag or `BURROW_TOKEN` env var, which take priority over the stored config.
+### `burrowctl auth status`
 
-Or inline:
+Show current authentication status.
+
 ```bash
-burrowctl tunnel create --port 3000 --token my-secret-token
+burrowctl auth status
 ```
 
 ## Tunnel ID Generation
@@ -175,17 +154,12 @@ Tunnel IDs are generated using a fantasy/D&D-themed format:
 Examples:
 - `swiftly-ancient-silent-dragon`
 - `darkly-shadow-umbral-wraith`
-- `keenly-mighty-radiant-phoenix`
-- `ghostly-silent-ethereal-void`
 
-Generated with `crypto/rand` for uniqueness. Word lists:
-- **Adverbs** (100): arcaneily, blindly, boldly, brightly, calmly, chaotically, clearly, coldly, covertly, cruelly, cryptically, darkly, dauntlessly, deeply, deftly, dimly, distantly, divinely, dreadfully, dryly, eerily, eldritchly, endlessly, eternally, evilly, faintly, fearlessly, fiercely, firmly, forebodingly, freely, frostily, fully, ghostly, ghoulishly, gravelely, grimly, hauntingly, harshly, heavily, hellishly, hollowly, icily, infernally, keenly, lethally, lightly, liminally, lowly, magically, malevolently, menacingly, mercilessly, mutely, mystically, nimbly, nobly, obscurely, ominously, openly, perilously, phantomly, proudly, quietly, rapidly, rarely, relentlessly, roughly, ruinously, savagely, sharply, silently, sinisterly, slowly, softly, solemnly, solidly, spectrally, starkly, stealthily, sternly, stolidly, strongly, subtly, swiftly, terribly, thinly, treacherously, truly, undyingly, unholy, vastly, vengefully, vividly, voraciously, wickedly, wildly, wisely, wrathfully, wryly
-- **Adjectives** (144): abyssal, accursed, ancient, arcane, ashen, astral, banished, battered, bewitched, bleak, blighted, bloodied, bold, bonded, brave, broken, burning, celestial, chaotic, charmed, chromatic, cold, corrupted, crimson, cryptic, cursed, dark, dead, deathly, defiled, demonic, destined, diabolical, distant, divine, doomed, draconic, dread, druidic, dry, dwarven, dying, elder, eldritch, elven, empty, enchanted, ethereal, exalted, fallen, feral, fierce, fiendish, flaming, forbidden, forgotten, forsaken, foul, frozen, furtive, ghostly, gilded, glowing, grim, hallowed, haunted, hellish, heretical, hidden, hollow, holy, hungry, icy, infernal, iron, jade, keen, legendary, lethal, liquid, lost, luminous, lurking, mad, malevolent, mighty, molten, moonlit, mournful, murky, mystic, necrotic, noble, obscure, ominous, pale, petrified, phantom, plagued, potent, primal, profane, quick, radiant, raging, ruined, runic, sacred, savage, scarlet, scorched, sepulchral, shadow, shattered, silent, silver, sinister, skeletal, smoldering, spectral, stark, still, stone, storming, sunken, swift, tainted, terrible, twilight, twisted, umbral, uncanny, unholy, unseen, veiled, vengeful, vivid, volatile, wandering, wicked, wild, withered, wrathful, wretched
-- **Nouns** (139): altar, amulet, anvil, arch, archmage, artefact, assassin, axe, banshee, basilisk, beacon, behemoth, blade, blight, bones, bramble, catacomb, centaur, chains, chimera, cipher, citadel, crypt, curse, cyclops, dagger, demon, depths, dirge, dragon, druid, dungeon, effigy, ember, enchantment, exile, familiar, fiend, forge, fortress, gargoyle, gate, ghost, ghoul, giant, goblin, golem, grave, grimoire, guardian, harbinger, haven, helm, heretic, hex, hydra, idol, illusion, inferno, isle, jailer, kraken, labyrinth, lair, lance, leviathan, lich, longbow, manticore, mausoleum, maze, minotaur, mithril, monolith, moon, necromancer, nexus, nightmare, nymph, obsidian, ogre, oracle, orc, overlord, paladin, phantom, phoenix, plague, portal, prism, prophet, quill, ravine, reaper, relic, revenant, rune, sanctum, sarcophagus, scroll, sentinel, serpent, shade, shard, shrine, siege, skeleton, skull, specter, spell, spire, staff, stalker, stronghold, sword, talisman, throne, tomb, tome, tower, troll, unicorn, urn, vampire, vault, vestige, void, vortex, warden, warlock, wasteland, witch, wizard, wraith, wyvern, xorn, zealot, zephyr, zombie
+Generated with `crypto/rand`. Word lists: 100 adverbs, 144 adjectives, 139 nouns. ~288M combinations.
 
 ## Reconnection Behavior
 
-The client reconnects on connection loss with exponential backoff (1s doubling to 30s cap).
+The client reconnects on connection loss with exponential backoff (1s doubling to 30s cap). After 5 consecutive failures, a new tunnel ID is generated.
 
 When the client disconnects, the server keeps the tunnel registered for 20 seconds before removing it. This allows the client to reconnect and restore the tunnel without a URL change.
 
@@ -204,24 +178,14 @@ burrowctl tunnel create --port 3000 --port 8080 --port 5432
 burrowctl tunnel create --port 3000 --server burrow.example.com:25701 --token my-token
 ```
 
-### Using Environment Variables
+### Using Authentication
 
 ```bash
-export BURROW_SERVER=burrow.example.com:25701
-export BURROW_TOKEN=my-secret-token
+# Store token once
+burrowctl auth login my-token --server burrow.example.com:25701
 
-# Now just specify ports
+# Then just specify ports
 burrowctl tunnel create --port 3000 --port 8080
-```
-
-### Monitoring
-
-```bash
-# Monitor tunnel traffic in real-time
-burrowctl tunnel inspect swiftly-ancient-silent-dragon --follow
-
-# Check connection health
-burrowctl tunnel status
 ```
 
 ### Cleanup

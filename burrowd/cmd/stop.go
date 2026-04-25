@@ -17,8 +17,6 @@ var stopCmd = &cobra.Command{
 	RunE:  runStop,
 }
 
-func init() {}
-
 func runStop(cmd *cobra.Command, args []string) error {
 	pidFile := internal.ConfigDir() + "/pid"
 	data, err := os.ReadFile(pidFile)
