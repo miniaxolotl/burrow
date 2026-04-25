@@ -1,22 +1,52 @@
-name: ci
+name: CI
 
 on:
   push:
-    branches:
-      - development
-      - production
+    branches: [development, production]
+  pull_request:
+    branches: [development, production]
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache: true
+      - run: go vet ./...
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache: true
+      - run: go build ./...
+
+  test:
+    runs-on: ubuntu-latest
+    needs: [lint, build]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.work
+          cache: true
+      - run: go test ./...
+
   deploy-preview:
     runs-on: ubuntu-24.04
-    if: github.ref == 'refs/heads/development'
+    needs: [test]
+    if: github.ref == 'refs/heads/development' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Deploy to preview
-        uses: dokku/github-action@master
+      - uses: dokku/github-action@master
         with:
           git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL_PREVIEW }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -24,14 +54,13 @@ jobs:
 
   deploy-production:
     runs-on: ubuntu-24.04
-    if: github.ref == 'refs/heads/production'
+    needs: [test]
+    if: github.ref == 'refs/heads/production' && github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Deploy to production
-        uses: dokku/github-action@master
+      - uses: dokku/github-action@master
         with:
           git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL }}
           ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
