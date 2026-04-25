@@ -9,6 +9,7 @@ type TunnelInfo struct {
 	Status     string `json:"status"`
 	Latency    string `json:"latency"`
 	Reconnects int    `json:"reconnects"`
+	TotalSize  int64  `json:"total_size"`
 }
 
 type TunnelLog struct {

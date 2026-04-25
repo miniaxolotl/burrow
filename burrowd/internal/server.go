@@ -69,6 +69,8 @@ type Server struct {
 	closeOnce      sync.Once
 	logMu          sync.RWMutex
 	logs           map[string][]*protocol.TunnelLog
+	sizeMu         sync.RWMutex
+	totalSize      map[string]int64
 }
 
 func NewServer(registry *TunnelRegistry, domain, secret string, secure bool) *Server {
@@ -81,6 +83,7 @@ func NewServer(registry *TunnelRegistry, domain, secret string, secure bool) *Se
 		connections:    make(map[string]*yamux.Session),
 		pendingRemoves: make(map[string]chan struct{}),
 		logs:           make(map[string][]*protocol.TunnelLog),
+		totalSize:      make(map[string]int64),
 	}
 
 	// CheckOrigin is intentionally permissive: clients connect from arbitrary
@@ -122,12 +125,16 @@ func (s *Server) auth(r *http.Request) bool {
 
 func (s *Server) addLog(tunnelID string, entry *protocol.TunnelLog) {
 	s.logMu.Lock()
-	defer s.logMu.Unlock()
 	entries := s.logs[tunnelID]
 	if len(entries) >= maxLogsPerTunnel {
 		entries = entries[1:]
 	}
 	s.logs[tunnelID] = append(entries, entry)
+	s.logMu.Unlock()
+
+	s.sizeMu.Lock()
+	s.totalSize[tunnelID] += entry.Size
+	s.sizeMu.Unlock()
 }
 
 func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
@@ -191,6 +198,11 @@ func (s *Server) handleTunnelList(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Failed to list tunnels", http.StatusInternalServerError)
 		return
 	}
+	s.sizeMu.RLock()
+	for _, t := range tunnels {
+		t.TotalSize = s.totalSize[t.TunnelID]
+	}
+	s.sizeMu.RUnlock()
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tunnels)
 }
