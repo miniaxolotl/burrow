@@ -18,38 +18,6 @@ import (
 	"github.com/xtaci/yamux"
 )
 
-type wsConn struct {
-	*websocket.Conn
-	buf []byte
-}
-
-func (c *wsConn) Read(b []byte) (int, error) {
-	// Drain leftover bytes from the previous WebSocket message before reading a new one.
-	if len(c.buf) > 0 {
-		n := copy(b, c.buf)
-		c.buf = c.buf[n:]
-		return n, nil
-	}
-	msgType, msg, err := c.Conn.ReadMessage()
-	if err != nil {
-		return 0, err
-	}
-	if msgType != websocket.BinaryMessage {
-		return 0, fmt.Errorf("expected binary message")
-	}
-	n := copy(b, msg)
-	if n < len(msg) {
-		c.buf = msg[n:]
-	}
-	return n, nil
-}
-
-func (c *wsConn) Write(b []byte) (int, error) {
-	if err := c.Conn.WriteMessage(websocket.BinaryMessage, b); err != nil {
-		return 0, err
-	}
-	return len(b), nil
-}
 
 const tunnelGracePeriod = 20 * time.Second
 const maxLogsPerTunnel = 200
@@ -322,7 +290,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	cfg := yamux.DefaultConfig()
 	cfg.KeepAliveInterval = 30 * time.Second
-	session, err := yamux.Server(&wsConn{Conn: conn}, cfg)
+	session, err := yamux.Server(&protocol.WsConn{Conn: conn}, cfg)
 	if err != nil {
 		return
 	}
@@ -458,19 +426,8 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 
 	var respSize int64
 	done := make(chan struct{}, 2)
-	go func() {
-		if _, err := io.Copy(stream, client); err != nil {
-			return
-		}
-		done <- struct{}{}
-	}()
-	go func() {
-		n, err := io.Copy(client, stream)
-		respSize = n
-		_ = err
-		client.Close()
-		done <- struct{}{}
-	}()
+	go func() { io.Copy(stream, client); done <- struct{}{} }()
+	go func() { n, _ := io.Copy(client, stream); respSize = n; client.Close(); done <- struct{}{} }()
 	<-done
 	<-done
 
@@ -509,19 +466,8 @@ func (s *Server) proxyWebSocket(w http.ResponseWriter, r *http.Request, stream n
 
 	var size int64
 	done := make(chan struct{}, 2)
-	go func() {
-		if _, err := io.Copy(stream, client); err != nil {
-			return
-		}
-		stream.Close()
-		done <- struct{}{}
-	}()
-	go func() {
-		n, _ := io.Copy(client, stream)
-		size = n
-		client.Close()
-		done <- struct{}{}
-	}()
+	go func() { io.Copy(stream, client); stream.Close(); done <- struct{}{} }()
+	go func() { n, _ := io.Copy(client, stream); size = n; client.Close(); done <- struct{}{} }()
 	<-done
 	<-done
 	return size

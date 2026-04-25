@@ -1,9 +1,10 @@
 package tunnel
 
 import (
+	"context"
+	"fmt"
 	"net"
-	"os"
-	"strings"
+	"net/http"
 
 	"burrow/protocol"
 
@@ -65,24 +66,25 @@ func httpScheme() string {
 	return "http"
 }
 
-// resolveToken returns the best available auth token. Priority:
-//  1. --token flag / BURROW_TOKEN env var
-//  2. ~/.config/burrow/client.json token field (written by `burrowctl auth login`)
-//  3. ~/.burrow/token file (legacy fallback, written by `burrowd auth login`)
-//  4. Generate from --secret / BURROW_SECRET env var
+// resolveToken returns the best available auth token.
+// Priority follows viper: --token flag > BURROW_TOKEN env > client.json token field.
+// Falls back to generating a token from --secret / BURROW_SECRET if no token is set.
 func resolveToken() string {
 	if t := viper.GetString("token"); t != "" {
 		return t
-	}
-	if home, err := os.UserHomeDir(); err == nil {
-		if data, err := os.ReadFile(home + "/.burrow/token"); err == nil {
-			if t := strings.TrimSpace(string(data)); t != "" {
-				return t
-			}
-		}
 	}
 	if secret := viper.GetString("secret"); secret != "" {
 		return protocol.GenerateToken(secret)
 	}
 	return ""
+}
+
+// apiDo performs an authenticated HTTP request to the burrow server.
+func apiDo(method, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(context.Background(), method, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build request: %w", err)
+	}
+	req.Header.Set("X-Tunnel-Token", resolveToken())
+	return http.DefaultClient.Do(req)
 }

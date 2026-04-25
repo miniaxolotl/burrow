@@ -29,38 +29,6 @@ func (cw *countWriter) Write(p []byte) (int, error) {
 	return n, err
 }
 
-type wsConn struct {
-	*websocket.Conn
-	buf []byte
-}
-
-func (c *wsConn) Read(b []byte) (int, error) {
-	// Drain any leftover bytes from the previous message before reading a new one.
-	if len(c.buf) > 0 {
-		n := copy(b, c.buf)
-		c.buf = c.buf[n:]
-		return n, nil
-	}
-	msgType, msg, err := c.Conn.ReadMessage()
-	if err != nil {
-		return 0, err
-	}
-	if msgType != websocket.BinaryMessage {
-		return 0, fmt.Errorf("expected binary message")
-	}
-	n := copy(b, msg)
-	if n < len(msg) {
-		c.buf = msg[n:]
-	}
-	return n, nil
-}
-
-func (c *wsConn) Write(b []byte) (int, error) {
-	if err := c.Conn.WriteMessage(websocket.BinaryMessage, b); err != nil {
-		return 0, err
-	}
-	return len(b), nil
-}
 
 type Client struct {
 	server  string
@@ -166,8 +134,10 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 		tunnelURL = fmt.Sprintf("https://%s.%s", tunnelID, c.domain)
 	}
 
-	wrappedConn := &wsConn{Conn: conn}
-	session, err := yamux.Client(wrappedConn, nil)
+	cfg := yamux.DefaultConfig()
+	cfg.KeepAliveInterval = 30 * time.Second
+	wrappedConn := &protocol.WsConn{Conn: conn}
+	session, err := yamux.Client(wrappedConn, cfg)
 	if err != nil {
 		conn.Close()
 		return nil, fmt.Errorf("failed to create yamux session: %w", err)

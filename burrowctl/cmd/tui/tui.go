@@ -500,17 +500,26 @@ func (m model) View() string {
 	b.WriteString(bg.Render("\n"))
 	b.WriteString(m.banner(m.server))
 
-	// table header
-	tableW := min(m.width-4, colIDWidth+colPortWidth+colLatWidth+colReconWidth+colSizeWidth+24)
-	sortLabel := [...]string{"port", "latency", "reconnects"}[m.sortMode]
+	// table header — sort indicator lives inside the sorted column header
+	portH, latH, reconH := "PORT", "LATENCY", "RECONNECTS"
+	switch m.sortMode {
+	case sortPort:
+		portH = "PORT ▲"
+	case sortLatency:
+		latH = "LATENCY ▲"
+	case sortReconnects:
+		reconH = "RECON ▲"
+	}
+	// +16: 5 separators×2 (10) + "STATUS" (6)
+	tableW := min(m.width-4, colIDWidth+colPortWidth+colLatWidth+colReconWidth+colSizeWidth+16)
 	b.WriteString(ind + colHeaderStyle.Render(
-		fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %-*s  %s  [%s]",
+		fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %-*s  %s",
 			colIDWidth, "TUNNEL ID",
-			colPortWidth, "PORT",
-			colLatWidth, "LATENCY",
-			colReconWidth, "RECONNECTS",
+			colPortWidth, portH,
+			colLatWidth, latH,
+			colReconWidth, reconH,
 			colSizeWidth, "SIZE",
-			"STATUS", sortLabel),
+			"STATUS"),
 	) + "\n")
 	b.WriteString(ind + divStyle.Render(strings.Repeat("─", tableW)) + "\n")
 
@@ -532,7 +541,7 @@ func (m model) View() string {
 			}
 			line := fmt.Sprintf("▶ %-*s  %-*s  %-*s  %-*s  %-*s  %s",
 				colIDWidth, id, colPortWidth, port, colLatWidth, lat, colReconWidth, recons, colSizeWidth, size, statusText)
-			b.WriteString(selRowStyle.Render(line) + "\n")
+			b.WriteString(selRowStyle.Width(m.width).Render(line) + "\n")
 		} else {
 			statusText := "● active"
 			statusSty := activeStyle
@@ -636,15 +645,16 @@ func (m model) viewLogs() string {
 	const colPathW = 26
 	const colSizeW = 8
 	const colDurW = 10
-	logTableW := min(m.width-4, colTimeW+colIPW+colMethodW+colPathW+colSizeW+colDurW+24)
+	// +10: 5 separators × 2
+	logTableW := min(m.width-4, colTimeW+colIPW+colMethodW+colPathW+colSizeW+colDurW+10)
 	b.WriteString(ind + colHeaderStyle.Render(
-		fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %-*s  %s",
+		fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %-*s  %-*s",
 			colTimeW, "TIME",
 			colIPW, "IP",
 			colMethodW, "METHOD",
 			colPathW, "PATH",
 			colSizeW, "SIZE",
-			"DURATION"),
+			colDurW, "DURATION"),
 	) + "\n")
 	b.WriteString(ind + divStyle.Render(strings.Repeat("─", logTableW)) + "\n")
 
@@ -668,7 +678,7 @@ func (m model) viewLogs() string {
 		if i == m.logCursor {
 			line := fmt.Sprintf("▶ %-*s  %-*s  %-*s  %-*s  %-*s  %s",
 				colTimeW, ts, colIPW, ip, colMethodW, method, colPathW, path, colSizeW, size, dur)
-			b.WriteString(selRowStyle.Render(line) + "\n")
+			b.WriteString(selRowStyle.Width(m.width).Render(line) + "\n")
 		} else {
 			b.WriteString(ind +
 				rowPortStyle.Render(fmt.Sprintf("%-*s", colTimeW, ts)) + sep +

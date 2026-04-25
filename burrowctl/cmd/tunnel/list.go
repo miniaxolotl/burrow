@@ -19,15 +19,8 @@ var listCmd = &cobra.Command{
 
 func fetchTunnels() ([]*protocol.TunnelInfo, error) {
 	server := viper.GetString("server")
-	token := resolveToken()
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s/tunnels", httpScheme(), server), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build request: %w", err)
-	}
-	req.Header.Set("X-Tunnel-Token", token)
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := apiDo("GET", fmt.Sprintf("%s://%s/tunnels", httpScheme(), server))
 	if err != nil {
 		return nil, fmt.Errorf("failed to contact server: %w", err)
 	}

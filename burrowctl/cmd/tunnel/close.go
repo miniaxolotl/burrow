@@ -1,7 +1,6 @@
 package tunnel
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 
@@ -19,16 +18,8 @@ var closeCmd = &cobra.Command{
 func runTunnelClose(cmd *cobra.Command, args []string) error {
 	tunnelID := args[0]
 	server := viper.GetString("server")
-	token := resolveToken()
 
-	req, err := http.NewRequestWithContext(context.Background(), "DELETE",
-		fmt.Sprintf("%s://%s/tunnel/%s", httpScheme(), server, tunnelID), nil)
-	if err != nil {
-		return fmt.Errorf("failed to build request: %w", err)
-	}
-	req.Header.Set("X-Tunnel-Token", token)
-
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := apiDo("DELETE", fmt.Sprintf("%s://%s/tunnel/%s", httpScheme(), server, tunnelID))
 	if err != nil {
 		return fmt.Errorf("failed to contact server: %w", err)
 	}

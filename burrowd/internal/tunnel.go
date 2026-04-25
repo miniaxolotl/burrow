@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"fmt"
+	"net"
 	"strings"
 	"time"
 
@@ -56,6 +57,9 @@ func (t *TunnelRegistry) List(ctx context.Context) ([]*protocol.TunnelInfo, erro
 }
 
 func ParseTunnelID(host, domain string) string {
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
 	suffix := "." + domain
 	if !strings.HasSuffix(host, suffix) {
 		return ""

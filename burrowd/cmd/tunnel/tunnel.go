@@ -1,6 +1,10 @@
 package tunnel
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -21,4 +25,20 @@ func init() {
 
 	TunnelCmd.AddCommand(listCmd)
 	TunnelCmd.AddCommand(revokeCmd)
+}
+
+func scheme() string {
+	if viper.GetBool("tls") {
+		return "https"
+	}
+	return "http"
+}
+
+func apiDo(method, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(context.Background(), method, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build request: %w", err)
+	}
+	req.Header.Set("X-Tunnel-Token", viper.GetString("token"))
+	return http.DefaultClient.Do(req)
 }

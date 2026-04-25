@@ -1,7 +1,6 @@
 package tunnel
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -34,24 +33,15 @@ func init() {
 func runTunnelInspect(cmd *cobra.Command, args []string) error {
 	tunnelID := args[0]
 	server := viper.GetString("server")
-	token := resolveToken()
 
 	if inspectFollow {
-		return followLogs(server, token, tunnelID)
+		return followLogs(server, tunnelID)
 	}
-
-	return printLogs(server, token, tunnelID)
+	return printLogs(server, tunnelID)
 }
 
-func fetchLogs(server, token, tunnelID string) ([]*protocol.TunnelLog, error) {
-	req, err := http.NewRequestWithContext(context.Background(), "GET",
-		fmt.Sprintf("%s://%s/logs/%s", httpScheme(), server, tunnelID), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build request: %w", err)
-	}
-	req.Header.Set("X-Tunnel-Token", token)
-
-	resp, err := http.DefaultClient.Do(req)
+func fetchLogs(server, tunnelID string) ([]*protocol.TunnelLog, error) {
+	resp, err := apiDo("GET", fmt.Sprintf("%s://%s/logs/%s", httpScheme(), server, tunnelID))
 	if err != nil {
 		return nil, fmt.Errorf("failed to contact server: %w", err)
 	}
@@ -68,8 +58,8 @@ func fetchLogs(server, token, tunnelID string) ([]*protocol.TunnelLog, error) {
 	return logs, nil
 }
 
-func printLogs(server, token, tunnelID string) error {
-	logs, err := fetchLogs(server, token, tunnelID)
+func printLogs(server, tunnelID string) error {
+	logs, err := fetchLogs(server, tunnelID)
 	if err != nil {
 		return err
 	}
@@ -87,10 +77,10 @@ func printLogs(server, token, tunnelID string) error {
 	return nil
 }
 
-func followLogs(server, token, tunnelID string) error {
+func followLogs(server, tunnelID string) error {
 	seen := 0
 	for {
-		logs, err := fetchLogs(server, token, tunnelID)
+		logs, err := fetchLogs(server, tunnelID)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 			time.Sleep(time.Second)
@@ -113,11 +103,11 @@ func followLogs(server, token, tunnelID string) error {
 func printLogTable(logs []*protocol.TunnelLog) {
 	for _, log := range logs {
 		ts := log.Timestamp.Format("15:04:05.000")
-		fmt.Printf("%s  %s  %-40s  %d  %s\n",
+		fmt.Printf("%s  %-15s  %-6s  %-40s  %s\n",
 			ts,
+			log.IP,
 			log.Method,
 			log.Path,
-			log.StatusCode,
 			log.Duration,
 		)
 	}
