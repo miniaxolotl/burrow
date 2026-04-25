@@ -1,0 +1,21 @@
+{
+  "name": "@monorepo/burrow",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Network tunneling service",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/miniaxolotl/burrow.git"
+  },
+  "homepage": "https://github.com/miniaxolotl/burrow#readme",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "release": "changeset publish"
+  },
+  "devDependencies": {
+    "@changesets/cli": "~2.30.0"
+  }
+}

@@ -13,9 +13,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.work
+          go-version-file: burrowd/go.mod
           cache: true
-      - run: go vet ./burrowd/... ./burrowctl/... ./protocol/...
+      - run: go vet ./...
 
   build:
     runs-on: ubuntu-latest
@@ -23,9 +23,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.work
+          go-version-file: burrowd/go.mod
           cache: true
-      - run: go build ./burrowd/... ./burrowctl/... ./protocol/...
+      - run: go build ./...
 
   test:
     runs-on: ubuntu-latest
@@ -34,9 +34,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version-file: go.work
+          go-version-file: burrowd/go.mod
           cache: true
-      - run: go test ./burrowd/... ./burrowctl/... ./protocol/...
+      - run: go test ./...
 
   deploy-preview:
     runs-on: ubuntu-24.04
