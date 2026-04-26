@@ -61,7 +61,7 @@ async function createGithubRelease(tag: string) {
   const exists = execSync(`git tag -l "${tag}"`, { cwd: ROOT }).toString().trim();
   if (!exists) {
     run(`git tag -a ${tag} -m "Release ${tag}"`);
-    run("git push origin ${tag}");
+    run(`git push origin ${tag}`);
   }
 
   run(`gh release create ${tag} --generate-notes --repo ${REPO}`);
@@ -98,7 +98,7 @@ async function deploy() {
   const ghToken = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
 
   if (process.env.GHCR_REGISTRY && ghToken) {
-    await registryLogin(process.env.GHCR_REGISTRY, ghToken, process.env.USER || "github");
+    await registryLogin(process.env.GHCR_REGISTRY, ghToken, process.env.USER || execSync("whoami", { encoding: "utf8" }).trim());
   }
 
   if (process.env.DOCKERHUB_REGISTRY && process.env.DOCKERHUB_TOKEN) {
