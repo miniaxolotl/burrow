@@ -59,20 +59,7 @@ Tags: `latest`, `v{major}.{minor}.{patch}`, `{major}.{minor}.{patch}`
 
 ## Versioning
 
-Burrow uses [Changesets](https://github.com/changesets/changesets) for version management.
-
-### Workflow
-
-```bash
-# Create a changeset
-pnpm changeset
-
-# Version bump (on production branch)
-pnpm changeset version
-
-# Publish to npm
-pnpm changeset publish
-```
+Burrow uses [release-please](https://github.com/googleapis/release-please) for automatic version bumping. Merge a PR to `production` with conventional commits (`feat:`, `fix:`, `chore:`) and release-please creates a release PR. Merging it tags the release and triggers the release + deploy workflows.
 
 ### Manual Release
 

@@ -22,7 +22,6 @@
     "clean": "rm -rf packages/*/dist scripts/*/dist node_modules"
   },
   "devDependencies": {
-    "@changesets/cli": "~2.30.0",
     "@types/node": "~25.5.0",
     "prettier": "~3.8.1"
   }
