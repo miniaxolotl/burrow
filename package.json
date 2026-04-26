@@ -1,7 +1,7 @@
 {
   "name": "@monorepo/burrow",
   "private": true,
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Network tunneling service",
   "license": "MIT",
   "packageManager": "pnpm@10.30.3",
