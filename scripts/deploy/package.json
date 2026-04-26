@@ -1,0 +1,15 @@
+{
+  "name": "@script/deploy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Builds and pushes Docker images to GHCR and Docker Hub, creates GitHub releases",
+  "scripts": {
+    "deploy": "tsx src/index.ts"
+  },
+  "devDependencies": {
+    "@lib/eslint-config": "workspace:*",
+    "@lib/typescript-config": "workspace:*",
+    "tsx": "~4.21.0"
+  }
+}
