@@ -44,7 +44,10 @@ async function release() {
   console.log("\n=== Release ===\n");
 
   const packageJson = JSON.parse(
-    execSync("cat ../../packages/burrowctl/package.json", { encoding: "utf8" }),
+    fs.readFileSync(
+      path.join(ROOT, "packages", "burrowctl", "package.json"),
+      "utf8",
+    ),
   );
   const version = packageJson.version;
 
@@ -62,40 +65,45 @@ async function release() {
     return;
   }
 
-  run('export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@latest', true);
-  run(`export PATH="$PATH:$(go env GOPATH)/bin" && GORELEASER_CURRENT_TAG=v${version} goreleaser build --clean --id burrowctl --skip=validate`);
+  run(
+    'export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@latest',
+    undefined,
+    true,
+  );
+  run(
+    `export PATH="$PATH:$(go env GOPATH)/bin" && GORELEASER_CURRENT_TAG=v${version} goreleaser build --clean --id burrowctl --skip=validate`,
+  );
 
   for (const [platform, binPath] of Object.entries(BIN_PATHS)) {
-    const pkgDir = `../../packages/burrowctl-${platform}`;
-    const pkgJsonPath = `${pkgDir}/package.json`;
+    const pkgDir = path.join(ROOT, "packages", `burrowctl-${platform}`);
+    const pkgJsonPath = path.join(pkgDir, "package.json");
 
     console.log(`--- ${platform} ---`);
 
     run(`cp dist/${binPath} ${pkgDir}/burrowctl`);
     run(`chmod +x ${pkgDir}/burrowctl`);
 
-    const pkgJson = JSON.parse(execSync(`cat ${pkgJsonPath}`, { encoding: "utf8" }));
+    const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
     pkgJson.version = version;
-    const tmpPath = `/tmp/pkg-json-${Date.now()}.json`;
-    fs.writeFileSync(tmpPath, JSON.stringify(pkgJson, null, 2) + "\n");
-    run(`cp ${tmpPath} ${pkgJsonPath}`);
+    fs.writeFileSync(pkgJsonPath, JSON.stringify(pkgJson, null, 2) + "\n");
 
-    run(`cd ${pkgDir} && npm publish --access public`);
+    run("npm publish --access public", pkgDir);
     console.log(`✓ Published @miniaxolotl/burrowctl-${platform}@${version}`);
   }
 
-  const mainDir = "../../packages/burrowctl";
-  const mainPkgJsonPath = `${mainDir}/package.json`;
-  const mainPkgJson = JSON.parse(execSync(`cat ${mainPkgJsonPath}`, { encoding: "utf8" }));
+  const mainDir = path.join(ROOT, "packages", "burrowctl");
+  const mainPkgJsonPath = path.join(mainDir, "package.json");
+  const mainPkgJson = JSON.parse(fs.readFileSync(mainPkgJsonPath, "utf8"));
   mainPkgJson.version = version;
   for (const dep of Object.keys(mainPkgJson.optionalDependencies || {})) {
     mainPkgJson.optionalDependencies[dep] = version;
   }
-  const mainTmpPath = `/tmp/pkg-json-main-${Date.now()}.json`;
-  fs.writeFileSync(mainTmpPath, JSON.stringify(mainPkgJson, null, 2) + "\n");
-  run(`cp ${mainTmpPath} ${mainPkgJsonPath}`);
+  fs.writeFileSync(
+    mainPkgJsonPath,
+    JSON.stringify(mainPkgJson, null, 2) + "\n",
+  );
 
-  run(`cd ${mainDir} && npm publish --access public`);
+  run("npm publish --access public", mainDir);
   console.log(`✓ Published @miniaxolotl/burrowctl@${version} to npm`);
 
   console.log("\n✓ Release complete");
