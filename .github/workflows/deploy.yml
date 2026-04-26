@@ -1,63 +1,34 @@
-name: deploy
+name: Deploy
 
 on:
   push:
-    branches: [development, production]
-    tags: ["v*"]
-
-permissions:
-  contents: read
-  packages: write
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to deploy (e.g., 0.2.3)"
+        required: false
+        default: ""
 
 jobs:
-  dokku:
-    if: github.ref_type == 'branch'
+  deploy:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Unlock app if locked
-        if: github.ref == 'refs/heads/production'
-        run: |
-          sshopts="-o StrictHostKeyChecking=no"
-          ssh $sshopts ${{ secrets.DOKKU_SSH_HOST_KEY }} "dokku apps:unlock burrowd" 2>/dev/null || true
-      - uses: dokku/github-action@master
-        with:
-          git_remote_url: ${{ github.ref == 'refs/heads/production' && secrets.DOKKU_GIT_REMOTE_URL || secrets.DOKKU_GIT_REMOTE_URL_PREVIEW }}
-          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
-          ssh_host_key: ${{ secrets.DOKKU_SSH_HOST_KEY }}
-          branch: main
-
-  docker:
-    if: github.ref_type == 'tag'
-    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
 
       - name: Get version
         id: version
-        run: echo "TAG=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
-
-      - name: Check Docker Hub credentials
-        id: dockerhub
         run: |
-          if [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
-            echo "available=true" >> $GITHUB_OUTPUT
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
           else
-            echo "available=false" >> $GITHUB_OUTPUT
+            TAG="${{ github.ref_name }}"
+            echo "VERSION=${TAG#v}" >> $GITHUB_OUTPUT
           fi
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -70,24 +41,37 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Login to Docker Hub
-        if: steps.dockerhub.outputs.available == 'true'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push
-        uses: docker/build-push-action@v6
+      - name: Build and push to GHCR
+        uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/miniaxolotl/burrowd:latest
-            ghcr.io/miniaxolotl/burrowd:${{ steps.version.outputs.TAG }}
-            ${{ steps.dockerhub.outputs.available == 'true' && format('miniaxolotl/burrowd:latest,miniaxolotl/burrowd:{0}', steps.version.outputs.TAG) || '' }}
+            ghcr.io/miniaxolotl/burrowd:v${{ steps.version.outputs.VERSION }}
           labels: |
-            org.opencontainers.image.version=${{ steps.version.outputs.TAG }}
+            org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
             org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push to Docker Hub
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            miniaxolotl/burrowd:latest
+            miniaxolotl/burrowd:v${{ steps.version.outputs.VERSION }}
+          labels: |
+            org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
