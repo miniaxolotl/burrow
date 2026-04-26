@@ -26,7 +26,20 @@ importers:
 
   lib/typescript-config: {}
 
-  packages/burrowctl: {}
+  packages/burrowctl:
+    optionalDependencies:
+      '@miniaxolotl/burrowctl-darwin-arm64':
+        specifier: 0.2.1
+        version: 0.2.1
+      '@miniaxolotl/burrowctl-darwin-x64':
+        specifier: 0.2.1
+        version: 0.2.1
+      '@miniaxolotl/burrowctl-linux-arm64':
+        specifier: 0.2.1
+        version: 0.2.1
+      '@miniaxolotl/burrowctl-linux-x64':
+        specifier: 0.2.1
+        version: 0.2.1
 
   packages/burrowctl-darwin-arm64: {}
 
@@ -276,6 +289,26 @@ packages:
   '@humanwhocodes/retry@0.4.3':
     resolution: {integrity: sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==}
     engines: {node: '>=18.18'}
+
+  '@miniaxolotl/burrowctl-darwin-arm64@0.2.1':
+    resolution: {integrity: sha512-aF0opl2iS3byohnHjU8I+xdwE+f3G60Cpg63WCNypsVmiobGpHtEC1hLGc6IgrN1/1oOlpPkC/8Vuzuwqe7Bnw==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@miniaxolotl/burrowctl-darwin-x64@0.2.1':
+    resolution: {integrity: sha512-hbAGSdVlpoynCofFpQsbmLmqGAZt9tvChwA1AkWP3c6dtpmOHJCHcVgtVxhVfVy2j1qTyjoEKz905AymJcPmdg==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@miniaxolotl/burrowctl-linux-arm64@0.2.1':
+    resolution: {integrity: sha512-bnstSLIN71xJm1Y13EiTnSODoBf/giQqSCZrHaqBcxv3D+cn+Vxa1bYHtDMcqTeIMMjnqWF6blaadsz0WlYgEQ==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@miniaxolotl/burrowctl-linux-x64@0.2.1':
+    resolution: {integrity: sha512-DU5h46Bh8LsGTWbpljU1aUqILvloHDMk0EaVhdUbfmj2eqUCBy+z6pnLqiNXJYAJovix8PPDrQQll7XV2qG5MA==}
+    cpu: [x64]
+    os: [linux]
 
   '@types/esrecurse@4.3.1':
     resolution: {integrity: sha512-xJBAbDifo5hpffDBuHl0Y8ywswbiAp/Wi7Y/GtAgSlZyIABppyurxVueOPE8LUQOxdlgi6Zqce7uoEpqNTeiUw==}
@@ -766,6 +799,18 @@ snapshots:
   '@humanwhocodes/module-importer@1.0.1': {}
 
   '@humanwhocodes/retry@0.4.3': {}
+
+  '@miniaxolotl/burrowctl-darwin-arm64@0.2.1':
+    optional: true
+
+  '@miniaxolotl/burrowctl-darwin-x64@0.2.1':
+    optional: true
+
+  '@miniaxolotl/burrowctl-linux-arm64@0.2.1':
+    optional: true
+
+  '@miniaxolotl/burrowctl-linux-x64@0.2.1':
+    optional: true
 
   '@types/esrecurse@4.3.1': {}
 
