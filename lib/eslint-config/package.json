@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Shared ESLint configuration for grove monorepo",
+  "description": "Shared ESLint configuration for burrow monorepo",
   "main": "index.js",
   "exports": {
     ".": "./index.js"
