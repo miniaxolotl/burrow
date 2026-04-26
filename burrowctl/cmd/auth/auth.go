@@ -19,6 +19,7 @@ func init() {
 	AuthCmd.AddCommand(loginCmd)
 	AuthCmd.AddCommand(logoutCmd)
 	AuthCmd.AddCommand(statusCmd)
+	AuthCmd.AddCommand(setServerCmd)
 }
 
 func ConfigDir() string {
@@ -42,7 +43,7 @@ func readConfig() (*clientConfig, string, error) {
 	cfgFile := filepath.Join(dir, "client.json")
 	data, err := os.ReadFile(cfgFile)
 	if err != nil {
-		return nil, "", err
+		return nil, cfgFile, err
 	}
 	var cfg clientConfig
 	if err := json.Unmarshal(data, &cfg); err != nil {

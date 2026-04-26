@@ -24,7 +24,7 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	cfg, cfgFile, err := readConfig()
 	if err != nil {
 		cfg = &clientConfig{
-			Server: "localhost:25701",
+			Server: "burrow.mawa.dev",
 			Domain: "burrow.mawa.dev",
 		}
 	}
