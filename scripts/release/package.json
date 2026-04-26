@@ -7,7 +7,7 @@
   "scripts": {
     "release": "tsx src/index.ts"
   },
-  "devDependencies": {
+"devDependencies": {
     "@lib/eslint-config": "workspace:*",
     "@lib/typescript-config": "workspace:*",
     "tsx": "~4.21.0"
