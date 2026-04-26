@@ -22,7 +22,14 @@ docker compose up -d
 ## Client
 
 ```bash
+# npm
 npm install -g @miniaxolotl/burrowctl
+
+# pnpm
+pnpm add -g @miniaxolotl/burrowctl
+
+# bun
+bun add -g @miniaxolotl/burrowctl
 ```
 
 Then:
