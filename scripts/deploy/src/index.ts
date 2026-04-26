@@ -75,10 +75,11 @@ async function deploy() {
   const version = packageJson.version;
 
   const tag = process.env.TAG || "latest";
+  const versionTag = tag.replace(/^v/, "");
   const tags =
     tag === "latest"
       ? ["latest", `v${version}`]
-      : ([tag, tag.replace(/^v/, "") === version ? "latest" : null].filter(
+      : ([tag, versionTag, versionTag === version ? "latest" : null].filter(
           Boolean,
         ) as string[]);
 
