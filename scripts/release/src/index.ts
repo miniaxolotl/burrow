@@ -5,6 +5,9 @@
 
 const { execSync } = await import("node:child_process");
 const fs = await import("node:fs");
+const path = await import("node:path");
+
+const ROOT = path.resolve(new URL("../../..", import.meta.url).pathname);
 
 const BIN_PATHS: Record<string, string> = {
   "linux-x64": "burrowctl_linux_amd64_v1/burrowctl",
@@ -13,10 +16,10 @@ const BIN_PATHS: Record<string, string> = {
   "darwin-arm64": "burrowctl_darwin_arm64_v8.0/burrowctl",
 };
 
-function run(cmd: string, ignoreErrors = false) {
+function run(cmd: string, cwd?: string, ignoreErrors = false) {
   console.log(`> ${cmd}`);
   try {
-    execSync(cmd, { stdio: "inherit" });
+    execSync(cmd, { stdio: "inherit", cwd: cwd || ROOT });
   } catch (err) {
     if (!ignoreErrors) {
       throw err;
