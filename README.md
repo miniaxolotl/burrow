@@ -22,7 +22,7 @@ burrowctl tunnel create --port 3000
 
 ## Docs
 
-- [Deploy & release](documentation/deploy/deploy.md)
+- [Deploy & release](documentation/deploy.md)
 - [Server setup](documentation/server.md)
 - [Client reference](documentation/client.md)
 

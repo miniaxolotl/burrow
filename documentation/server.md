@@ -49,47 +49,6 @@ burrowd serve --secret mysecret --domain mawa.dev --port 25701
 - `--secret` - Authentication secret (required)
 - `--tls` - Generate `https://` tunnel URLs (set when server is behind HTTPS proxy)
 
-### `burrowd auth login`
-
-Authenticate with a token. Validates against the configured secret and stores the token.
-
-```bash
-burrowd auth login {token}
-```
-
-**Behavior:**
-- Validates token HMAC against `BURROW_SECRET`
-- Stores the token as plaintext in `~/.burrow/token` (0600 permissions)
-
-### `burrowd auth status`
-
-Check current authentication status. Shows masked token if `~/.burrow/token` exists.
-
-### `burrowd auth logout`
-
-Remove stored authentication token.
-
-### `burrowd tunnel list`
-
-List all active tunnels by querying the running server's `GET /tunnels` API.
-
-```bash
-burrowd tunnel list
-burrowd tunnel list --server burrow.example.com:25701 --token mytoken
-```
-
-**Requires:** `burrowd serve` must be running. Use `--server` and `--token` (or `BURROW_SERVER` / `BURROW_TOKEN` env vars) to authenticate.
-
-### `burrowd tunnel revoke`
-
-Force-close a specific tunnel by calling the server's `DELETE /tunnel/{id}` API. Closes both the Redis record and the live yamux session.
-
-```bash
-burrowd tunnel revoke {tunnel_id}
-```
-
-**Requires:** `burrowd serve` must be running. Use `--server` and `--token` (or `BURROW_SERVER` / `BURROW_TOKEN` env vars) to authenticate.
-
 ### `burrowd stop`
 
 Stop the server gracefully via PID file.
@@ -294,7 +253,7 @@ docker compose up -d redis
 ./bin/burrowd serve --secret dev --domain localhost --port 25701
 
 # In another terminal, run client
-./bin/burrowctl tunnel create --server localhost:25701 --secret dev --port 3000
+./bin/burrowctl tunnel create --server localhost:25701 --token dev --port 3000
 ```
 
 ### Using Docker Compose
