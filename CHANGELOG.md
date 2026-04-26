@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.6](https://github.com/miniaxolotl/burrow/compare/v0.2.5...v0.2.6) (2026-04-26)
+
+
+### Bug Fixes
+
+* update optionalDependencies in package.json and pnpm-lock.yaml to use workspace references ([7e1472f](https://github.com/miniaxolotl/burrow/commit/7e1472fa59b8447d8e1433e0f2c34354453307a6))
+
 ## [0.2.5](https://github.com/miniaxolotl/burrow/compare/v0.2.4...v0.2.5) (2026-04-26)
 
 
