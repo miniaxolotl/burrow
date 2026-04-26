@@ -1,4 +1,7 @@
 packages:
-  - "lib/*"
-  - "packages/*"
-  - "scripts/*"
+  - lib/*
+  - packages/*
+  - scripts/*
+
+onlyBuiltDependencies:
+  - esbuild
