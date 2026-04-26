@@ -4,12 +4,6 @@ on:
   push:
     tags:
       - "v*"
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to deploy (e.g., 0.2.3)"
-        required: false
-        default: ""
 
 jobs:
   deploy:
@@ -25,15 +19,8 @@ jobs:
       - name: Get version
         id: version
         run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
-            VERSION="${{ github.ref_name }}"
-          else
-            VERSION=$(node -p 'require("./packages/burrowctl/package.json").version')
-          fi
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "TAG=${VERSION#v}" >> $GITHUB_OUTPUT
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "TAG=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Check Docker Hub credentials
         id: dockerhub
