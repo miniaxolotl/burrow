@@ -53,8 +53,7 @@ async function release() {
     console.log(`\nLocal ${version} → npm: ${npmVersion || "none"}\n`);
 
     if (!dryRun) {
-      run("go install github.com/goreleaser/goreleaser/v2@v2");
-      run("goreleaser build --single-target --clean --snapshot --id burrowctl");
+      run('export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@v2 && goreleaser build --single-target --clean --snapshot --id burrowctl');
 
       for (const [platform, binPath] of Object.entries(BIN_PATHS)) {
         const pkgDir = `../../packages/burrowctl-${platform}`;
