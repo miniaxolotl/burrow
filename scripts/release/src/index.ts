@@ -9,9 +9,9 @@ const path = await import("node:path");
 
 const BIN_PATHS = {
   "linux-x64": "burrowctl_linux_amd64_v1/burrowctl",
-  "linux-arm64": "burrowctl_linux_arm64/burrowctl",
+  "linux-arm64": "burrowctl_linux_arm64_v8.0/burrowctl",
   "darwin-x64": "burrowctl_darwin_amd64_v1/burrowctl",
-  "darwin-arm64": "burrowctl_darwin_arm64/burrowctl",
+  "darwin-arm64": "burrowctl_darwin_arm64_v8.0/burrowctl",
 };
 
 const ROOT = path.resolve(new URL("../../..", import.meta.url).pathname);
