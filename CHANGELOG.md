@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.2.7](https://github.com/miniaxolotl/burrow/compare/v0.2.6...v0.2.7) (2026-04-26)
+
+
+### Features
+
+* add set-server command to configure burrow server address and update default server in login ([868639d](https://github.com/miniaxolotl/burrow/commit/868639d2075fe1db0a72c40cf8f8863f6b0399a7))
+* enhance tunnel registration with owner authentication and update related methods ([815e7b0](https://github.com/miniaxolotl/burrow/commit/815e7b03ec206940ab843ded23fe516606f9d2a4))
+
+
+### Bug Fixes
+
+* allow tunnel creation without authentication by always returning true in authTunnel ([2fa8dc1](https://github.com/miniaxolotl/burrow/commit/2fa8dc10b09491fe6f4e09e13b442c0ce7d81225))
+* update default server address to burrow.mawa.dev in client configuration ([a11936f](https://github.com/miniaxolotl/burrow/commit/a11936ffce75f129f6e72c62e8224dde2f9ef096))
+* update deploy workflow to resolve tags and improve version handling ([5c93b8c](https://github.com/miniaxolotl/burrow/commit/5c93b8cffa6ca6d8d52e54d1dcfa5f96da296f34))
+* update preview version handling in deploy workflow ([81f7589](https://github.com/miniaxolotl/burrow/commit/81f75896e7bffbf17fd9c01d08026e030520e639))
+
 ## [0.2.6](https://github.com/miniaxolotl/burrow/compare/v0.2.5...v0.2.6) (2026-04-26)
 
 
