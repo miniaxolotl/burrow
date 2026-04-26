@@ -2,6 +2,8 @@ package internal
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -108,6 +110,28 @@ func (s *Server) authAdmin(r *http.Request) bool {
 	return protocol.ValidateToken(s.tokenFromRequest(r), s.secret)
 }
 
+// authForTunnel allows admins or the tunnel's owner. Anonymous tunnels (no owner)
+// are accessible without auth.
+func (s *Server) authForTunnel(r *http.Request, tunnelID string) bool {
+	if s.authAdmin(r) {
+		return true
+	}
+	td, err := s.registry.Get(r.Context(), tunnelID)
+	if err != nil || td == nil {
+		return false
+	}
+	if td.OwnerHash == "" {
+		return true
+	}
+	token := s.tokenFromRequest(r)
+	return token != "" && hashToken(token) == td.OwnerHash
+}
+
+func hashToken(token string) string {
+	h := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(h[:])
+}
+
 func jsonError(w http.ResponseWriter, message string, code int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
@@ -163,13 +187,13 @@ func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !s.authAdmin(r) {
-		jsonError(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
 	tunnelID := strings.TrimPrefix(r.URL.Path, "/logs/")
 	if tunnelID == "" {
 		jsonError(w, "Tunnel ID required", http.StatusBadRequest)
+		return
+	}
+	if !s.authForTunnel(r, tunnelID) {
+		jsonError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	s.logMu.RLock()
@@ -240,13 +264,13 @@ func (s *Server) handleTunnel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
-	if !s.authAdmin(r) {
-		jsonError(w, "Unauthorized", http.StatusUnauthorized)
-		return
-	}
 	tunnelID := strings.TrimPrefix(r.URL.Path, "/tunnel/")
 	if tunnelID == "" {
 		jsonError(w, "Tunnel ID required", http.StatusBadRequest)
+		return
+	}
+	if !s.authForTunnel(r, tunnelID) {
+		jsonError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
 	if err := s.registry.Remove(tunnelID); err != nil {
@@ -286,6 +310,11 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ownerHash := ""
+	if token := s.tokenFromRequest(r); token != "" {
+		ownerHash = hashToken(token)
+	}
+
 	// Cancel any pending grace-period removal — the client is reconnecting.
 	s.mu.Lock()
 	if cancel, ok := s.pendingRemoves[tunnelID]; ok {
@@ -313,7 +342,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer session.Close()
 
-	if _, err := s.registry.Register(r.Context(), tunnelID, uint16(port)); err != nil {
+	if _, err := s.registry.Register(r.Context(), tunnelID, uint16(port), ownerHash); err != nil {
 		return
 	}
 
@@ -358,7 +387,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		for {
 			select {
 			case <-ticker.C:
-				s.registry.Register(context.Background(), tunnelID, uint16(port))
+				s.registry.Register(context.Background(), tunnelID, uint16(port), ownerHash)
 			case <-done:
 				return
 			}

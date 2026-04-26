@@ -28,11 +28,15 @@ func (t *TunnelRegistry) tunnelURL(tunnelID string) string {
 	return fmt.Sprintf("%s://%s.%s", scheme, tunnelID, t.domain)
 }
 
-func (t *TunnelRegistry) Register(ctx context.Context, tunnelID string, port uint16) (string, error) {
-	if err := t.redis.SetTunnel(ctx, tunnelID, port, 24*time.Hour); err != nil {
+func (t *TunnelRegistry) Register(ctx context.Context, tunnelID string, port uint16, ownerHash string) (string, error) {
+	if err := t.redis.SetTunnel(ctx, tunnelID, port, ownerHash, 24*time.Hour); err != nil {
 		return "", fmt.Errorf("failed to register tunnel: %w", err)
 	}
 	return t.tunnelURL(tunnelID), nil
+}
+
+func (t *TunnelRegistry) Get(ctx context.Context, tunnelID string) (*TunnelData, error) {
+	return t.redis.GetTunnel(ctx, tunnelID)
 }
 
 func (t *TunnelRegistry) Remove(tunnelID string) error {

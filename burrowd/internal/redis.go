@@ -16,6 +16,7 @@ type RedisClient struct {
 type TunnelData struct {
 	ID        string    `json:"id"`
 	Port      uint16    `json:"port"`
+	OwnerHash string    `json:"owner_hash,omitempty"`
 	CreatedAt time.Time `json:"created_at"`
 	ExpiresAt time.Time `json:"expires_at"`
 }
@@ -46,11 +47,12 @@ func (r *RedisClient) Close() error {
 	return r.client.Close()
 }
 
-func (r *RedisClient) SetTunnel(ctx context.Context, id string, port uint16, ttl time.Duration) error {
+func (r *RedisClient) SetTunnel(ctx context.Context, id string, port uint16, ownerHash string, ttl time.Duration) error {
 	key := fmt.Sprintf("tunnel:%s", id)
 	data := TunnelData{
 		ID:        id,
 		Port:      port,
+		OwnerHash: ownerHash,
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(ttl),
 	}
