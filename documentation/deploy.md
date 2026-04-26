@@ -1,103 +1,97 @@
 # Deploy & Release
 
-## Release Flow
+## Releases
 
-1. Merge features into `development`
-2. Release-please creates a PR with version bumps — merge it
-3. Release-please creates a `v0.x.x` tag, triggering the release workflow:
-   - **GoReleaser** builds platform binaries (linux-x64, linux-arm64, darwin-x64, darwin-arm64)
-   - **npm publish** publishes `@miniaxolotl/burrowctl` + 4 platform packages
-4. Merge `development` → `production` to deploy
+Burrow uses [release-please](https://github.com/googleapis/release-please) for automated versioning.
 
-## CI/CD Workflows
+### Workflow
 
-| Workflow | Trigger | Action |
-|----------|---------|--------|
-| `ci.yml` | PRs, pushes to `development`/`production` | Lint, build, test |
-| `release.yml` | Push to `development` | Release-please PR |
-| `release.yml` | Push `v*` tag | GoReleaser build + npm publish |
-| `deploy.yml` | Push `v*` tag | Docker push to GHCR + Docker Hub |
+1. Push conventional commits to `development`
+2. Release-please creates a release PR
+3. Merge → GitHub release + `v*` tag created
+4. Deploy workflow triggers on tag → pushes Docker images
 
-## Docker Images
+### Conventional Commits
 
-Both GHCR and Docker Hub receive identical tags on every release:
+| Prefix | Effect |
+| ------ | ------ |
+| `feat:` | Minor bump |
+| `fix:` | Patch bump |
+| `BREAKING CHANGE:` | Major bump |
+| `docs:`, `chore:`, `refactor:` | No bump |
 
-```
-ghcr.io/miniaxolotl/burrowd:latest
-ghcr.io/miniaxolotl/burrowd:v0.x.x
-miniaxolotl/burrowd:latest
-miniaxolotl/burrowd:v0.x.x
-```
+### Config
 
-## Local Deploy (Docker)
+- `release-please-config.json` — single package (`.`) with `simple` release type
+- `.release-please-manifest.json` — current version
+- Updates `package.json`, platform `package.json` files, `burrowd/version.go`, `burrowctl/version.go`
 
-Build and push images manually:
+## Deploy
+
+### Docker Compose
 
 ```bash
-# Build locally (no push)
-pnpm --filter @script/deploy run deploy
-
-# Push to GHCR
-GHCR_REGISTRY=ghcr.io/miniaxolotl pnpm --filter @script/deploy run deploy
-
-# Push to Docker Hub
-DOCKERHUB_REGISTRY=miniaxolotl pnpm --filter @script/deploy run deploy
-
-# Push to both
-GHCR_REGISTRY=ghcr.io/miniaxolotl DOCKERHUB_REGISTRY=miniaxolotl pnpm --filter @script/deploy run deploy
+cp .env.example .env
+docker compose up -d
 ```
 
-Tags: `latest` + version from `packages/burrowctl/package.json`.
-
-## Local Release (npm)
-
-Build binaries and publish to npm:
+### Docker Run
 
 ```bash
-pnpm --filter @script/release run release
-pnpm --filter @script/release run release -- --dry-run  # skip publish
+docker run -p 25701:25701 \
+  -e BURROW_SECRET=your-secret \
+  -e BURROW_DOMAIN=burrow.example.com \
+  -e BURROW_REDIS_URL=redis://redis:6379 \
+  ghcr.io/miniaxolotl/burrowd:latest
 ```
 
-Publishes:
-- `@miniaxolotl/burrowctl` (main package with `optionalDependencies`)
-- `@miniaxolotl/burrowctl-linux-x64`
-- `@miniaxolotl/burrowctl-linux-arm64`
-- `@miniaxolotl/burrowctl-darwin-x64`
-- `@miniaxolotl/burrowctl-darwin-arm64`
-
-## Dokku Deployment
-
-### Prerequisites
-
-- Dokku 0.27+ on your server
-- Redis plugin: `dokku plugin:install https://github.com/dokku/dokku-redis.git redis`
-- Wildcard DNS configured (`*.burrow.yourdomain.com` → server)
-
-### Setup
+### Dokku
 
 ```bash
 dokku apps:create burrowd
 dokku redis:create burrowd
-dokku redis:link burrowd burrowd
-dokku config:set burrowd BURROW_SECRET=your-secret BURROW_DOMAIN=burrow.yourdomain.com BURROW_PORT=25701
-```
-
-### SSL (Wildcard Certificates)
-
-HTTP-01 challenge fails on wildcards. Use DNS-01:
-
-```bash
-sudo certbot certonly --dns-cloudflare -d "burrow.yourdomain.com" -d "*.burrow.yourdomain.com"
-dokku certs:add burrowd /etc/letsencrypt/live/burrow.yourdomain.com/fullchain.pem /etc/letsencrypt/live/burrow.yourdomain.com/privkey.pem
-```
-
-### Deploy via Git
-
-```bash
+dokku config:set burrowd BURROW_SECRET=secret BURROW_DOMAIN=burrow.example.com
 git remote add dokku dokku@your-server:dokku/burrowd
 git push dokku production:master
 ```
 
-### Nginx
+### Wildcard SSL
 
-The `nginx.conf.sigil` template handles WebSocket upgrades and SSL. Dokku auto-generates the config from it.
+HTTP-01 challenge doesn't work for wildcards. Use DNS challenge:
+
+```bash
+certbot certonly --dns-cloudflare -d "burrow.example.com" -d "*.burrow.example.com"
+dokku certs:add burrowd /etc/letsencrypt/live/burrow.example.com/fullchain.pem /etc/letsencrypt/live/burrow.example.com/privkey.pem
+```
+
+## CI/CD
+
+| Workflow | Trigger | Action |
+| -------- | ------- | ------ |
+| `ci.yml` | Push/PR | Lint, build, test |
+| `release.yml` | Push to `development` | Release PR → npm publish on tag |
+| `deploy.yml` | `v*` tag | Push Docker to GHCR + Docker Hub |
+
+## Updating
+
+```bash
+# Docker
+docker pull ghcr.io/miniaxolotl/burrowd:latest
+docker compose down && docker compose up -d
+
+# npm
+npm update -g @miniaxolotl/burrowctl
+```
+
+## Troubleshooting
+
+```bash
+# Server health
+curl http://localhost:25701/health
+
+# Docker logs
+docker compose logs -f burrowd
+
+# Verify Redis
+docker compose exec redis redis-cli ping
+```

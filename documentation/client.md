@@ -1,226 +1,72 @@
-# Burrowctl - Client Documentation
+# burrowctl
 
-## Overview
+CLI client that creates tunnels from local ports to the burrow server, exposing them as public URLs.
 
-`burrowctl` is the client CLI that creates tunnels from local ports to the burrow server, exposing them as public URLs.
+## Install
+
+```bash
+# npm
+npm install -g @miniaxolotl/burrowctl
+
+# Or download binaries from GitHub Releases
+# Linux/macOS: amd64, arm64
+```
+
+## Quick Start
+
+```bash
+burrowctl auth login <token> --server burrow.example.com:25701
+burrowctl tunnel create --port 3000
+```
 
 ## Configuration
 
-Configuration is loaded from (in order of precedence):
-1. Command-line flags
-2. Environment variables
-3. `~/.config/burrow/client.json` (written by `burrowctl auth login`)
-4. `~/.burrow/token` (legacy fallback, written by `burrowd auth login`)
-5. Generate from `--secret` / `BURROW_SECRET`
-
-### Environment Variables
-
 | Variable | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `BURROW_SERVER` | Server address (host:port) |
-| `BURROW_TOKEN` | Authentication token |
-| `BURROW_SECRET` | Shared secret (auto-generates token if token not set) |
-| `BURROW_TLS` | Use TLS (`wss://` and `https://`) when connecting to the server |
-| `BURROW_DOMAIN` | Fallback domain for tunnel URL display |
+| `BURROW_TOKEN` | Auth token |
+| `BURROW_SECRET` | Shared secret (auto-generates token) |
+| `BURROW_TLS` | Use TLS (`wss://` / `https://`) |
+| `BURROW_DOMAIN` | Fallback domain for URL display |
 
-### Config File
-
-`~/.config/burrow/client.json` — created on first run. Fields: `server`, `token`, `secret`, `domain`, `tls`.
+Config stored in `~/.config/burrow/client.json` after first `auth login`.
 
 ## Commands
 
-### `burrowctl tunnel create`
-
-Create tunnels for one or more local ports. After tunnels are established, launches the interactive TUI.
-
 ```bash
-burrowctl tunnel create --port 3000 --port 8080
+burrowctl tunnel create --port 3000 --port 8080   # Create tunnels + open TUI
+burrowctl tunnel list                              # List active tunnels
+burrowctl tunnel status                            # Connection status
+burrowctl tunnel inspect {id} [--follow] [--tail N] # View logs
+burrowctl tunnel close {id}                        # Close a tunnel
+burrowctl auth login <token> [--server addr]       # Store token
+burrowctl auth logout                              # Remove token
+burrowctl auth status                              # Check auth status
 ```
 
-**Flags:**
-- `--port` - Local port to tunnel (can be specified multiple times, required)
-- `--server` - Burrow server address (default: `localhost:25701`)
-- `--token` - Authentication token
-- `--secret` - Shared secret (auto-generates token)
-- `--tls` - Use TLS (`wss://` and `https://`) when connecting to the server
-- `--domain` - Fallback domain for tunnel URL display
-
-**Behavior:**
-- Connects to the burrow server via WebSocket
-- Authenticates with token
-- For each port, opens a tunnel and registers it
-- Launches the interactive TUI — all tunnel management happens there
-- TLS is auto-enabled for non-localhost servers (no `--tls` flag needed for production)
-- Press `q` or `Ctrl+C` in the TUI to close all tunnels and exit
-
-**TUI controls:**
+## TUI Controls
 
 | Key | Action |
-|-----|--------|
-| `n` | New tunnel (prompts for port) |
-| `c` | Copy selected tunnel URL to clipboard |
-| `o` | Open selected tunnel URL in browser |
-| `d` | Close (delete) selected tunnel (with confirmation) |
-| `l` | View request logs for selected tunnel / return to list from log view |
-| `s` | Cycle sort mode (port → latency → reconnects) |
-| `?` | Show keyboard shortcuts help overlay |
-| `g` / `Home` | Jump to top of list |
-| `G` / `End` | Jump to bottom of list |
-| `PgUp` / `PgDn` | Page up/down (10 entries) |
-| `↑↓` / `j k` | Navigate tunnel list |
-| `esc` | Back (from log view, port input, or confirmation) |
+| --- | ------ |
+| `n` | New tunnel |
+| `c` | Copy URL |
+| `o` | Open URL in browser |
+| `d` | Close tunnel |
+| `l` | View logs / return to list |
+| `s` | Cycle sort (port → latency → reconnects) |
+| `f` | Toggle auto-follow in log view |
+| `r` | Refresh logs |
+| `?` | Help overlay |
+| `g`/`G` | Top/bottom |
+| `PgUp`/`PgDn` | Page up/down |
+| `↑↓` / `j k` | Navigate |
 | `q` / `Ctrl+C` | Quit |
 
-**Log view controls:**
+## Reconnection
 
-| Key | Action |
-|-----|--------|
-| `g` / `Home` | Jump to first log entry |
-| `G` / `End` | Jump to last log entry |
-| `PgUp` / `PgDn` | Page up/down (10 entries) |
-| `↑↓` / `j k` | Scroll through log entries |
-| `f` | Toggle auto-follow mode (auto-scroll to new entries) |
-| `r` | Manually refresh logs |
-| `esc` / `l` | Return to tunnel list |
+Exponential backoff (1s → 30s cap). After 5 failures, a new tunnel ID is generated. Server keeps tunnels for 20s after disconnect to allow reconnection without URL change.
 
-**TUI features:**
-- Real-time tunnel list updated every second (tunnel ID, port, latency, reconnect count, total size)
-- Latency tracked in real-time via `/health` ping every second
-- Total bytes transferred across all requests per tunnel
-- Spinner during tunnel creation
-- Request log view: time, client IP, method, path, response size, duration
-- Tunnel list sorted by port (default), toggle with `s` to sort by latency or reconnects
-- Cursor tracks selected tunnel ID across list refreshes
-- Auto-follow mode in log view (`f` key) for `tail -f`-style behavior
-- Confirmation prompt before closing tunnels
-- Full-screen help overlay (`?`) with structured key reference
-- Visual indicator for tunnels with reconnects (orange status text)
-- Fast navigation: `g`/`G` for top/bottom, `PgUp`/`PgDn` for paging, `Home`/`End` keys
-- Consistent header layout across all views
-- Dark background with keyboard-driven navigation
+## Documentation
 
-### `burrowctl tunnel list`
-
-List active tunnels managed by this client.
-
-```bash
-burrowctl tunnel list
-```
-
-**Example output:**
-```
-TUNNEL ID                       PORT     URL                                             STATUS
-swiftly-ancient-silent-dragon  3000     https://swiftly-ancient-silent-dragon.burrow.mawa.dev   active
-darkly-shadow-umbral-wraith    8080     https://darkly-shadow-umbral-wraith.burrow.mawa.dev     active
-```
-
-### `burrowctl tunnel status`
-
-Show connection status for all tunnels. Same output as `list` but with a separator line beneath the header.
-
-```bash
-burrowctl tunnel status
-```
-
-**Note:** Neither `list` nor `status` shows latency or reconnect count — those are only visible in the TUI. Both commands produce identical output except `status` adds a separator line beneath the table.
-
-### `burrowctl tunnel inspect`
-
-View tunnel traffic logs from the command line.
-
-```bash
-burrowctl tunnel inspect {tunnel_id}
-burrowctl tunnel inspect {tunnel_id} --tail 20
-burrowctl tunnel inspect {tunnel_id} --follow
-```
-
-**Flags:**
-- `--tail N` — Show only the last N log entries (default: all)
-- `--follow` — Poll every second and print new entries as they arrive (continuous tail)
-
-### `burrowctl tunnel close`
-
-Close a specific tunnel.
-
-```bash
-burrowctl tunnel close {tunnel_id}
-```
-
-### `burrowctl auth login`
-
-Store an authentication token for future use.
-
-```bash
-burrowctl auth login your-hmac-token
-burrowctl auth login your-hmac-token --server burrow.example.com:25701
-```
-
-Stores the token in `~/.config/burrow/client.json`, then validates it against the configured server. The `--server` flag overrides which server to validate against. If the server rejects the token (401), a warning is printed but the token is still saved — run `burrowctl auth login` again with a valid token to fix.
-
-### `burrowctl auth logout`
-
-Remove stored authentication token.
-
-```bash
-burrowctl auth logout
-```
-
-### `burrowctl auth status`
-
-Show current authentication status.
-
-```bash
-burrowctl auth status
-```
-
-## Tunnel ID Generation
-
-Tunnel IDs are generated using a fantasy/D&D-themed format:
-
-```
-{adverb}-{adjective}-{adjective}-{noun}
-```
-
-Examples:
-- `swiftly-ancient-silent-dragon`
-- `darkly-shadow-umbral-wraith`
-
-Generated with `crypto/rand`. Word lists: 100 adverbs, 144 adjectives, 139 nouns. ~288M combinations.
-
-## Reconnection Behavior
-
-The client reconnects on connection loss with exponential backoff (1s doubling to 30s cap). After 5 consecutive failures, a new tunnel ID is generated.
-
-When the client disconnects, the server keeps the tunnel registered for 20 seconds before removing it. This allows the client to reconnect and restore the tunnel without a URL change.
-
-## Examples
-
-### Basic Usage
-
-```bash
-# Tunnel a local web server
-burrowctl tunnel create --port 3000
-
-# Tunnel multiple services
-burrowctl tunnel create --port 3000 --port 8080 --port 5432
-
-# Use specific server
-burrowctl tunnel create --port 3000 --server burrow.example.com:25701 --token my-token
-```
-
-### Using Authentication
-
-```bash
-# Store token once
-burrowctl auth login my-token --server burrow.example.com:25701
-
-# Then just specify ports
-burrowctl tunnel create --port 3000 --port 8080
-```
-
-### Cleanup
-
-```bash
-# Close specific tunnel
-burrowctl tunnel close swiftly-ancient-silent-dragon
-```
+- [Server reference](server.md)
+- [Deploy & release](deploy.md)
