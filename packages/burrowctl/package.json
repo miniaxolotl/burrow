@@ -1,6 +1,6 @@
 {
   "name": "@miniaxolotl/burrowctl",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "CLI client for the burrow tunnel server",
   "license": "MIT",
   "repository": {
@@ -19,9 +19,9 @@
     "arm64"
   ],
   "optionalDependencies": {
-    "@miniaxolotl/burrowctl-linux-x64": "0.2.1",
-    "@miniaxolotl/burrowctl-linux-arm64": "0.2.1",
-    "@miniaxolotl/burrowctl-darwin-x64": "0.2.1",
-    "@miniaxolotl/burrowctl-darwin-arm64": "0.2.1"
+    "@miniaxolotl/burrowctl-linux-x64": "0.2.2",
+    "@miniaxolotl/burrowctl-linux-arm64": "0.2.2",
+    "@miniaxolotl/burrowctl-darwin-x64": "0.2.2",
+    "@miniaxolotl/burrowctl-darwin-arm64": "0.2.2"
   }
 }
