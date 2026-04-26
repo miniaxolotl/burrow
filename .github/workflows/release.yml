@@ -43,10 +43,8 @@ jobs:
       - name: Install goreleaser
         run: go install github.com/goreleaser/goreleaser/v2@latest
 
-      - name: Build and release with goreleaser
-        run: goreleaser release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build binaries with goreleaser
+        run: goreleaser build --clean --id burrowctl
 
       - name: Publish to npm
         run: pnpm run release
