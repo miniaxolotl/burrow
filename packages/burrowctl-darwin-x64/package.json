@@ -7,6 +7,10 @@
     "type": "git",
     "url": "https://github.com/miniaxolotl/burrow"
   },
-  "os": ["darwin"],
-  "cpu": ["x64"]
+  "os": [
+    "darwin"
+  ],
+  "cpu": [
+    "x64"
+  ]
 }

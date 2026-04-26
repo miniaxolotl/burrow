@@ -17,5 +17,11 @@
   "cpu": [
     "x64",
     "arm64"
-  ]
+  ],
+  "optionalDependencies": {
+    "@miniaxolotl/burrowctl-linux-x64": "0.1.0",
+    "@miniaxolotl/burrowctl-linux-arm64": "0.1.0",
+    "@miniaxolotl/burrowctl-darwin-x64": "0.1.0",
+    "@miniaxolotl/burrowctl-darwin-arm64": "0.1.0"
+  }
 }

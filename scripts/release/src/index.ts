@@ -4,6 +4,7 @@
  */
 
 const { execSync } = await import("node:child_process");
+const fs = await import("node:fs");
 
 const REPO = "miniaxolotl/burrow";
 
@@ -80,7 +81,9 @@ async function publishPlatformPackages(version: string, dryRun: boolean) {
       const pkgJsonPath = `${pkgDir}/package.json`;
       const pkgJson = JSON.parse(execSync(`cat ${pkgJsonPath}`, { encoding: "utf8" }));
       pkgJson.version = version;
-      execSync(`node -e "const fs=require('fs'); fs.writeFileSync('${pkgJsonPath}', JSON.stringify(${JSON.stringify(pkgJson)}, null, 2) + '\\n')"`);
+      const tmpPath = `/tmp/pkg-json-${Date.now()}.json`;
+      fs.writeFileSync(tmpPath, JSON.stringify(pkgJson, null, 2) + "\n");
+      run(`cp ${tmpPath} ${pkgJsonPath}`);
 
       run(`cd ${pkgDir} && npm publish --access public`);
     }
@@ -99,7 +102,9 @@ async function publishMainPackage(version: string, dryRun: boolean) {
     for (const dep of Object.keys(pkgJson.optionalDependencies || {})) {
       pkgJson.optionalDependencies[dep] = version;
     }
-    execSync(`node -e "const fs=require('fs'); fs.writeFileSync('${pkgJsonPath}', JSON.stringify(${JSON.stringify(pkgJson)}, null, 2) + '\\n')"`);
+    const tmpPath = `/tmp/pkg-json-main-${Date.now()}.json`;
+    fs.writeFileSync(tmpPath, JSON.stringify(pkgJson, null, 2) + "\n");
+    run(`cp ${tmpPath} ${pkgJsonPath}`);
 
     run(`cd ${mainDir} && npm publish --access public`);
   }
@@ -125,7 +130,7 @@ async function release() {
     console.log(`\nLocal ${version} → npm: ${npmVersion || "none"}\n`);
 
     if (!dryRun) {
-      run("pnpm --filter @miniaxolotl/burrowctl build");
+      run("pnpm --filter @miniaxolotl/burrowctl build", true);
 
       await publishPlatformPackages(version, false);
       await publishMainPackage(version, false);
