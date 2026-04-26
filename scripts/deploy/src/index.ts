@@ -1,12 +1,9 @@
 /**
- * Deploy script: builds and pushes multi-platform Docker image to GHCR and/or Docker Hub,
- * then creates a GitHub release.
+ * Deploy script: builds and pushes multi-platform Docker image to GHCR and/or Docker Hub.
  *
  * Registries are enabled by setting the corresponding env var:
  *   GHCR_REGISTRY=ghcr.io/miniaxolotl   -> push to GitHub Container Registry
  *   DOCKERHUB_REGISTRY=miniaxolotl      -> push to Docker Hub
- *
- * GitHub release is created when GH_TOKEN or GITHUB_TOKEN is set.
  *
  * Run with: pnpm --filter @script/deploy run deploy
  *
@@ -17,13 +14,10 @@
  */
 
 const { execSync } = await import("node:child_process");
-const fs = await import("node:fs");
-const path = await import("node:path");
 
 const IMAGE = "burrowd";
-const REPO = "miniaxolotl/burrow";
 const PLATFORMS = process.env.PLATFORMS || "linux/amd64,linux/arm64";
-const ROOT = path.resolve(new URL("../../..", import.meta.url).pathname);
+const ROOT = new URL("../../..", import.meta.url).pathname;
 
 function run(cmd, cwd) {
   console.log(`> ${cmd}`);
@@ -51,39 +45,9 @@ async function registryLogin(registry, token, user) {
   run(`echo "${token}" | docker login ${registry} -u ${user} --password-stdin`);
 }
 
-async function createGithubRelease(tag) {
-  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
-  if (!token) {
-    console.log("No GH_TOKEN or GITHUB_TOKEN - skipping GitHub release");
-    return;
-  }
-
-  console.log(`\n--- Creating GitHub release ${tag} ---`);
-
-  const exists = execSync(`git tag -l "${tag}"`, { cwd: ROOT }).toString().trim();
-  if (!exists) {
-    run(`git tag -a ${tag} -m "Release ${tag}"`);
-    run(`git push origin ${tag}`);
-  }
-
-  run(`gh release create ${tag} --generate-notes --repo ${REPO}`);
-  console.log(`GitHub release ${tag} created`);
-}
-
 async function deploy() {
-  const packageJson = JSON.parse(
-    fs.readFileSync(path.join(ROOT, "packages", "burrowctl", "package.json"), "utf8"),
-  );
-  const version = packageJson.version;
-
   const tag = process.env.TAG || "latest";
-  const versionTag = tag.replace(/^v/, "");
-  const tags =
-    tag === "latest"
-      ? ["latest", `v${version}`]
-      : ([tag, versionTag, versionTag === version ? "latest" : null].filter(
-          Boolean,
-        ));
+  const tags = tag === "latest" ? ["latest"] : [tag, tag.replace(/^v/, "")];
 
   const registries = [];
 
@@ -91,10 +55,7 @@ async function deploy() {
     registries.push({ name: "GHCR", url: process.env.GHCR_REGISTRY });
   }
   if (process.env.DOCKERHUB_REGISTRY) {
-    registries.push({
-      name: "Docker Hub",
-      url: process.env.DOCKERHUB_REGISTRY,
-    });
+    registries.push({ name: "Docker Hub", url: process.env.DOCKERHUB_REGISTRY });
   }
 
   const ghToken = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
@@ -134,10 +95,6 @@ async function deploy() {
     );
   } else {
     console.log(`\nDeployed to ${registries.map((r) => r.name).join(" + ")}`);
-  }
-
-  if (tag !== "latest") {
-    await createGithubRelease(tag);
   }
 }
 

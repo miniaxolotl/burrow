@@ -4,7 +4,12 @@
       "release-type": "simple",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
+        "package.json",
         "packages/burrowctl/package.json",
+        "packages/burrowctl-linux-x64/package.json",
+        "packages/burrowctl-linux-arm64/package.json",
+        "packages/burrowctl-darwin-x64/package.json",
+        "packages/burrowctl-darwin-arm64/package.json",
         "burrowd/version.go",
         "burrowctl/version.go"
       ],
