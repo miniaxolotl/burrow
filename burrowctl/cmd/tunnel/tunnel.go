@@ -19,7 +19,7 @@ var TunnelCmd = &cobra.Command{
 }
 
 func init() {
-	TunnelCmd.PersistentFlags().String("server", "localhost:25701", "Burrow server address")
+	TunnelCmd.PersistentFlags().String("server", "burrow.mawa.dev", "Burrow server address")
 	TunnelCmd.PersistentFlags().String("token", "", "Authentication token")
 	TunnelCmd.PersistentFlags().String("secret", "", "Shared secret (generates a token)")
 	TunnelCmd.PersistentFlags().String("domain", "burrow.mawa.dev", "Domain for tunnel URLs")

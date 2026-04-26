@@ -47,7 +47,7 @@ func loadClientConfig() {
 	cfgFile := filepath.Join(dir, "client.json")
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
 		defaults := map[string]any{
-			"server": "localhost:25701",
+			"server": "burrow.mawa.dev",
 			"token":  "",
 			"secret": "",
 			"domain": "burrow.mawa.dev",
