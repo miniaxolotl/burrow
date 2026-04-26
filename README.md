@@ -9,14 +9,6 @@ Expose local services to the internet via HTTPS subdomains.
 ## Server
 
 ```bash
-docker run -d -p 25701:25701 \
-  -e BURROW_SECRET=your-secret \
-  ghcr.io/miniaxolotl/burrowd:latest
-```
-
-Or with Docker Compose:
-
-```bash
 cp .env.example .env && docker compose up -d
 ```
 
@@ -27,20 +19,6 @@ npm i -g @miniaxolotl/burrowctl
 burrowctl auth login <token> --server your-server:25701
 burrowctl tunnel create --port 3000
 ```
-
-Or use `npx @miniaxolotl/burrowctl` for one-time use.
-
-## TUI
-
-| Key | Action |
-|-----|--------|
-| `n` | New tunnel |
-| `c` | Copy URL |
-| `o` | Open in browser |
-| `d` | Close tunnel |
-| `l` | Request logs |
-| `s` | Sort |
-| `q` | Quit |
 
 ## Docs
 
