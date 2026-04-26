@@ -94,12 +94,9 @@ func (s *Server) tokenFromRequest(r *http.Request) string {
 	return r.URL.Query().Get("token")
 }
 
-// authTunnel allows tunnel creation when no secret is configured (open mode).
-func (s *Server) authTunnel(r *http.Request) bool {
-	if s.secret == "" {
-		return true
-	}
-	return protocol.ValidateToken(s.tokenFromRequest(r), s.secret)
+// authTunnel: tunnel creation is always open — no authentication required.
+func (s *Server) authTunnel(_ *http.Request) bool {
+	return true
 }
 
 // authAdmin always requires a valid token; returns false when no secret is set.
