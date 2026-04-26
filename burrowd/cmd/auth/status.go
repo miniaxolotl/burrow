@@ -28,8 +28,9 @@ func runAuthStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	token := strings.TrimSpace(string(data))
-	if len(token) > 8 {
-		masked := strings.Repeat("*", len(token)-8) + token[len(token)-8:]
+	maskedLen := len(token) - 4
+	if maskedLen > 0 {
+		masked := strings.Repeat("*", maskedLen) + token[4:]
 		fmt.Printf("Authenticated\nToken: %s\n", masked)
 	} else {
 		fmt.Printf("Authenticated\nToken: %s\n", token)
