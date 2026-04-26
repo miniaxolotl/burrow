@@ -17,6 +17,7 @@ jobs:
         with:
           go-version-file: burrowd/go.mod
           cache: true
+          cache-dependency-path: '**/go.sum'
       - run: go vet ./burrowd/... ./burrowctl/... ./protocol/...
 
   build:
@@ -29,6 +30,7 @@ jobs:
         with:
           go-version-file: burrowd/go.mod
           cache: true
+          cache-dependency-path: '**/go.sum'
       - run: go work sync
       - run: go build ./burrowd/... ./burrowctl/... ./protocol/...
 
@@ -43,6 +45,7 @@ jobs:
         with:
           go-version-file: burrowd/go.mod
           cache: true
+          cache-dependency-path: '**/go.sum'
       - run: go test ./burrowd/... ./burrowctl/... ./protocol/...
 
   deploy-preview:
