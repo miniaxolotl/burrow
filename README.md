@@ -1,5 +1,8 @@
 # burrow
 
+[![npm](https://img.shields.io/npm/v/@miniaxolotl/burrowctl)](https://npmjs.com/package/@miniaxolotl/burrowctl)
+[![License](https://img.shields.io/npm/l/@miniaxolotl/burrowctl)](LICENSE)
+
 Expose local services to the internet via HTTPS subdomains.
 
 ```
