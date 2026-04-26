@@ -18,11 +18,18 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: burrowd/go.mod
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           registry-url: https://registry.npmjs.org
+
+      - name: Install goreleaser
+        run: go install github.com/goreleaser/goreleaser@v2@latest
 
       - run: pnpm install --frozen-lockfile
       - run: go work sync
@@ -42,10 +49,7 @@ jobs:
 
       - name: Build with goreleaser
         if: steps.npm-check.outputs.published != 'true'
-        run: |
-          goreleaser build --single-target --clean --snapshot --id burrowctl
-        env:
-          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+        run: goreleaser build --single-target --clean --snapshot --id burrowctl
 
       - name: Publish to npm
         if: steps.npm-check.outputs.published != 'true'
