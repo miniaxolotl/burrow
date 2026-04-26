@@ -53,10 +53,7 @@ async function release() {
     console.log(`\nLocal ${version} → npm: ${npmVersion || "none"}\n`);
 
     if (!dryRun) {
-      const goreleaserInstalled = execSync("which goreleaser", { encoding: "utf8", stdio: "pipe" }).toString().trim();
-      if (!goreleaserInstalled) {
-        run('export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@v2');
-      }
+      run('export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@v2', true);
       run('export PATH="$PATH:$(go env GOPATH)/bin" && goreleaser build --clean --snapshot --id burrowctl');
 
       for (const [platform, binPath] of Object.entries(BIN_PATHS)) {
@@ -82,9 +79,6 @@ async function release() {
       const mainPkgJsonPath = `${mainDir}/package.json`;
       const mainPkgJson = JSON.parse(execSync(`cat ${mainPkgJsonPath}`, { encoding: "utf8" }));
       mainPkgJson.version = version;
-      for (const dep of Object.keys(mainPkgJson.optionalDependencies || {})) {
-        mainPkgJson.optionalDependencies[dep] = version;
-      }
       const mainTmpPath = `/tmp/pkg-json-main-${Date.now()}.json`;
       fs.writeFileSync(mainTmpPath, JSON.stringify(mainPkgJson, null, 2) + "\n");
       run(`cp ${mainTmpPath} ${mainPkgJsonPath}`);
