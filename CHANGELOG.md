@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.2.5](https://github.com/miniaxolotl/burrow/compare/v0.2.4...v0.2.5) (2026-04-26)
+
+
+### Bug Fixes
+
+* refactor release script to use fs.readFileSync for package.json access and improve path handling ([2cf2afa](https://github.com/miniaxolotl/burrow/commit/2cf2afa461cf1620790e8b74373e7ba111b4a498))
+* update deployment and release workflows for improved version handling and Docker integration ([fdd81b0](https://github.com/miniaxolotl/burrow/commit/fdd81b048497f29c7634911322bd2291996c7836))
+* update ESLint and TypeScript config descriptions to reflect burrow monorepo ([5529aed](https://github.com/miniaxolotl/burrow/commit/5529aedd3dede5df13c7400a04d72ffe24e24893))
+* update release workflow to trigger on development branch ([100c013](https://github.com/miniaxolotl/burrow/commit/100c01353e134a845c21c4e0e145083fc2a1c8b8))
+
 ## [0.2.4](https://github.com/miniaxolotl/burrow/compare/v0.2.3...v0.2.4) (2026-04-26)
 
 
