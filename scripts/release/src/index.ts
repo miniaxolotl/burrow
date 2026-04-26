@@ -62,8 +62,8 @@ async function release() {
     return;
   }
 
-  run('export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@v2', true);
-  run('export PATH="$PATH:$(go env GOPATH)/bin" && goreleaser build --clean --snapshot --id burrowctl');
+  run('export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@latest', true);
+  run(`export PATH="$PATH:$(go env GOPATH)/bin" && GORELEASER_CURRENT_TAG=v${version} goreleaser build --clean --id burrowctl --skip=validate`);
 
   for (const [platform, binPath] of Object.entries(BIN_PATHS)) {
     const pkgDir = `../../packages/burrowctl-${platform}`;

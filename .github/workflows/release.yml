@@ -2,8 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [development]
-    tags: ['v*']
+    branches: [development, production]
   workflow_dispatch:
 
 permissions:
@@ -13,10 +12,9 @@ permissions:
 jobs:
   release-please:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/development'
+    if: github.ref == 'refs/heads/development'
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
-      tag_name: ${{ steps.release.outputs['.--tag_name'] }}
     steps:
       - uses: googleapis/release-please-action@v4
         id: release
@@ -27,12 +25,11 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/production'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.ref }}
 
       - uses: pnpm/action-setup@v4
 
@@ -49,12 +46,6 @@ jobs:
           cache-dependency-path: '**/go.sum'
 
       - run: pnpm install --frozen-lockfile
-
-      - name: Install goreleaser
-        run: go install github.com/goreleaser/goreleaser/v2@latest
-
-      - name: Build binaries
-        run: goreleaser build --clean --id burrowctl
 
       - name: Publish to npm
         run: pnpm run release
