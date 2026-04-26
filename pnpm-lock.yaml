@@ -26,7 +26,20 @@ importers:
 
   lib/typescript-config: {}
 
-  packages/burrowctl: {}
+  packages/burrowctl:
+    optionalDependencies:
+      '@miniaxolotl/burrowctl-darwin-arm64':
+        specifier: workspace:*
+        version: link:../burrowctl-darwin-arm64
+      '@miniaxolotl/burrowctl-darwin-x64':
+        specifier: workspace:*
+        version: link:../burrowctl-darwin-x64
+      '@miniaxolotl/burrowctl-linux-arm64':
+        specifier: workspace:*
+        version: link:../burrowctl-linux-arm64
+      '@miniaxolotl/burrowctl-linux-x64':
+        specifier: workspace:*
+        version: link:../burrowctl-linux-x64
 
   packages/burrowctl-darwin-arm64: {}
 

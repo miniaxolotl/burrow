@@ -19,9 +19,9 @@
     "arm64"
   ],
   "optionalDependencies": {
-    "@miniaxolotl/burrowctl-linux-x64": "0.2.4",
-    "@miniaxolotl/burrowctl-linux-arm64": "0.2.4",
-    "@miniaxolotl/burrowctl-darwin-x64": "0.2.4",
-    "@miniaxolotl/burrowctl-darwin-arm64": "0.2.4"
+    "@miniaxolotl/burrowctl-linux-x64": "workspace:*",
+    "@miniaxolotl/burrowctl-linux-arm64": "workspace:*",
+    "@miniaxolotl/burrowctl-darwin-x64": "workspace:*",
+    "@miniaxolotl/burrowctl-darwin-arm64": "workspace:*"
   }
 }
