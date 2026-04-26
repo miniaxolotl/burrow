@@ -88,6 +88,9 @@ async function release() {
   const mainPkgJsonPath = `${mainDir}/package.json`;
   const mainPkgJson = JSON.parse(execSync(`cat ${mainPkgJsonPath}`, { encoding: "utf8" }));
   mainPkgJson.version = version;
+  for (const dep of Object.keys(mainPkgJson.optionalDependencies || {})) {
+    mainPkgJson.optionalDependencies[dep] = version;
+  }
   const mainTmpPath = `/tmp/pkg-json-main-${Date.now()}.json`;
   fs.writeFileSync(mainTmpPath, JSON.stringify(mainPkgJson, null, 2) + "\n");
   run(`cp ${mainTmpPath} ${mainPkgJsonPath}`);
