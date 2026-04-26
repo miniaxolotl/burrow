@@ -8,9 +8,9 @@ const fs = await import("node:fs");
 
 const BIN_PATHS: Record<string, string> = {
   "linux-x64": "burrowctl_linux_amd64_v1/burrowctl",
-  "linux-arm64": "burrowctl_linux_arm64_v1/burrowctl",
+  "linux-arm64": "burrowctl_linux_arm64_v8.0/burrowctl",
   "darwin-x64": "burrowctl_darwin_amd64_v1/burrowctl",
-  "darwin-arm64": "burrowctl_darwin_arm64_v1/burrowctl",
+  "darwin-arm64": "burrowctl_darwin_arm64_v8.0/burrowctl",
 };
 
 async function run(cmd: string, ignoreErrors = false) {
