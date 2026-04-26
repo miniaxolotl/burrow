@@ -2,53 +2,65 @@ name: CI
 
 on:
   push:
-    branches: [development, production]
+    branches: [production, development]
   pull_request:
-    branches: [development, production]
+    branches: [production, development]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: burrowd/go.mod
           cache: true
-      - run: |
-          go vet ./burrowd/... ./burrowctl/... ./protocol/...
+      - run: go vet ./burrowd/... ./burrowctl/... ./protocol/...
 
   build:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: burrowd/go.mod
           cache: true
-      - run: |
-          go build ./burrowd/... ./burrowctl/... ./protocol/...
+      - run: go work sync
+      - run: go build ./burrowd/... ./burrowctl/... ./protocol/...
 
   test:
     runs-on: ubuntu-latest
     needs: [lint, build]
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version-file: burrowd/go.mod
           cache: true
-      - run: |
-          go test ./burrowd/... ./burrowctl/... ./protocol/...
+      - run: go test ./burrowd/... ./burrowctl/... ./protocol/...
 
   deploy-preview:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs: [test]
     if: github.ref == 'refs/heads/development' && github.event_name == 'push'
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - uses: dokku/github-action@master
         with:
           git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL_PREVIEW }}
@@ -56,13 +68,21 @@ jobs:
           branch: main
 
   deploy-production:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     needs: [test]
     if: github.ref == 'refs/heads/production' && github.event_name == 'push'
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - uses: dokku/github-action@master
         with:
           git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL }}
