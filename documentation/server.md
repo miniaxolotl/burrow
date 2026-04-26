@@ -192,3 +192,120 @@ docker compose up -d
 This starts:
 - `burrowd` server on port 25701
 - `redis` on port 6379
+
+## Deploy (Docker)
+
+```bash
+cp .env.deploy .env   # set GHCR_REGISTRY and/or DOCKERHUB_REGISTRY + tokens
+pnpm --filter @script/deploy run deploy
+```
+
+See `scripts/deploy/README.md` for configuration options.
+
+## Deploy (Dokku)
+
+### Prerequisites
+
+- Dokku 0.27+ installed on your server
+- Redis plugin: `dokku plugin:install https://github.com/dokku/dokku-redis.git redis`
+- Domain configured with wildcard DNS (`*.burrow.yourdomain.com` → your server)
+
+### App Creation
+
+```bash
+# On your Dokku server
+dokku apps:create burrowd
+dokku redis:create burrowd
+dokku config:set burrowd BURROW_SECRET=your-secret-key BURROW_DOMAIN=burrow.yourdomain.com BURROW_PORT=25701
+```
+
+### SSL/Wildcard Certificates
+
+```bash
+# Install certbot with DNS plugin (Cloudflare example)
+sudo certbot certonly --dns-cloudflare -d "burrow.yourdomain.com" -d "*.burrow.yourdomain.com"
+
+# Add certificates to Dokku app
+dokku certs:add burrowd /etc/letsencrypt/live/burrow.yourdomain.com/fullchain.pem /etc/letsencrypt/live/burrow.yourdomain.com/privkey.pem
+```
+
+### Nginx Configuration
+
+The server ships with `nginx.conf.sigil` for Dokku. Make sure it's included in your deployment or create a custom nginx template:
+
+```bash
+# If using custom nginx template path
+dokku nginx:set burrowd nginx-template-path /path/to/nginx.conf.sigil
+dokku ps:restart burrowd
+```
+
+### Deploy via Git
+
+```bash
+# On your local machine
+git remote add dokku dokku@your-server:dokku/burrowd
+git push dokku production:master
+```
+
+## Install (Server)
+
+### Quick Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/miniaxolotl/burrow/production/scripts/install.sh | sh
+```
+
+### Local Install (No sudo)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/miniaxolotl/burrow/production/scripts/install.sh | sh -s -- --local
+```
+
+### From Source
+
+```bash
+git clone https://github.com/miniaxolotl/burrow && cd burrow
+./scripts/build.sh
+sudo mv bin/burrowd /usr/local/bin/
+```
+
+### Binaries
+
+Pre-built binaries for Linux (amd64, arm64) and macOS (amd64, arm64) are available on the [GitHub Releases](https://github.com/miniaxolotl/burrow/releases) page.
+
+## Development
+
+### Prerequisites
+
+- Go 1.21+
+- Redis (local or Docker)
+- Node.js 22+ (for scripts)
+
+### Local Dev Setup
+
+```bash
+# Start Redis
+docker compose up -d redis
+
+# Build binaries
+./scripts/build.sh
+
+# Run server
+./bin/burrowd serve --secret dev --domain localhost --port 25701
+
+# In another terminal, run client
+./bin/burrowctl tunnel create --server localhost:25701 --secret dev --port 3000
+```
+
+### Using Docker Compose
+
+```bash
+# Full local stack
+docker compose up -d
+
+# Server logs
+docker compose logs -f burrowd
+
+# Stop
+docker compose down
+```

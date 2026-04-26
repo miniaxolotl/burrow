@@ -11,29 +11,49 @@ Expose local services to the internet via HTTPS subdomains.
 https://swiftly-ancient-silent-dragon.burrow.mawa.dev → localhost:3000
 ```
 
-## Server
+## Server (Docker)
 
 ```bash
+git clone https://github.com/miniaxolotl/burrow && cd burrow
 cp .env.example .env   # set BURROW_SECRET
 docker compose up -d
 ```
 
-## Client
+## Client (npm)
+
+```bash
+npm install -g @miniaxolotl/burrowctl
+```
+
+Then:
 
 ```bash
 burrowctl auth login <token> --server your-server:25701
 burrowctl tunnel create --port 3000
 ```
 
-Or one-off:
+## Configuration
 
-```bash
-BURROW_SERVER=your-server:25701 BURROW_SECRET=xxx burrowctl tunnel create --port 3000
-```
+### Server `.env`
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `BURROW_SECRET` | Authentication secret | (required) |
+| `BURROW_DOMAIN` | Domain for tunnel URLs | `mawa.dev` |
+| `BURROW_PORT` | Server port | `25701` |
+| `BURROW_REDIS_URL` | Redis connection URL | `localhost:6379` |
+| `BURROW_TLS` | Generate `https://` URLs | `false` |
+
+### Client environment
+
+| Variable | Description |
+|----------|-------------|
+| `BURROW_SERVER` | Server address (`host:port`) |
+| `BURROW_TOKEN` | Authentication token |
+| `BURROW_SECRET` | Shared secret (auto-generates token) |
+| `BURROW_TLS` | Use TLS (`wss://`) |
 
 ## TUI
-
-`create` launches an interactive manager:
 
 | Key | Action |
 |-----|--------|
@@ -44,21 +64,7 @@ BURROW_SERVER=your-server:25701 BURROW_SECRET=xxx burrowctl tunnel create --port
 | `l` | View request logs |
 | `q` | Quit |
 
-## Local Dev
-
-```bash
-docker compose up -d redis
-go build -o bin/burrowd ./burrowd
-go build -o bin/burrowctl ./burrowctl
-./bin/burrowd serve --secret dev --domain localhost
-./bin/burrowctl tunnel create --server localhost:25701 --secret dev --port 3000
-```
-
-## Deploy
-
-See `documentation/server.md` for Dokku deployment, wildcard SSL, and nginx config.
-
-## Documentation
+## Docs
 
 - [Client CLI reference](documentation/client.md)
 - [Server setup & deployment](documentation/server.md)
