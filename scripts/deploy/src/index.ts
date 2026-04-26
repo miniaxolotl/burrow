@@ -113,7 +113,10 @@ async function deploy() {
     for (const t of tags) {
       const fullImage = `${registry.url}/${IMAGE}:${t}`;
       const labels = await buildLabels(t);
-      run(`docker buildx build --platform ${PLATFORMS} ${labels.join(" ")} -t ${fullImage} --push .`);
+      const platform = PLATFORMS.includes(",") && process.env.CI !== "true"
+        ? "linux/amd64"
+        : PLATFORMS;
+      run(`docker buildx build --platform ${platform} ${labels.join(" ")} -t ${fullImage} --push .`);
       console.log(`✓ Pushed ${fullImage}`);
     }
   }
@@ -121,7 +124,10 @@ async function deploy() {
   if (registries.length === 0) {
     const labels = await buildLabels(tags[0]);
     const tagArgs = tags.map((t) => `-t ${IMAGE}:${t}`).join(" ");
-    run(`docker buildx build --platform ${PLATFORMS} ${labels.join(" ")} ${tagArgs} --load .`);
+    const platform = PLATFORMS.includes(",") && process.env.CI !== "true"
+      ? "linux/amd64"
+      : PLATFORMS;
+    run(`docker buildx build --platform ${platform} ${labels.join(" ")} ${tagArgs} --load .`);
     console.log(
       `\n✓ Built ${tags.map((t) => `${IMAGE}:${t}`).join(", ")} (no registry set, skipping push)`,
     );
