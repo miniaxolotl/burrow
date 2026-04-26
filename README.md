@@ -1,6 +1,7 @@
 # burrow
 
 [![npm](https://img.shields.io/npm/v/@miniaxolotl/burrowctl)](https://npmjs.com/package/@miniaxolotl/burrowctl)
+[![Docker Hub](https://img.shields.io/docker/v/miniaxolotl/burrowd?label=docker%20hub)](https://hub.docker.com/r/miniaxolotl/burrowd)
 [![License](https://img.shields.io/npm/l/@miniaxolotl/burrowctl)](LICENSE)
 
 Expose local services to the internet via HTTPS subdomains.
