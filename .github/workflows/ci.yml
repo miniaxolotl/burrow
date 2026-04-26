@@ -64,10 +64,6 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - name: Unlock app if locked
-        run: |
-          sshopts="-o StrictHostKeyChecking=no"
-          ssh $sshopts ${{ secrets.DOKKU_SSH_HOST_KEY }} "dokku apps:unlock burrowd-preview" 2>/dev/null || true
       - uses: dokku/github-action@master
         with:
           git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL_PREVIEW }}
@@ -91,6 +87,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Unlock app if locked
+        run: |
+          sshopts="-o StrictHostKeyChecking=no"
+          ssh $sshopts ${{ secrets.DOKKU_SSH_HOST_KEY }} "dokku apps:unlock burrowd" 2>/dev/null || true
       - uses: dokku/github-action@master
         with:
           git_remote_url: ${{ secrets.DOKKU_GIT_REMOTE_URL }}
