@@ -53,7 +53,7 @@ async function release() {
     console.log(`\nLocal ${version} → npm: ${npmVersion || "none"}\n`);
 
     if (!dryRun) {
-      run('export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@v2 && goreleaser build --single-target --clean --snapshot --id burrowctl');
+      run('export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@v2 && goreleaser build --clean --snapshot --id burrowctl');
 
       for (const [platform, binPath] of Object.entries(BIN_PATHS)) {
         const pkgDir = `../../packages/burrowctl-${platform}`;
@@ -61,7 +61,7 @@ async function release() {
 
         console.log(`--- ${platform} ---`);
 
-        run(`cp burrowctl/${binPath} ${pkgDir}/burrowctl`);
+        run(`cp dist/${binPath} ${pkgDir}/burrowctl`);
         run(`chmod +x ${pkgDir}/burrowctl`);
 
         const pkgJson = JSON.parse(execSync(`cat ${pkgJsonPath}`, { encoding: "utf8" }));

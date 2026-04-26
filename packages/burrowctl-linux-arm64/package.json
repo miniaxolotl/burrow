@@ -1,6 +1,6 @@
 {
   "name": "@miniaxolotl/burrowctl-linux-arm64",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Linux arm64 binary for burrowctl",
   "license": "MIT",
   "repository": {
