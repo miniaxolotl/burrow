@@ -18,25 +18,17 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: burrowd/go.mod
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
-      - name: Install goreleaser
-        run: go install github.com/goreleaser/goreleaser@v2@latest
-
       - run: pnpm install --frozen-lockfile
-      - run: go work sync
 
       - name: Get version
         id: version
-        run: echo "VERSION=$(node -p "require('./packages/burrowctl/package.json').version")" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(node -p "require('./packages/burrowctl/package.json').version')" >> $GITHUB_OUTPUT
 
       - name: Check npm
         id: npm-check
@@ -47,47 +39,11 @@ jobs:
             echo "published=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Build with goreleaser
-        if: steps.npm-check.outputs.published != 'true'
-        run: goreleaser build --single-target --clean --snapshot --id burrowctl
-
       - name: Publish to npm
         if: steps.npm-check.outputs.published != 'true'
-        run: |
-          VERSION=${{ steps.version.outputs.VERSION }}
-          for PLATFORM in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
-            PKG_DIR="packages/burrowctl-${PLATFORM}"
-            case "$PLATFORM" in
-              linux-x64)    BIN_PATH="burrowctl_linux_amd64_v1/burrowctl" ;;
-              linux-arm64)  BIN_PATH="burrowctl_linux_arm64_v1/burrowctl" ;;
-              darwin-x64)   BIN_PATH="burrowctl_darwin_amd64_v1/burrowctl" ;;
-              darwin-arm64) BIN_PATH="burrowctl_darwin_arm64_v1/burrowctl" ;;
-            esac
-            cp "burrowctl/$BIN_PATH" "$PKG_DIR/burrowctl"
-            chmod +x "$PKG_DIR/burrowctl"
-            node -e "
-              const fs = require('fs');
-              const pkg = JSON.parse(fs.readFileSync('${PKG_DIR}/package.json'));
-              pkg.version = '${VERSION}';
-              fs.writeFileSync('${PKG_DIR}/package.json', JSON.stringify(pkg, null, 2) + '\n');
-            "
-            cd "$PKG_DIR" && pnpm publish --access public
-            echo "✓ Published @miniaxolotl/burrowctl-${PLATFORM}@${VERSION}"
-          done
-          MAIN_DIR="packages/burrowctl"
-          node -e "
-            const fs = require('fs');
-            const pkg = JSON.parse(fs.readFileSync('${MAIN_DIR}/package.json'));
-            pkg.version = '${VERSION}';
-            for (const dep of Object.keys(pkg.optionalDependencies)) {
-              pkg.optionalDependencies[dep] = '${VERSION}';
-            }
-            fs.writeFileSync('${MAIN_DIR}/package.json', JSON.stringify(pkg, null, 2) + '\n');
-          "
-          cd "$MAIN_DIR" && pnpm publish --access public
-          echo "✓ Published @miniaxolotl/burrowctl@${VERSION}"
+        run: pnpm run release
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub release
         run: |
