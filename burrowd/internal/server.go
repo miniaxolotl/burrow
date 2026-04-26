@@ -83,14 +83,29 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-func (s *Server) auth(r *http.Request) bool {
-	token := r.Header.Get("X-Tunnel-Token")
-	if token == "" {
-		token = r.URL.Query().Get("token")
-		// WARNING: Accepting token from query params is insecure as tokens may
-		// appear in server access logs. Prefer X-Tunnel-Token header.
+func (s *Server) tokenFromRequest(r *http.Request) string {
+	if t := r.Header.Get("X-Tunnel-Token"); t != "" {
+		return t
 	}
-	return protocol.ValidateToken(token, s.secret)
+	// WARNING: Accepting token from query params is insecure as tokens may
+	// appear in server access logs. Prefer X-Tunnel-Token header.
+	return r.URL.Query().Get("token")
+}
+
+// authTunnel allows tunnel creation when no secret is configured (open mode).
+func (s *Server) authTunnel(r *http.Request) bool {
+	if s.secret == "" {
+		return true
+	}
+	return protocol.ValidateToken(s.tokenFromRequest(r), s.secret)
+}
+
+// authAdmin always requires a valid token; returns false when no secret is set.
+func (s *Server) authAdmin(r *http.Request) bool {
+	if s.secret == "" {
+		return false
+	}
+	return protocol.ValidateToken(s.tokenFromRequest(r), s.secret)
 }
 
 func jsonError(w http.ResponseWriter, message string, code int) {
@@ -148,7 +163,7 @@ func (s *Server) handleLogs(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !s.auth(r) {
+	if !s.authAdmin(r) {
 		jsonError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -195,7 +210,7 @@ func (s *Server) handleTunnelList(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !s.auth(r) {
+	if !s.authAdmin(r) {
 		jsonError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -225,7 +240,7 @@ func (s *Server) handleTunnel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
-	if !s.auth(r) {
+	if !s.authAdmin(r) {
 		jsonError(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -253,7 +268,7 @@ func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	if !s.auth(r) {
+	if !s.authTunnel(r) {
 		http.Error(w, "Unauthorized", http.StatusUnauthorized)
 		return
 	}
@@ -337,9 +352,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Keep the Redis TTL alive for as long as the session is open.
 	done := make(chan struct{})
 	var keepaliveWg sync.WaitGroup
-	keepaliveWg.Add(1)
-	go func() {
-		defer keepaliveWg.Done()
+	keepaliveWg.Go(func() {
 		ticker := time.NewTicker(time.Hour)
 		defer ticker.Stop()
 		for {
@@ -350,7 +363,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-	}()
+	})
 	defer func() {
 		close(done)
 		keepaliveWg.Wait()

@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -122,6 +123,15 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 	start := time.Now()
 	conn, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
 	if err != nil {
+		if resp != nil {
+			body, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
+			resp.Body.Close()
+			msg := strings.TrimSpace(string(body))
+			if msg != "" {
+				return nil, fmt.Errorf("server rejected connection: %s: %s", resp.Status, msg)
+			}
+			return nil, fmt.Errorf("server rejected connection: %s", resp.Status)
+		}
 		return nil, fmt.Errorf("failed to connect to server: %w", err)
 	}
 	latency := time.Since(start)

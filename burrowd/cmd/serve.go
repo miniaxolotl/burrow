@@ -76,14 +76,10 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	secret := viper.GetString("secret")
 
-	if secret == "" {
-		return fmt.Errorf("secret is required: set --secret flag or BURROW_SECRET env var")
-	}
-
 	pidFile := internal.ConfigDir() + "/pid"
 	if err := os.MkdirAll(internal.ConfigDir(), 0700); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to create config directory: %v\n", err)
-	} else if err := os.WriteFile(pidFile, []byte(fmt.Sprintf("%d", os.Getpid())), 0600); err != nil {
+	} else if err := os.WriteFile(pidFile, fmt.Appendf(nil, "%d", os.Getpid()), 0600); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to write PID file: %v\n", err)
 	} else {
 		defer os.Remove(pidFile)
