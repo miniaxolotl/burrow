@@ -28,7 +28,7 @@ jobs:
 
       - name: Get version
         id: version
-        run: echo "VERSION=$(node -p "require('./packages/burrowctl/package.json').version')" >> $GITHUB_OUTPUT
+        run: echo "VERSION=$(node -p 'require("./packages/burrowctl/package.json").version')" >> $GITHUB_OUTPUT
 
       - name: Check npm
         id: npm-check

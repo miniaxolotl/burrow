@@ -29,7 +29,7 @@ jobs:
           if [ -n "${{ github.event.inputs.tag }}" ]; then
             VERSION="${{ github.event.inputs.tag }}"
           else
-            VERSION=$(node -p "require('./packages/burrowctl/package.json').version")
+            VERSION=$(node -p 'require("./packages/burrowctl/package.json").version')
           fi
           echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
           echo "TAG=${VERSION#v}" >> $GITHUB_OUTPUT
