@@ -15,7 +15,8 @@ jobs:
         with:
           go-version-file: burrowd/go.mod
           cache: true
-      - run: go vet ./...
+      - run: |
+          go vet ./burrowd/... ./burrowctl/... ./protocol/...
 
   build:
     runs-on: ubuntu-latest
@@ -25,7 +26,8 @@ jobs:
         with:
           go-version-file: burrowd/go.mod
           cache: true
-      - run: go build ./...
+      - run: |
+          go build ./burrowd/... ./burrowctl/... ./protocol/...
 
   test:
     runs-on: ubuntu-latest
@@ -36,7 +38,8 @@ jobs:
         with:
           go-version-file: burrowd/go.mod
           cache: true
-      - run: go test ./...
+      - run: |
+          go test ./burrowd/... ./burrowctl/... ./protocol/...
 
   deploy-preview:
     runs-on: ubuntu-24.04

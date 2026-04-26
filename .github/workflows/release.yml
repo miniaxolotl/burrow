@@ -48,6 +48,8 @@ jobs:
           go-version-file: burrowd/go.mod
           cache: true
 
+      - run: go work sync
+
       - name: Run goreleaser
         uses: goreleaser/goreleaser-action@v6
         with:
