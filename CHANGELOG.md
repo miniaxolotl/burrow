@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.4](https://github.com/miniaxolotl/burrow/compare/v0.2.3...v0.2.4) (2026-04-26)
+
+
+### Bug Fixes
+
+* add optionalDependencies for burrowctl platform binaries ([5e8029c](https://github.com/miniaxolotl/burrow/commit/5e8029c7a860e41bce47f584592b7a546d199fdf))
+
 ## [0.2.3](https://github.com/miniaxolotl/burrow/compare/v0.2.2...v0.2.3) (2026-04-26)
 
 
