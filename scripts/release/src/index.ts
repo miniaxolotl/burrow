@@ -65,7 +65,8 @@ async function release() {
 
   // Build binaries with goreleaser
   run('export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@v2', undefined, true);
-  run('export PATH="$PATH:$(go env GOPATH)/bin" && goreleaser build --clean --snapshot --id burrowctl');
+  const isCI = process.env.CI === "true";
+  run(`export PATH="$PATH:$(go env GOPATH)/bin" && goreleaser build --clean${isCI ? "" : " --snapshot"} --id burrowctl`);
 
   // Verify binaries were built
   for (const [, binPath] of Object.entries(BIN_PATHS)) {

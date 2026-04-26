@@ -16,15 +16,6 @@ https://swiftly-ancient-silent-dragon.burrow.mawa.dev → localhost:3000
 ### 1. Start the server
 
 ```bash
-git clone https://github.com/miniaxolotl/burrow && cd burrow
-cp .env.example .env
-# Edit .env — set BURROW_SECRET and adjust domain/port as needed
-docker compose up -d
-```
-
-Or pull a pre-built image:
-
-```bash
 docker run -d --name burrowd \
   -p 25701:25701 \
   -e BURROW_SECRET=your-secret \
@@ -32,12 +23,29 @@ docker run -d --name burrowd \
   ghcr.io/miniaxolotl/burrowd:latest
 ```
 
+Or with Docker Compose:
+
+```bash
+git clone https://github.com/miniaxolotl/burrow && cd burrow
+cp .env.example .env   # set BURROW_SECRET
+docker compose up -d
+```
+
 ### 2. Install the client
+
+**Global install (recommended):**
 
 ```bash
 npm install -g @miniaxolotl/burrowctl
-# or: pnpm add -g @miniaxolotl/burrowctl
-# or: bun add -g @miniaxolotl/burrowctl
+pnpm add -g @miniaxolotl/burrowctl
+bun add -g @miniaxolotl/burrowctl
+```
+
+**One-time use with npx:**
+
+```bash
+npx @miniaxolotl/burrowctl auth login <token> --server your-server:25701
+npx @miniaxolotl/burrowctl tunnel create --port 3000
 ```
 
 ### 3. Authenticate & create a tunnel
@@ -94,8 +102,8 @@ Flags can also be passed directly: `--server`, `--token`, `--secret`, `--domain`
 
 ## Docs
 
-- [Deployment guide](documentation/deploy/deploy.md)
-- [Server setup & deployment](documentation/server.md)
+- [Deploy & release guide](documentation/deploy/deploy.md)
+- [Server setup](documentation/server.md)
 - [Client reference](documentation/client.md)
 
 ## License
