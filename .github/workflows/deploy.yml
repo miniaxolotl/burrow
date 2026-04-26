@@ -1,26 +1,51 @@
-name: Deploy
+name: deploy
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [development, production]
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  deploy:
+  dokku:
+    if: github.ref_type == 'branch'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Unlock app if locked
+        if: github.ref == 'refs/heads/production'
+        run: |
+          sshopts="-o StrictHostKeyChecking=no"
+          ssh $sshopts ${{ secrets.DOKKU_SSH_HOST_KEY }} "dokku apps:unlock burrowd" 2>/dev/null || true
+      - uses: dokku/github-action@master
+        with:
+          git_remote_url: ${{ github.ref == 'refs/heads/production' && secrets.DOKKU_GIT_REMOTE_URL || secrets.DOKKU_GIT_REMOTE_URL_PREVIEW }}
+          ssh_private_key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ssh_host_key: ${{ secrets.DOKKU_SSH_HOST_KEY }}
+          branch: main
+
+  docker:
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - name: Get version
         id: version
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "TAG=$VERSION" >> $GITHUB_OUTPUT
+        run: echo "TAG=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
 
       - name: Check Docker Hub credentials
         id: dockerhub
