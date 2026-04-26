@@ -11,44 +11,7 @@ Expose local services to the internet via HTTPS subdomains.
 https://swiftly-ancient-silent-dragon.burrow.mawa.dev → localhost:3000
 ```
 
-## Deploy
-
-### Docker
-
-```bash
-cp .env.example .env   # edit with registry tokens
-pnpm install
-pnpm --filter @script/deploy run deploy
-```
-
-Registry tokens via env vars:
-- `GHCR_REGISTRY=ghcr.io/miniaxolotl` — GitHub Container Registry
-- `DOCKERHUB_REGISTRY=miniaxolotl` — Docker Hub
-
-When no registry is set, builds locally without pushing. See `scripts/deploy/README.md` for full options.
-
-### Dokku
-
-See [Server documentation](documentation/server.md#deploy-dokku) for:
-- App creation and Redis setup
-- Wildcard SSL certificates
-- Nginx configuration
-
-### Binaries
-
-Pre-built binaries for Linux and macOS are on the [Releases](https://github.com/miniaxolotl/burrow/releases) page:
-
-```bash
-# Linux amd64
-curl -fsSL https://github.com/miniaxolotl/burrow/releases/latest/download/burrowd_0.2.0_linux_amd64.tar.gz | tar -xz
-sudo mv burrowd /usr/local/bin/
-
-# macOS arm64
-curl -fsSL https://github.com/miniaxolotl/burrow/releases/latest/download/burrowd_0.2.0_darwin_arm64.tar.gz | tar -xz
-sudo mv burrowd /usr/local/bin/
-```
-
-## Server (Docker)
+## Server
 
 ```bash
 git clone https://github.com/miniaxolotl/burrow && cd burrow
@@ -56,7 +19,7 @@ cp .env.example .env   # set BURROW_SECRET
 docker compose up -d
 ```
 
-## Client (npm)
+## Client
 
 ```bash
 npm install -g @miniaxolotl/burrowctl
@@ -103,6 +66,7 @@ burrowctl tunnel create --port 3000
 
 ## Docs
 
+- [Deployment guide](documentation/deploy/deploy.md)
 - [Client CLI reference](documentation/client.md)
 - [Server setup & deployment](documentation/server.md)
 
