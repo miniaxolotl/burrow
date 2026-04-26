@@ -40,16 +40,26 @@ jobs:
             echo "published=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Build with goreleaser
+        if: steps.npm-check.outputs.published != 'true'
+        run: |
+          goreleaser build --single-target --clean --snapshot --id burrowctl
+        env:
+          GORELEASER_KEY: ${{ secrets.GORELEASER_KEY }}
+
       - name: Publish to npm
         if: steps.npm-check.outputs.published != 'true'
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
           for PLATFORM in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
             PKG_DIR="packages/burrowctl-${PLATFORM}"
-            BIN_SRC="dist/burrowctl_${PLATFORM}_amd64_v1/burrowctl"
-            [ "$PLATFORM" = "linux-arm64" ] && BIN_SRC="dist/burrowctl_linux_arm64/burrowctl"
-            [ "$PLATFORM" = "darwin-arm64" ] && BIN_SRC="dist/burrowctl_darwin_arm64/burrowctl"
-            cp "$BIN_SRC" "$PKG_DIR/burrowctl"
+            case "$PLATFORM" in
+              linux-x64)    BIN_PATH="burrowctl_linux_amd64_v1/burrowctl" ;;
+              linux-arm64)  BIN_PATH="burrowctl_linux_arm64_v1/burrowctl" ;;
+              darwin-x64)   BIN_PATH="burrowctl_darwin_amd64_v1/burrowctl" ;;
+              darwin-arm64) BIN_PATH="burrowctl_darwin_arm64_v1/burrowctl" ;;
+            esac
+            cp "burrowctl/$BIN_PATH" "$PKG_DIR/burrowctl"
             chmod +x "$PKG_DIR/burrowctl"
             node -e "
               const fs = require('fs');
