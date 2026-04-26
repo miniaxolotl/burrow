@@ -12,6 +12,7 @@
  */
 
 const { execSync } = await import("node:child_process");
+const fs = await import("node:fs");
 const path = await import("node:path");
 
 const IMAGE = "burrowd";
@@ -24,11 +25,12 @@ function run(cmd: string, cwd?: string) {
 
 async function deploy() {
   const packageJson = JSON.parse(
-    execSync("cat ../../packages/burrowctl/package.json", { encoding: "utf8" }),
+    fs.readFileSync(
+      path.join(ROOT, "packages", "burrowctl", "package.json"),
+      "utf8",
+    ),
   );
   const version = packageJson.version;
-
-  const tags = ["latest", version];
 
   const registries: { name: string; url: string }[] = [];
 
@@ -36,33 +38,35 @@ async function deploy() {
     registries.push({ name: "GHCR", url: process.env.GHCR_REGISTRY });
   }
   if (process.env.DOCKERHUB_REGISTRY) {
-    registries.push({
-      name: "Docker Hub",
-      url: process.env.DOCKERHUB_REGISTRY,
-    });
+    registries.push({ name: "Docker Hub", url: process.env.DOCKERHUB_REGISTRY });
   }
 
-  console.log(`\n=== Deploy ${IMAGE}:${tags.join(", ")} ===\n`);
+  const tagSuffixes = ["latest", version];
+
+  const allTags =
+    registries.length === 0
+      ? tagSuffixes.map((t) => `${IMAGE}:${t}`)
+      : registries.flatMap(({ url }) =>
+          tagSuffixes.map((t) => `${url}/${IMAGE}:${t}`),
+        );
+
+  console.log(`\n=== Deploy ${IMAGE}:${tagSuffixes.join(", ")} ===\n`);
+
+  const tagFlags = allTags.map((t) => `-t ${t}`).join(" ");
+  run(`docker build --build-arg VERSION=${version} ${tagFlags} .`);
 
   if (registries.length === 0) {
-    for (const t of tags) {
-      run(`docker build -t ${IMAGE}:${t} .`);
-    }
     console.log(
-      `\n✓ Built ${tags.map((t) => `${IMAGE}:${t}`).join(", ")} (no registry set, skipping push)`,
+      `\n✓ Built ${allTags.join(", ")} (no registry set, skipping push)`,
     );
-  } else {
-    for (const registry of registries) {
-      console.log(`\n--- Pushing to ${registry.name} ---`);
-      for (const t of tags) {
-        const fullImage = `${registry.url}/${IMAGE}:${t}`;
-        run(`docker build -t ${fullImage} .`);
-        run(`docker push ${fullImage}`);
-        console.log(`✓ Pushed ${fullImage}`);
-      }
-    }
-    console.log(`\n✓ Deployed to ${registries.map((r) => r.name).join(" + ")}`);
+    return;
   }
+
+  for (const tag of allTags) {
+    run(`docker push ${tag}`);
+  }
+
+  console.log(`\n✓ Deployed to ${registries.map((r) => r.name).join(" + ")}`);
 }
 
 deploy().catch((err) => {
