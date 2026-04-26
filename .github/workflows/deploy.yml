@@ -2,13 +2,12 @@ name: Deploy
 
 on:
   push:
-    branches: [production]
     tags:
       - "v*"
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Tag to deploy (e.g., v0.2.3)"
+      version:
+        description: "Version to deploy (e.g., 0.2.3)"
         required: false
         default: ""
 
@@ -26,8 +25,10 @@ jobs:
       - name: Get version
         id: version
         run: |
-          if [ -n "${{ github.event.inputs.tag }}" ]; then
-            VERSION="${{ github.event.inputs.tag }}"
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
           else
             VERSION=$(node -p 'require("./packages/burrowctl/package.json").version')
           fi
@@ -42,6 +43,9 @@ jobs:
           else
             echo "available=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -60,27 +64,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Compute tags
-        id: tags
-        run: |
-          TAGS="ghcr.io/miniaxolotl/burrowd:latest"
-          TAGS="$TAGS,ghcr.io/miniaxolotl/burrowd:v${{ steps.version.outputs.TAG }}"
-          if [ "${{ steps.dockerhub.outputs.available }}" = "true" ]; then
-            TAGS="$TAGS,miniaxolotl/burrowd:latest"
-            TAGS="$TAGS,miniaxolotl/burrowd:v${{ steps.version.outputs.TAG }}"
-          fi
-          echo "TAGS=$TAGS" >> $GITHUB_OUTPUT
-
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.tags.outputs.TAGS }}
+          tags: |
+            ghcr.io/miniaxolotl/burrowd:latest
+            ghcr.io/miniaxolotl/burrowd:${{ steps.version.outputs.TAG }}
+            ${{ steps.dockerhub.outputs.available == 'true' && format('miniaxolotl/burrowd:latest,miniaxolotl/burrowd:{0}', steps.version.outputs.TAG) || '' }}
           labels: |
             org.opencontainers.image.version=${{ steps.version.outputs.TAG }}
             org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

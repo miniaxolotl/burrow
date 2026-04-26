@@ -3,8 +3,8 @@
  * then creates a GitHub release.
  *
  * Registries are enabled by setting the corresponding env var:
- *   GHCR_REGISTRY=ghcr.io/miniaxolotl   → push to GitHub Container Registry
- *   DOCKERHUB_REGISTRY=miniaxolotl      → push to Docker Hub
+ *   GHCR_REGISTRY=ghcr.io/miniaxolotl   -> push to GitHub Container Registry
+ *   DOCKERHUB_REGISTRY=miniaxolotl      -> push to Docker Hub
  *
  * GitHub release is created when GH_TOKEN or GITHUB_TOKEN is set.
  *
@@ -17,22 +17,24 @@
  */
 
 const { execSync } = await import("node:child_process");
+const fs = await import("node:fs");
+const path = await import("node:path");
 
 const IMAGE = "burrowd";
 const REPO = "miniaxolotl/burrow";
 const PLATFORMS = process.env.PLATFORMS || "linux/amd64,linux/arm64";
-const ROOT = new URL("../../..", import.meta.url).pathname;
+const ROOT = path.resolve(new URL("../../..", import.meta.url).pathname);
 
-function run(cmd: string, cwd?: string) {
+function run(cmd, cwd) {
   console.log(`> ${cmd}`);
   execSync(cmd, { stdio: "inherit", cwd: cwd || ROOT });
 }
 
-async function gitRevision(): Promise<string> {
+async function gitRevision() {
   return execSync("git rev-parse HEAD", { cwd: ROOT }).toString().trim();
 }
 
-async function buildLabels(tag: string): Promise<string[]> {
+async function buildLabels(tag) {
   const version = tag.replace(/^v/, "");
   const revision = await gitRevision();
   const created = new Date().toISOString();
@@ -44,15 +46,15 @@ async function buildLabels(tag: string): Promise<string[]> {
   ];
 }
 
-async function registryLogin(registry: string, token: string, user: string) {
+async function registryLogin(registry, token, user) {
   console.log(`Logging in to ${registry}...`);
   run(`echo "${token}" | docker login ${registry} -u ${user} --password-stdin`);
 }
 
-async function createGithubRelease(tag: string) {
+async function createGithubRelease(tag) {
   const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
   if (!token) {
-    console.log("⊘ No GH_TOKEN or GITHUB_TOKEN — skipping GitHub release");
+    console.log("No GH_TOKEN or GITHUB_TOKEN - skipping GitHub release");
     return;
   }
 
@@ -65,12 +67,12 @@ async function createGithubRelease(tag: string) {
   }
 
   run(`gh release create ${tag} --generate-notes --repo ${REPO}`);
-  console.log(`✓ GitHub release ${tag} created`);
+  console.log(`GitHub release ${tag} created`);
 }
 
 async function deploy() {
   const packageJson = JSON.parse(
-    execSync("cat ../../packages/burrowctl/package.json", { encoding: "utf8" }),
+    fs.readFileSync(path.join(ROOT, "packages", "burrowctl", "package.json"), "utf8"),
   );
   const version = packageJson.version;
 
@@ -81,9 +83,9 @@ async function deploy() {
       ? ["latest", `v${version}`]
       : ([tag, versionTag, versionTag === version ? "latest" : null].filter(
           Boolean,
-        ) as string[]);
+        ));
 
-  const registries: { name: string; url: string }[] = [];
+  const registries = [];
 
   if (process.env.GHCR_REGISTRY) {
     registries.push({ name: "GHCR", url: process.env.GHCR_REGISTRY });
@@ -98,11 +100,12 @@ async function deploy() {
   const ghToken = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
 
   if (process.env.GHCR_REGISTRY && ghToken) {
-    await registryLogin(process.env.GHCR_REGISTRY, ghToken, process.env.USER || execSync("whoami", { encoding: "utf8" }).trim());
+    const ghUser = process.env.GHCR_USER || "miniaxolotl";
+    await registryLogin(process.env.GHCR_REGISTRY, ghToken, ghUser);
   }
 
   if (process.env.DOCKERHUB_REGISTRY && process.env.DOCKERHUB_TOKEN) {
-    const dockerUser = process.env.DOCKERHUB_REGISTRY.split("/")[0];
+    const dockerUser = process.env.DOCKERHUB_USER || process.env.DOCKERHUB_REGISTRY;
     await registryLogin(process.env.DOCKERHUB_REGISTRY, process.env.DOCKERHUB_TOKEN, dockerUser);
   }
 
@@ -114,11 +117,8 @@ async function deploy() {
     for (const t of tags) {
       const fullImage = `${registry.url}/${IMAGE}:${t}`;
       const labels = await buildLabels(t);
-      const platform = PLATFORMS.includes(",") && process.env.CI !== "true"
-        ? "linux/amd64"
-        : PLATFORMS;
-      run(`docker buildx build --platform ${platform} ${labels.join(" ")} -t ${fullImage} --push .`);
-      console.log(`✓ Pushed ${fullImage}`);
+      run(`docker buildx build --platform ${PLATFORMS} ${labels.join(" ")} -t ${fullImage} --push .`);
+      console.log(`Pushed ${fullImage}`);
     }
   }
 
@@ -130,10 +130,10 @@ async function deploy() {
       : PLATFORMS;
     run(`docker buildx build --platform ${platform} ${labels.join(" ")} ${tagArgs} --load .`);
     console.log(
-      `\n✓ Built ${tags.map((t) => `${IMAGE}:${t}`).join(", ")} (no registry set, skipping push)`,
+      `\nBuilt ${tags.map((t) => `${IMAGE}:${t}`).join(", ")} (no registry set, skipping push)`,
     );
   } else {
-    console.log(`\n✓ Deployed to ${registries.map((r) => r.name).join(" + ")}`);
+    console.log(`\nDeployed to ${registries.map((r) => r.name).join(" + ")}`);
   }
 
   if (tag !== "latest") {

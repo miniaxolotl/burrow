@@ -33,15 +33,15 @@ builds:
 
 archives:
   - id: burrowd
-    builds: [burrowd]
+    ids: [burrowd]
     name_template: "burrowd_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format: tar.gz
+    formats: [tar.gz]
     wrap_in_directory: false
 
   - id: burrowctl
-    builds: [burrowctl]
+    ids: [burrowctl]
     name_template: "burrowctl_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    format: tar.gz
+    formats: [tar.gz]
     wrap_in_directory: false
 
 checksum:

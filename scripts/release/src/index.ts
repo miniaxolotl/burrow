@@ -5,18 +5,23 @@
 
 const { execSync } = await import("node:child_process");
 const fs = await import("node:fs");
+const path = await import("node:path");
 
-const BIN_PATHS: Record<string, string> = {
+const BIN_PATHS = {
   "linux-x64": "burrowctl_linux_amd64_v1/burrowctl",
-  "linux-arm64": "burrowctl_linux_arm64_v8.0/burrowctl",
+  "linux-arm64": "burrowctl_linux_arm64/burrowctl",
   "darwin-x64": "burrowctl_darwin_amd64_v1/burrowctl",
-  "darwin-arm64": "burrowctl_darwin_arm64_v8.0/burrowctl",
+  "darwin-arm64": "burrowctl_darwin_arm64/burrowctl",
 };
 
-async function run(cmd: string, ignoreErrors = false) {
+const ROOT = path.resolve(new URL("../../..", import.meta.url).pathname);
+const DIST = path.join(ROOT, "dist");
+const PKGS = path.join(ROOT, "packages");
+
+function run(cmd, cwd, ignoreErrors = false) {
   console.log(`> ${cmd}`);
   try {
-    execSync(cmd, { stdio: "inherit" });
+    execSync(cmd, { stdio: "inherit", cwd: cwd || ROOT });
   } catch (err) {
     if (!ignoreErrors) {
       throw err;
@@ -24,7 +29,7 @@ async function run(cmd: string, ignoreErrors = false) {
   }
 }
 
-async function getNpmVersion(pkg: string): Promise<string | null> {
+async function getNpmVersion(pkg) {
   try {
     const version = execSync(`npm view ${pkg} version --json`, {
       encoding: "utf8",
@@ -40,59 +45,65 @@ async function release() {
 
   console.log("\n=== Release ===\n");
 
-  const packageJson = JSON.parse(
-    execSync("cat ../../packages/burrowctl/package.json", { encoding: "utf8" }),
-  );
+  const pkgJsonPath = path.join(PKGS, "burrowctl", "package.json");
+  const packageJson = JSON.parse(fs.readFileSync(pkgJsonPath, "utf8"));
   const version = packageJson.version;
 
   const npmVersion = await getNpmVersion("@miniaxolotl/burrowctl");
 
   if (npmVersion === version) {
-    console.log(`✓ @miniaxolotl/burrowctl@${version} already deployed to npm`);
-  } else {
-    console.log(`\nLocal ${version} → npm: ${npmVersion || "none"}\n`);
+    console.log(`@miniaxolotl/burrowctl@${version} already on npm`);
+    return;
+  }
 
-    if (!dryRun) {
-      run('export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@v2', true);
-      run('export PATH="$PATH:$(go env GOPATH)/bin" && goreleaser build --clean --snapshot --id burrowctl');
+  console.log(`\nLocal ${version} -> npm: ${npmVersion || "none"}\n`);
 
-      for (const [platform, binPath] of Object.entries(BIN_PATHS)) {
-        const pkgDir = `../../packages/burrowctl-${platform}`;
-        const pkgJsonPath = `${pkgDir}/package.json`;
+  if (dryRun) {
+    console.log("\nDry run complete - no changes published");
+    return;
+  }
 
-        console.log(`--- ${platform} ---`);
+  // Build binaries with goreleaser
+  run('export PATH="$PATH:$(go env GOPATH)/bin" && go install github.com/goreleaser/goreleaser/v2@v2', undefined, true);
+  run('export PATH="$PATH:$(go env GOPATH)/bin" && goreleaser build --clean --snapshot --id burrowctl');
 
-        run(`cp dist/${binPath} ${pkgDir}/burrowctl`);
-        run(`chmod +x ${pkgDir}/burrowctl`);
-
-        const pkgJson = JSON.parse(execSync(`cat ${pkgJsonPath}`, { encoding: "utf8" }));
-        pkgJson.version = version;
-        const tmpPath = `/tmp/pkg-json-${Date.now()}.json`;
-        fs.writeFileSync(tmpPath, JSON.stringify(pkgJson, null, 2) + "\n");
-        run(`cp ${tmpPath} ${pkgJsonPath}`);
-
-        run(`cd ${pkgDir} && npm publish --access public`);
-        console.log(`✓ Published @miniaxolotl/burrowctl-${platform}@${version}`);
-      }
-
-      const mainDir = "../../packages/burrowctl";
-      const mainPkgJsonPath = `${mainDir}/package.json`;
-      const mainPkgJson = JSON.parse(execSync(`cat ${mainPkgJsonPath}`, { encoding: "utf8" }));
-      mainPkgJson.version = version;
-      const mainTmpPath = `/tmp/pkg-json-main-${Date.now()}.json`;
-      fs.writeFileSync(mainTmpPath, JSON.stringify(mainPkgJson, null, 2) + "\n");
-      run(`cp ${mainTmpPath} ${mainPkgJsonPath}`);
-
-      run(`cd ${mainDir} && npm publish --access public`);
-      console.log(`✓ Published @miniaxolotl/burrowctl@${version} to npm`);
+  // Verify binaries were built
+  for (const [, binPath] of Object.entries(BIN_PATHS)) {
+    const fullPath = path.join(DIST, binPath);
+    if (!fs.existsSync(fullPath)) {
+      throw new Error(`Binary not found: ${fullPath}`);
     }
   }
 
-  if (dryRun) {
-    console.log("\n✓ Dry run complete — no changes published");
-  } else {
-    console.log("\n✓ Release complete");
+  // Publish platform-specific packages
+  for (const [platform, binPath] of Object.entries(BIN_PATHS)) {
+    const pkgDir = path.join(PKGS, `burrowctl-${platform}`);
+    const pkgJsonPath2 = path.join(pkgDir, "package.json");
+
+    console.log(`\n--- ${platform} ---`);
+
+    fs.copyFileSync(path.join(DIST, binPath), path.join(pkgDir, "burrowctl"));
+    fs.chmodSync(path.join(pkgDir, "burrowctl"), 0o755);
+
+    const pkgJson = JSON.parse(fs.readFileSync(pkgJsonPath2, "utf8"));
+    pkgJson.version = version;
+    fs.writeFileSync(pkgJsonPath2, JSON.stringify(pkgJson, null, 2) + "\n");
+
+    run(`npm publish --access public`, pkgDir);
+    console.log(`Published @miniaxolotl/burrowctl-${platform}@${version}`);
   }
+
+  // Publish main package
+  const mainDir = path.join(PKGS, "burrowctl");
+  const mainPkgJsonPath = path.join(mainDir, "package.json");
+  const mainPkgJson = JSON.parse(fs.readFileSync(mainPkgJsonPath, "utf8"));
+  mainPkgJson.version = version;
+  fs.writeFileSync(mainPkgJsonPath, JSON.stringify(mainPkgJson, null, 2) + "\n");
+
+  run(`npm publish --access public`, mainDir);
+  console.log(`Published @miniaxolotl/burrowctl@${version}`);
+
+  console.log("\nRelease complete");
 }
 
 release().catch((err) => {

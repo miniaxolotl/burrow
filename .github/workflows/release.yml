@@ -2,8 +2,14 @@ name: Release
 
 on:
   push:
-    branches: [production]
+    tags:
+      - "v*"
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g., 0.2.3)"
+        required: false
+        default: ""
 
 jobs:
   release:
@@ -15,6 +21,8 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
 
@@ -24,11 +32,26 @@ jobs:
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: burrowd/go.mod
+          cache: true
+          cache-dependency-path: '**/go.sum'
+
       - run: pnpm install --frozen-lockfile
 
       - name: Get version
         id: version
-        run: echo "VERSION=$(node -p 'require("./packages/burrowctl/package.json").version')" >> $GITHUB_OUTPUT
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            VERSION="${{ github.ref_name }}"
+            VERSION="${VERSION#v}"
+          else
+            VERSION=$(node -p 'require("./packages/burrowctl/package.json").version')
+          fi
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Check npm
         id: npm-check
@@ -39,22 +62,16 @@ jobs:
             echo "published=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Install goreleaser
+        run: go install github.com/goreleaser/goreleaser/v2@latest
+
+      - name: Build and release with goreleaser
+        run: goreleaser release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Publish to npm
         if: steps.npm-check.outputs.published != 'true'
         run: pnpm run release
         env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub release
-        run: |
-          TAG="v${{ steps.version.outputs.VERSION }}"
-          if gh release view "$TAG" --repo "${{ github.repository }}" 2>/dev/null; then
-            echo "Release $TAG already exists"
-          else
-            gh release create "$TAG" \
-              --title "Release $TAG" \
-              --generate-notes \
-              --repo "${{ github.repository }}"
-          fi
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
