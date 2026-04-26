@@ -5,44 +5,80 @@ CLI client that creates tunnels from local ports to the burrow server, exposing 
 ## Install
 
 ```bash
-# npm
 npm install -g @miniaxolotl/burrowctl
-
-# Or download binaries from GitHub Releases
-# Linux/macOS: amd64, arm64
 ```
+
+Or download binaries from [GitHub Releases](https://github.com/miniaxolotl/burrow/releases) (Linux / macOS, amd64 + arm64).
 
 ## Quick Start
 
+No account or token required to use the public server:
+
 ```bash
-burrowctl auth login <token> --server burrow.example.com:25701
+burrowctl tunnel create --port 3000
+```
+
+Connects to `burrow.mawa.dev` over TLS by default.
+
+## Self-hosting
+
+Point the client at your own server:
+
+```bash
+burrowctl auth set-server your-server.example.com
+burrowctl auth login <token>            # token generated from your BURROW_SECRET
 burrowctl tunnel create --port 3000
 ```
 
 ## Configuration
 
-| Variable | Description |
-| -------- | ----------- |
-| `BURROW_SERVER` | Server address (host:port) |
-| `BURROW_TOKEN` | Auth token |
-| `BURROW_SECRET` | Shared secret (auto-generates token) |
-| `BURROW_TLS` | Use TLS (`wss://` / `https://`) |
-| `BURROW_DOMAIN` | Fallback domain for URL display |
+Settings are stored in `~/.config/burrow/client.json` after first run.
 
-Config stored in `~/.config/burrow/client.json` after first `auth login`.
+| Variable | Description | Default |
+| -------- | ----------- | ------- |
+| `BURROW_SERVER` | Server address | `burrow.mawa.dev` |
+| `BURROW_TOKEN` | Auth token | — |
+| `BURROW_SECRET` | Shared secret (generates a token on the fly) | — |
+| `BURROW_TLS` | Force TLS on/off (`true`/`false`) | auto (on for non-localhost) |
+| `BURROW_DOMAIN` | Fallback domain for URL display | `burrow.mawa.dev` |
 
 ## Commands
 
+### Auth
+
 ```bash
-burrowctl tunnel create --port 3000 --port 8080   # Create tunnels + open TUI
-burrowctl tunnel list                              # List active tunnels
-burrowctl tunnel status                            # Connection status
-burrowctl tunnel inspect {id} [--follow] [--tail N] # View logs
-burrowctl tunnel close {id}                        # Close a tunnel
-burrowctl auth login <token> [--server addr]       # Store token
-burrowctl auth logout                              # Remove token
-burrowctl auth status                              # Check auth status
+burrowctl auth set-server <address>          # Set server (e.g. your-server.example.com)
+burrowctl auth login <token> [--server addr] # Store token (and optionally set server)
+burrowctl auth logout                         # Remove stored token
+burrowctl auth status                         # Show current token and server
 ```
+
+### Tunnels
+
+```bash
+burrowctl tunnel create --port 3000 --port 8080    # Open tunnels + launch TUI
+burrowctl tunnel close <id>                         # Close a tunnel by ID
+burrowctl tunnel inspect <id> [--follow] [--tail N] # View request logs
+```
+
+### Admin (requires token)
+
+```bash
+burrowctl tunnel list      # List all active tunnels on the server
+burrowctl tunnel status    # Same as list with a separator
+```
+
+## Access control
+
+| Operation | Anonymous | With token |
+| --------- | --------- | ---------- |
+| Create tunnel | ✅ | ✅ |
+| Close own tunnel | ✅ (anonymous) | ✅ |
+| View own tunnel logs | ✅ (anonymous) | ✅ |
+| Close any tunnel | ✗ | ✅ (admin) |
+| List all tunnels | ✗ | ✅ (admin) |
+
+Tunnels created with a token are owned by that token — only the same token (or an admin) can close them or view their logs. Tunnels created without a token are anonymous and can be managed by anyone who knows the tunnel ID.
 
 ## TUI Controls
 
@@ -64,7 +100,7 @@ burrowctl auth status                              # Check auth status
 
 ## Reconnection
 
-Exponential backoff (1s → 30s cap). After 5 failures, a new tunnel ID is generated. Server keeps tunnels for 20s after disconnect to allow reconnection without URL change.
+Exponential backoff (1s → 30s cap). After 5 consecutive failures a new tunnel ID is generated. The server holds tunnel registrations for 20 s after disconnect so a quick reconnect preserves the URL.
 
 ## Documentation
 

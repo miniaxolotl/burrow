@@ -6,17 +6,27 @@
 
 Expose local services to the internet via HTTPS subdomains.
 
-## Server
-
-```bash
-cp .env.example .env && docker compose up -d
-```
-
 ## Client
 
 ```bash
 npm i -g @miniaxolotl/burrowctl
-burrowctl auth login <token> --server your-server:25701
+burrowctl tunnel create --port 3000
+```
+
+Connects to `burrow.mawa.dev` by default. No account or token required.
+
+## Self-hosting
+
+```bash
+cp .env.example .env   # set BURROW_SECRET and BURROW_DOMAIN
+docker compose up -d
+```
+
+Then point your client at it:
+
+```bash
+burrowctl auth set-server your-server.example.com
+burrowctl auth login <token>
 burrowctl tunnel create --port 3000
 ```
 
