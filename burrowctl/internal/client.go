@@ -19,18 +19,6 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
-type countWriter struct {
-	w io.Writer
-	n int64
-}
-
-func (cw *countWriter) Write(p []byte) (int, error) {
-	n, err := cw.w.Write(p)
-	atomic.AddInt64(&cw.n, int64(n))
-	return n, err
-}
-
-
 type Client struct {
 	server  string
 	token   string
