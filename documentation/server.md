@@ -17,7 +17,6 @@ docker compose up -d
 | `BURROW_DOMAIN` | Domain for tunnel URLs | `localhost` |
 | `BURROW_PORT` | Server port | `25701` |
 | `BURROW_REDIS_URL` | Redis connection URL | `redis://redis:6379` |
-| `BURROW_TLS` | Generate `https://` tunnel URLs | `false` |
 
 Also accepts `PORT` and `REDIS_URL` as fallbacks.
 

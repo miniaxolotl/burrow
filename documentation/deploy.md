@@ -69,7 +69,7 @@ dokku certs:add burrowd /etc/letsencrypt/live/burrow.example.com/fullchain.pem /
 | Workflow | Trigger | Action |
 | -------- | ------- | ------ |
 | `ci.yml` | Push/PR | Lint, build, test |
-| `release.yml` | Push to `development` | Release PR → npm publish on tag |
+| `release.yml` | Push to `development` or `production` | Release PR on dev → npm publish on prod branch |
 | `deploy.yml` | `v*` tag | Push Docker to GHCR + Docker Hub |
 
 ## Updating
