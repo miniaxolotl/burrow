@@ -23,12 +23,10 @@ func init() {
 	TunnelCmd.PersistentFlags().String("token", "", "Authentication token")
 	TunnelCmd.PersistentFlags().String("secret", "", "Shared secret (generates a token)")
 	TunnelCmd.PersistentFlags().String("domain", "burrow.mawa.dev", "Domain for tunnel URLs")
-	TunnelCmd.PersistentFlags().Bool("tls", false, "Use TLS (wss:// and https://) when connecting to the server")
 	viper.BindPFlag("server", TunnelCmd.PersistentFlags().Lookup("server"))
 	viper.BindPFlag("token", TunnelCmd.PersistentFlags().Lookup("token"))
 	viper.BindPFlag("secret", TunnelCmd.PersistentFlags().Lookup("secret"))
 	viper.BindPFlag("domain", TunnelCmd.PersistentFlags().Lookup("domain"))
-	viper.BindPFlag("tls", TunnelCmd.PersistentFlags().Lookup("tls"))
 
 	TunnelCmd.AddCommand(createCmd)
 	TunnelCmd.AddCommand(listCmd)
@@ -37,16 +35,9 @@ func init() {
 	TunnelCmd.AddCommand(closeCmd)
 }
 
-// secureTLS returns true when TLS should be used. Explicit --tls flag or
-// BURROW_TLS=true takes priority; otherwise TLS is auto-enabled for any
-// server that is not localhost / 127.0.0.1 / ::1.
+// secureTLS returns true when TLS should be used.
+// TLS is auto-enabled for any server that is not localhost / 127.0.0.1 / ::1.
 func secureTLS() bool {
-	if f := TunnelCmd.PersistentFlags().Lookup("tls"); f != nil && f.Changed {
-		return viper.GetBool("tls")
-	}
-	if viper.GetBool("tls") {
-		return true
-	}
 	host := viper.GetString("server")
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h

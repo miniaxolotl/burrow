@@ -51,7 +51,6 @@ func loadClientConfig() {
 			"token":  "",
 			"secret": "",
 			"domain": "burrow.mawa.dev",
-			"tls":    false,
 		}
 		if b, err := json.MarshalIndent(defaults, "", "  "); err == nil {
 			os.WriteFile(cfgFile, append(b, '\n'), 0600)

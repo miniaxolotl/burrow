@@ -45,10 +45,7 @@ func runLogin(cmd *cobra.Command, args []string) error {
 
 	if cfg.Server != "" {
 		fmt.Printf("Verifying against %s...", cfg.Server)
-		scheme := "http"
-		if cfg.TLS {
-			scheme = "https"
-		}
+		scheme := "https"
 		req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s/tunnels", scheme, cfg.Server), nil)
 		if err != nil {
 			fmt.Println()

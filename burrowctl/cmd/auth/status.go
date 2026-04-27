@@ -29,7 +29,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Authenticated\nToken: %s\n", masked)
 	fmt.Printf("Server: %s\n", cfg.Server)
 	fmt.Printf("Domain: %s\n", cfg.Domain)
-	fmt.Printf("TLS: %v\n", cfg.TLS)
 	return nil
 }
 

@@ -39,7 +39,6 @@ Settings are stored in `~/.config/burrow/client.json` after first run.
 | `BURROW_SERVER` | Server address | `burrow.mawa.dev` |
 | `BURROW_TOKEN` | Auth token | — |
 | `BURROW_SECRET` | Shared secret (generates a token on the fly) | — |
-| `BURROW_TLS` | Force TLS on/off (`true`/`false`) | auto (on for non-localhost) |
 | `BURROW_DOMAIN` | Fallback domain for URL display | `burrow.mawa.dev` |
 
 ## Commands

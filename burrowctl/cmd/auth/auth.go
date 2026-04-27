@@ -35,7 +35,6 @@ type clientConfig struct {
 	Token  string `json:"token"`
 	Secret string `json:"secret"`
 	Domain string `json:"domain"`
-	TLS    bool   `json:"tls"`
 }
 
 func readConfig() (*clientConfig, string, error) {
