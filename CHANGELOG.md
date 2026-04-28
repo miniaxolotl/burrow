@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.8](https://github.com/miniaxolotl/burrow/compare/v0.2.7...v0.2.8) (2026-04-28)
+
+
+### Features
+
+* **docs:** add UI images to README for Tunnel Manager section ([3f90557](https://github.com/miniaxolotl/burrow/commit/3f90557dc97e2c6a0a175487e4b637bca7aeabd7))
+
 ## [0.2.7](https://github.com/miniaxolotl/burrow/compare/v0.2.6...v0.2.7) (2026-04-26)
 
 
