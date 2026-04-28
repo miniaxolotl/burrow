@@ -99,7 +99,21 @@ Tunnels created with a token are owned by that token — only the same token (or
 
 ## Reconnection
 
-Exponential backoff (1s → 30s cap). After 5 consecutive failures a new tunnel ID is generated. The server holds tunnel registrations for 20 s after disconnect so a quick reconnect preserves the URL.
+Exponential backoff (1s → 30s cap). After 5 consecutive failures a new tunnel ID is generated. The server holds tunnel registrations for 20s after disconnect so a quick reconnect preserves the URL.
+
+## Protocol
+
+The client connects via WebSocket and multiplexes streams using yamux. Each accepted stream represents one proxied TCP connection.
+
+```
+Client → WebSocket → yamux stream → local TCP
+       ↗                           ↖
+       └──────── health pings ─────┘
+```
+
+- **Health checks**: Performed every second to measure latency. Uses `X-Tunnel-Token` header.
+- **Tunnel URL**: Server returns `X-Tunnel-URL` header on WebSocket upgrade, otherwise constructed as `https://{tunnelID}.{domain}`.
+- **Stream handling**: Each stream dials `localhost:{port}` and proxies data bidirectionally. Errors on `io.Copy` are logged but do not affect tunnel status.
 
 ## Documentation
 
