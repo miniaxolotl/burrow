@@ -9,7 +9,7 @@ Burrow uses [release-please](https://github.com/googleapis/release-please) for a
 1. Push conventional commits to `development`
 2. Release-please creates a release PR
 3. Merge → GitHub release + `v*` tag created
-4. Deploy workflow triggers on tag → pushes Docker images
+4. Deploy workflow triggers on push to `development` or `production` → pushes Docker images
 
 ### Conventional Commits
 
@@ -70,7 +70,7 @@ dokku certs:add burrowd /etc/letsencrypt/live/burrow.example.com/fullchain.pem /
 | -------- | ------- | ------ |
 | `ci.yml` | Push/PR | Lint, build, test |
 | `release.yml` | Push to `development` or `production` | Release PR on dev → npm publish on prod branch |
-| `deploy.yml` | `v*` tag | Push Docker to GHCR + Docker Hub |
+| `deploy.yml` | Push to `development` or `production`, or manual | Push Docker to GHCR + Docker Hub |
 
 ## Updating
 

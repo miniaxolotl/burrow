@@ -10,6 +10,10 @@ npm install -g @miniaxolotl/burrowctl
 
 Or download binaries from [GitHub Releases](https://github.com/miniaxolotl/burrow/releases) (Linux / macOS, amd64 + arm64).
 
+## TLS
+
+TLS is auto-enabled for any server that is not `localhost`, `127.0.0.1`, or `::1`. There is no configuration option to override this for remote servers.
+
 ## Quick Start
 
 No account or token required to use the public server:
