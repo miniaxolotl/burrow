@@ -353,15 +353,29 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.pendingRemoves[tunnelID] = cancel
 		s.mu.Unlock()
 		go func() {
-			select {
-			case <-time.After(tunnelGracePeriod):
+			// Re-read cancel from the map on each loop iteration. The old
+			// goroutine (from a prior session) may still be running — when a
+			// reconnect stores a new cancel channel and closes it, this
+			// goroutine picks up the new reference and exits promptly instead
+			// of waiting on its stale channel until time.After fires.
+			for {
 				s.mu.Lock()
-				delete(s.pendingRemoves, tunnelID)
+				cancel = s.pendingRemoves[tunnelID]
 				s.mu.Unlock()
-				s.registry.Remove(tunnelID)
-				s.cleanupTunnel(tunnelID)
-			case <-cancel:
-				// Cancelled by reconnect or shutdown.
+				select {
+				case <-cancel:
+					s.mu.Lock()
+					delete(s.pendingRemoves, tunnelID)
+					s.mu.Unlock()
+					return
+				case <-time.After(tunnelGracePeriod):
+					s.mu.Lock()
+					delete(s.pendingRemoves, tunnelID)
+					s.mu.Unlock()
+					s.registry.Remove(tunnelID)
+					s.cleanupTunnel(tunnelID)
+					return
+				}
 			}
 		}()
 	}()
