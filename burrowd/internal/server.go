@@ -329,6 +329,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+	conn.SetReadLimit(protocol.MaxMessageSize)
 	defer conn.Close()
 
 	cfg := yamux.DefaultConfig()
