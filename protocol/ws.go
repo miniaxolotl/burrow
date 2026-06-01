@@ -6,6 +6,11 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// MaxMessageSize is the maximum allowed size for a single WebSocket message.
+// Yamux frames are limited to the stream window size (256 KB by default), so
+// 1 MB provides generous headroom while protecting against OOM attacks.
+const MaxMessageSize = 1024 * 1024
+
 // WsConn wraps *websocket.Conn to implement io.ReadWriter for yamux sessions.
 type WsConn struct {
 	*websocket.Conn

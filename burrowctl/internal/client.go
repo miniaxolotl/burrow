@@ -28,6 +28,8 @@ type Client struct {
 	mu      sync.RWMutex
 }
 
+var httpClient = &http.Client{Timeout: 10 * time.Second}
+
 type TunnelConn struct {
 	ID         string
 	Port       uint16
@@ -85,12 +87,12 @@ func (c *Client) trackLatency(tc *TunnelConn) {
 			if c.secure {
 				scheme = "https"
 			}
-			req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s/health", scheme, c.server), nil)
+			req, err := http.NewRequestWithContext(tc.ctx, "GET", fmt.Sprintf("%s://%s/health", scheme, c.server), nil)
 			if err != nil {
 				continue
 			}
 			req.Header.Set("X-Tunnel-Token", c.token)
-			resp, err := http.DefaultClient.Do(req)
+			resp, err := httpClient.Do(req)
 			if err != nil {
 				continue
 			}
@@ -122,6 +124,7 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 		}
 		return nil, fmt.Errorf("failed to connect to server: %w", err)
 	}
+	conn.SetReadLimit(protocol.MaxMessageSize)
 	latency := time.Since(start)
 
 	tunnelURL := ""
@@ -307,7 +310,7 @@ func (c *Client) GetLogs(tunnelID string) ([]*protocol.TunnelLog, error) {
 	}
 	req.Header.Set("X-Tunnel-Token", c.token)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to contact server: %w", err)
 	}
