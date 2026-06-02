@@ -1,0 +1,39 @@
+FROM node:22-alpine AS builder
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY packages/admin/package.json ./packages/admin/
+
+RUN pnpm install --frozen-lockfile
+
+COPY packages/admin/ ./packages/admin/
+
+RUN pnpm --filter @miniaxolotl/burrowctl-admin build
+
+FROM node:22-alpine
+
+LABEL org.opencontainers.image.source="https://github.com/miniaxolotl/burrow" \
+      org.opencontainers.image.url="https://github.com/miniaxolotl/burrow" \
+      org.opencontainers.image.documentation="https://github.com/miniaxolotl/burrow#readme" \
+      org.opencontainers.image.title="burrow-admin" \
+      org.opencontainers.image.description="Burrow admin panel" \
+      org.opencontainers.image.licenses="MIT" \
+      org.opencontainers.image.vendor="Elias Mawa" \
+      org.opencontainers.image.authors="Elias Mawa <elias@mawa.dev>"
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+WORKDIR /app
+
+COPY --from=builder /app/package.json /app/pnpm-lock.yaml /app/pnpm-workspace.yaml ./
+COPY --from=builder /app/packages/admin/package.json ./packages/admin/
+COPY --from=builder /app/packages/admin/build ./packages/admin/build/
+
+RUN pnpm install --frozen-lockfile --prod
+
+EXPOSE 3000
+
+CMD ["node", "packages/admin/build/index.js"]

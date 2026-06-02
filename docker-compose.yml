@@ -10,10 +10,21 @@ services:
       --domain ${BURROW_DOMAIN:-localhost}
       --redis-url ${BURROW_REDIS_URL:-redis://redis:6379}
       --secret ${BURROW_SECRET}
+      --postgres-url ${BURROW_POSTGRES_URL:-postgres://burrow:burrow@postgres:5432/burrow?sslmode=disable}
+      --kafka-brokers ${BURROW_KAFKA_BROKERS:-kafka:9092}
+      --deployment-mode ${BURROW_DEPLOYMENT_MODE:-oss}
+      --jwt-secret ${BURROW_JWT_SECRET:-}
+      --anon-tunnel-limit ${BURROW_ANON_TUNNEL_LIMIT:-1}
+      --user-tunnel-limit ${BURROW_USER_TUNNEL_LIMIT:-5}
+      --paid-tunnel-limit ${BURROW_PAID_TUNNEL_LIMIT:-0}
     ports:
       - "${BURROW_PORT:-25701}:${BURROW_PORT:-25701}"
     depends_on:
       redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -24,6 +35,22 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  admin:
+    build:
+      context: .
+      dockerfile: Dockerfile.admin
+    env_file: .env
+    ports:
+      - "${ADMIN_PORT:-3000}:3000"
+    depends_on:
+      burrowd:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - burrow-net
+    environment:
+      - ADMIN_API_URL=http://burrowd:${BURROW_PORT:-25701}
 
   redis:
     image: redis:7-alpine
@@ -40,9 +67,69 @@ services:
       retries: 3
       start_period: 5s
 
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: burrow
+      POSTGRES_PASSWORD: ${BURROW_POSTGRES_PASSWORD:-burrow}
+      POSTGRES_DB: burrow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - burrow-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U burrow"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.9.7
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_logs:/var/lib/zookeeper/log
+    restart: unless-stopped
+    networks:
+      - burrow-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.9.7
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    ports:
+      - "29092:29092"
+    restart: unless-stopped
+    networks:
+      - burrow-net
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics --bootstrap-server localhost:9092 --list"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
 networks:
   burrow-net:
     driver: bridge
 
 volumes:
   redis_data:
+  postgres_data:
+  zookeeper_data:
+  zookeeper_logs:
+  kafka_data:

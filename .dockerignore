@@ -10,4 +10,8 @@ burrowctl/
 documentation/
 plans/
 
+packages/admin/node_modules/
+packages/admin/.svelte-kit/
+packages/admin/build/
+
 *.md
