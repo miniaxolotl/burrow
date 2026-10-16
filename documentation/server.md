@@ -11,12 +11,13 @@ docker compose up -d
 
 ## Configuration
 
-| Variable | Description | Default |
-| -------- | ----------- | ------- |
-| `BURROW_SECRET` | Admin secret — if set, admin endpoints require a valid token | — |
-| `BURROW_DOMAIN` | Domain for tunnel URLs | `localhost` |
-| `BURROW_PORT` | Server port | `25701` |
-| `BURROW_REDIS_URL` | Redis connection URL | `redis://redis:6379` |
+| Variable           | Description                                                  | Default              |
+| ------------------ | ------------------------------------------------------------ | -------------------- |
+| `BURROW_SECRET`    | Admin secret — if set, admin endpoints require a valid token | —                    |
+| `BURROW_DOMAIN`    | Domain for tunnel URLs                                       | `localhost`          |
+| `BURROW_PORT`      | Server port                                                  | `25701`              |
+| `BURROW_REDIS_URL` | Redis connection URL                                         | `redis://redis:6379` |
+| `BURROW_TLS`       | Generate HTTPS tunnel URLs behind a TLS-terminating proxy    | `false`              |
 
 Also accepts `PORT` and `REDIS_URL` as fallbacks.
 
@@ -52,13 +53,13 @@ burrowd tunnel revoke <id>            # Force-close a tunnel
 
 ## API
 
-| Endpoint | Method | Auth | Description |
-| -------- | ------ | ---- | ----------- |
-| `/health` | GET | none | Server health and tunnel count |
-| `/tunnel/ws` | WebSocket | none | Client tunnel connection |
-| `/tunnel/<id>` | DELETE | owner or admin | Close a tunnel |
-| `/logs/<id>` | GET | owner or admin | Request logs for a tunnel (max 200) |
-| `/tunnels` | GET | admin | List all active tunnels |
+| Endpoint       | Method    | Auth           | Description                         |
+| -------------- | --------- | -------------- | ----------------------------------- |
+| `/health`      | GET       | none           | Server health and tunnel count      |
+| `/tunnel/ws`   | WebSocket | none           | Client tunnel connection            |
+| `/tunnel/<id>` | DELETE    | owner or admin | Close a tunnel                      |
+| `/logs/<id>`   | GET       | owner or admin | Request logs for a tunnel (max 200) |
+| `/tunnels`     | GET       | admin          | List all active tunnels             |
 
 ## Tunnel URLs
 
@@ -78,6 +79,10 @@ IDs are generated as `{adverb}-{adjective}-{adjective}-{noun}` (e.g. `swiftly-an
 ```
 
 ## Deployment
+
+The hosted service uses DigitalOcean App Platform with Upstash Redis over TLS.
+Production is `brmbl.dev`; staging is `staging.brmbl.dev`. Each environment has
+its own Redis database and admin secret. See [Deploy & release](deploy.md).
 
 ### Docker Compose
 

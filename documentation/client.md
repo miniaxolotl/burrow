@@ -22,7 +22,13 @@ No account or token required to use the public server:
 burrowctl tunnel create --port 3000
 ```
 
-Connects to `burrow.mawa.dev` over TLS by default.
+Connects to `brmbl.dev` over TLS by default. Existing installations that saved the old public server can switch with `burrowctl auth set-server brmbl.dev`.
+
+To test staging without changing your saved configuration:
+
+```bash
+burrowctl tunnel create --server staging.brmbl.dev --port 3000
+```
 
 ## Self-hosting
 
@@ -38,12 +44,12 @@ burrowctl tunnel create --port 3000
 
 Settings are stored in `~/.config/burrow/client.json` after first run.
 
-| Variable | Description | Default |
-| -------- | ----------- | ------- |
-| `BURROW_SERVER` | Server address | `burrow.mawa.dev` |
-| `BURROW_TOKEN` | Auth token | — |
-| `BURROW_SECRET` | Shared secret (generates a token on the fly) | — |
-| `BURROW_DOMAIN` | Fallback domain for URL display | `burrow.mawa.dev` |
+| Variable        | Description                                  | Default     |
+| --------------- | -------------------------------------------- | ----------- |
+| `BURROW_SERVER` | Server address                               | `brmbl.dev` |
+| `BURROW_TOKEN`  | Auth token                                   | —           |
+| `BURROW_SECRET` | Shared secret (generates a token on the fly) | —           |
+| `BURROW_DOMAIN` | Fallback domain for URL display              | `brmbl.dev` |
 
 ## Commands
 
@@ -73,33 +79,33 @@ burrowctl tunnel status    # Same as list with a separator
 
 ## Access control
 
-| Operation | Anonymous | With token |
-| --------- | --------- | ---------- |
-| Create tunnel | ✅ | ✅ |
-| Close own tunnel | ✅ (anonymous) | ✅ |
-| View own tunnel logs | ✅ (anonymous) | ✅ |
-| Close any tunnel | ✗ | ✅ (admin) |
-| List all tunnels | ✗ | ✅ (admin) |
+| Operation            | Anonymous      | With token |
+| -------------------- | -------------- | ---------- |
+| Create tunnel        | ✅             | ✅         |
+| Close own tunnel     | ✅ (anonymous) | ✅         |
+| View own tunnel logs | ✅ (anonymous) | ✅         |
+| Close any tunnel     | ✗              | ✅ (admin) |
+| List all tunnels     | ✗              | ✅ (admin) |
 
 Tunnels created with a token are owned by that token — only the same token (or an admin) can close them or view their logs. Tunnels created without a token are anonymous and can be managed by anyone who knows the tunnel ID.
 
 ## TUI Controls
 
-| Key | Action |
-| --- | ------ |
-| `n` | New tunnel |
-| `c` | Copy URL |
-| `o` | Open URL in browser |
-| `d` | Close tunnel |
-| `l` | View logs / return to list |
-| `s` | Cycle sort (port → latency → reconnects) |
-| `f` | Toggle auto-follow in log view |
-| `r` | Refresh logs |
-| `?` | Help overlay |
-| `g`/`G` | Top/bottom |
-| `PgUp`/`PgDn` | Page up/down |
-| `↑↓` / `j k` | Navigate |
-| `q` / `Ctrl+C` | Quit |
+| Key            | Action                                   |
+| -------------- | ---------------------------------------- |
+| `n`            | New tunnel                               |
+| `c`            | Copy URL                                 |
+| `o`            | Open URL in browser                      |
+| `d`            | Close tunnel                             |
+| `l`            | View logs / return to list               |
+| `s`            | Cycle sort (port → latency → reconnects) |
+| `f`            | Toggle auto-follow in log view           |
+| `r`            | Refresh logs                             |
+| `?`            | Help overlay                             |
+| `g`/`G`        | Top/bottom                               |
+| `PgUp`/`PgDn`  | Page up/down                             |
+| `↑↓` / `j k`   | Navigate                                 |
+| `q` / `Ctrl+C` | Quit                                     |
 
 ## Reconnection
 

@@ -46,7 +46,7 @@ func readConfig() (*clientConfig, string, error) {
 	}
 	var cfg clientConfig
 	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, "", err
+		return nil, cfgFile, err
 	}
 	return &cfg, cfgFile, nil
 }

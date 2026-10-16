@@ -5,8 +5,28 @@ on:
     branches: [production, development]
   pull_request:
     branches: [production, development]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
+  infrastructure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: "1.12.6"
+          tofu_wrapper: false
+      - run: bash scripts/infra/check.sh
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: burrowd/go.mod
+          cache-dependency-path: "**/go.sum"
+      - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.11
+      - run: docker build --build-arg VERSION=ci -t burrowd:ci .
+
   website:
     runs-on: ubuntu-latest
     steps:
@@ -19,6 +39,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint:website
       - run: pnpm typecheck:website
+      - run: pnpm --filter website exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 ../../scripts/release/src/index.ts
       - run: pnpm build:website
 
   lint:
@@ -29,7 +50,7 @@ jobs:
         with:
           go-version-file: burrowd/go.mod
           cache: true
-          cache-dependency-path: '**/go.sum'
+          cache-dependency-path: "**/go.sum"
       - run: go vet ./burrowd/... ./burrowctl/... ./protocol/...
 
   build:
@@ -40,7 +61,7 @@ jobs:
         with:
           go-version-file: burrowd/go.mod
           cache: true
-          cache-dependency-path: '**/go.sum'
+          cache-dependency-path: "**/go.sum"
       - run: go work sync
       - run: go build ./burrowd/... ./burrowctl/... ./protocol/...
 
@@ -53,5 +74,5 @@ jobs:
         with:
           go-version-file: burrowd/go.mod
           cache: true
-          cache-dependency-path: '**/go.sum'
+          cache-dependency-path: "**/go.sum"
       - run: go test ./burrowd/... ./burrowctl/... ./protocol/...

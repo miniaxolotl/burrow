@@ -17,7 +17,7 @@ builds:
     flags: [-trimpath]
     ldflags:
       - -s -w
-      - -X burrowd/main.Version={{.Version}}
+      - -X main.Version={{.Version}}
 
   - id: burrowctl
     dir: burrowctl
@@ -29,7 +29,7 @@ builds:
     flags: [-trimpath]
     ldflags:
       - -s -w
-      - -X burrowctl/main.Version={{.Version}}
+      - -X main.Version={{.Version}}
 
 archives:
   - id: burrowd

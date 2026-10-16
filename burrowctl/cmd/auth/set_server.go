@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"burrow/burrowctl/internal"
+
 	"github.com/spf13/cobra"
 )
 
@@ -21,10 +23,14 @@ func runSetServer(cmd *cobra.Command, args []string) error {
 	cfg, _, err := readConfig()
 	if err != nil {
 		cfg = &clientConfig{
-			Domain: "burrow.mawa.dev",
+			Server: internal.DefaultServer,
+			Domain: internal.DefaultServer,
 		}
 	}
 
+	if cfg.Domain == "" || cfg.Domain == cfg.Server {
+		cfg.Domain = server
+	}
 	cfg.Server = server
 	if err := writeConfig(cfg, cfgFile); err != nil {
 		return err

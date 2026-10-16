@@ -2,7 +2,7 @@ export const faqs = [
   {
     question: "Do I need an account?",
     answer:
-      "No. Burrow connects to burrow.mawa.dev by default. Install the CLI and create a tunnel — no account or API key needed.",
+      "No. Burrow connects to brmbl.dev by default. Install the CLI and create a tunnel — no account or API key needed.",
   },
   {
     question: "Does my URL stay the same?",

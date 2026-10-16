@@ -11,3 +11,20 @@ documentation/
 plans/
 
 *.md
+
+**/node_modules/
+**/.next/
+**/dist/
+**/.terraform/
+.local/
+infra/
+packages/
+lib/
+scripts/
+.agents/
+.claude/
+.assets/
+.github/
+.vscode/
+*.tfstate*
+*.tfplan

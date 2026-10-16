@@ -14,3 +14,14 @@ dist/
 .next/
 *.tsbuildinfo
 packages/burrowctl-*/burrowctl
+.local/
+**/.terraform/
+.terraform-plugin-cache/
+*.tfstate
+*.tfstate.*
+*.tfplan
+tfplan
+*.tfvars
+*.auto.tfvars.json
+!*.example.tfvars
+crash.log
