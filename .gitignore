@@ -15,6 +15,7 @@ dist/
 *.tsbuildinfo
 packages/burrowctl-*/burrowctl
 .local/
+secrets.md
 **/.terraform/
 .terraform-plugin-cache/
 *.tfstate
