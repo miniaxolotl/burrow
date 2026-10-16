@@ -20,7 +20,6 @@ import (
 	"github.com/hashicorp/yamux"
 )
 
-
 const tunnelGracePeriod = 20 * time.Second
 const maxLogsPerTunnel = 200
 
@@ -45,11 +44,11 @@ type Server struct {
 
 func NewServer(registry *TunnelRegistry, domain, secret string, secure bool) *Server {
 	s := &Server{
-		registry:    registry,
-		domain:      domain,
-		secret:      secret,
-		secure:      secure,
-		startTime:   time.Now(),
+		registry:       registry,
+		domain:         domain,
+		secret:         secret,
+		secure:         secure,
+		startTime:      time.Now(),
 		connections:    make(map[string]*yamux.Session),
 		pendingRemoves: make(map[string]chan struct{}),
 		logs:           make(map[string][]*protocol.TunnelLog),
@@ -465,24 +464,23 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	// Finish reading the original request body before hijacking. Reading it
+	// afterward starts net/http's background reader on a connection we own,
+	// which can consume the first byte of the next keep-alive request.
+	if err := r.Write(stream); err != nil {
+		jsonError(w, "Failed to forward request", http.StatusBadGateway)
+		return
+	}
 	client, brw, err := hj.Hijack()
 	if err != nil {
 		return
 	}
-
-	if err := r.Write(stream); err != nil {
-		return
-	}
-
-	if brw.Reader.Buffered() > 0 {
-		buf := make([]byte, brw.Reader.Buffered())
-		brw.Reader.Read(buf)
-		stream.Write(buf)
-	}
+	defer client.Close()
 
 	var respSize int64
 	done := make(chan struct{}, 2)
-	go func() { io.Copy(stream, client); done <- struct{}{} }()
+	// Keep using the returned reader: it can contain pipelined request bytes.
+	go func() { io.Copy(stream, brw.Reader); stream.Close(); done <- struct{}{} }()
 	go func() { n, _ := io.Copy(client, stream); respSize = n; client.Close(); done <- struct{}{} }()
 	<-done
 	<-done
@@ -504,25 +502,19 @@ func (s *Server) proxyWebSocket(w http.ResponseWriter, r *http.Request, stream n
 	if !ok {
 		return 0
 	}
+	if err := r.Write(stream); err != nil {
+		jsonError(w, "Failed to forward request", http.StatusBadGateway)
+		return 0
+	}
 	client, brw, err := hj.Hijack()
 	if err != nil {
 		return 0
 	}
 	defer client.Close()
 
-	if err := r.Write(stream); err != nil {
-		return 0
-	}
-
-	if brw.Reader.Buffered() > 0 {
-		buf := make([]byte, brw.Reader.Buffered())
-		brw.Reader.Read(buf)
-		stream.Write(buf)
-	}
-
 	var size int64
 	done := make(chan struct{}, 2)
-	go func() { io.Copy(stream, client); stream.Close(); done <- struct{}{} }()
+	go func() { io.Copy(stream, brw.Reader); stream.Close(); done <- struct{}{} }()
 	go func() { n, _ := io.Copy(client, stream); size = n; client.Close(); done <- struct{}{} }()
 	<-done
 	<-done
