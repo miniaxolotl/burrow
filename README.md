@@ -11,24 +11,22 @@ Expose local services to the internet via HTTPS subdomains.
 
 ```bash
 npm i -g @miniaxolotl/burrowctl
-burrowctl tunnel create --port 3000
+burrowctl tunnel 3000
 ```
 
-Connects to `brmbl.dev` by default. No account or token required. Visit [useburrow.app](https://useburrow.app).
+Connects to `brmbl.dev` by default. No account or manual key setup: the CLI stores a private owner credential automatically. Only your credential can list, inspect, reconnect, or close your tunnels. Visit [useburrow.app](https://useburrow.app).
 
 ## Self-hosting
 
 ```bash
-cp .env.example .env   # set BURROW_SECRET and BURROW_DOMAIN
+cp .env.example .env   # set BURROW_DOMAIN
 docker compose up -d
 ```
 
 Then point your client at it:
 
 ```bash
-burrowctl auth set-server your-server.example.com
-burrowctl auth login <token>
-burrowctl tunnel create --port 3000
+burrowctl tunnel 3000 --server your-server.example.com
 ```
 
 ### Tunnel Manager

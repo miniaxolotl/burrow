@@ -19,11 +19,6 @@ resource "upstash_redis_database" "tunnels" {
   budget         = 20 # Upstash's minimum monthly usage cap, not a fixed charge.
 }
 
-resource "random_password" "admin" {
-  length  = 64
-  special = false
-}
-
 resource "digitalocean_app" "tunnels" {
   project_id = digitalocean_project.this.id
   spec {
@@ -77,12 +72,6 @@ resource "digitalocean_app" "tunnels" {
       env {
         key   = "BURROW_REDIS_URL"
         value = "rediss://default:${urlencode(upstash_redis_database.tunnels.password)}@${upstash_redis_database.tunnels.endpoint}:${upstash_redis_database.tunnels.port}"
-        scope = "RUN_TIME"
-        type  = "SECRET"
-      }
-      env {
-        key   = "BURROW_SECRET"
-        value = random_password.admin.result
         scope = "RUN_TIME"
         type  = "SECRET"
       }

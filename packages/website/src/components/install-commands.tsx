@@ -46,7 +46,7 @@ export function InstallCommands({ releases }: { releases: string }) {
         {
           number: "02",
           title: "Open a tunnel to your app",
-          command: "burrowctl tunnel create --port 3000",
+          command: "burrowctl tunnel 3000",
         },
       ].map(({ number, title, command }) => (
         <div key={number} className="mt-6">

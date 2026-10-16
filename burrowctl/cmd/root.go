@@ -1,24 +1,23 @@
 package cmd
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
 	"strings"
 
-	"burrow/burrowctl/cmd/auth"
 	"burrow/burrowctl/cmd/tunnel"
-	"burrow/burrowctl/internal"
+	"burrow/burrowctl/internal/config"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "burrowctl",
-	Short: "burrowctl - Tunnel client",
-	Long:  `burrowctl is the client CLI for creating tunnels to the burrow server.`,
+	Use:               "burrowctl",
+	Short:             "burrowctl - Tunnel client",
+	Long:              `burrowctl is the client CLI for creating tunnels to the burrow server.`,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error { return configErr },
 }
+
+var configErr error
 
 func Execute() error {
 	return rootCmd.Execute()
@@ -35,30 +34,17 @@ func init() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
 	viper.AutomaticEnv()
 
-	rootCmd.AddCommand(tunnel.TunnelCmd)
-	rootCmd.AddCommand(auth.AuthCmd)
+	tunnel.AddCommands(rootCmd)
 }
 
 func loadClientConfig() {
-	dir := auth.ConfigDir()
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	var cfgFile string
+	cfgFile, configErr = config.EnsureConfig()
+	if configErr != nil {
 		return
-	}
-
-	cfgFile := filepath.Join(dir, "client.json")
-	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
-		defaults := map[string]any{
-			"server": internal.DefaultServer,
-			"token":  "",
-			"secret": "",
-			"domain": internal.DefaultServer,
-		}
-		if b, err := json.MarshalIndent(defaults, "", "  "); err == nil {
-			os.WriteFile(cfgFile, append(b, '\n'), 0600)
-		}
 	}
 
 	viper.SetConfigFile(cfgFile)
 	viper.SetConfigType("json")
-	viper.ReadInConfig()
+	configErr = viper.ReadInConfig()
 }

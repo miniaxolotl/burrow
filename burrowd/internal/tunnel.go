@@ -6,8 +6,6 @@ import (
 	"net"
 	"strings"
 	"time"
-
-	"burrow/protocol"
 )
 
 type TunnelRegistry struct {
@@ -28,8 +26,8 @@ func (t *TunnelRegistry) tunnelURL(tunnelID string) string {
 	return fmt.Sprintf("%s://%s.%s", scheme, tunnelID, t.domain)
 }
 
-func (t *TunnelRegistry) Register(ctx context.Context, tunnelID string, port uint16, ownerHash string) (string, error) {
-	if err := t.redis.SetTunnel(ctx, tunnelID, port, ownerHash, 24*time.Hour); err != nil {
+func (t *TunnelRegistry) Register(ctx context.Context, tunnelID string, port uint16, ownerHash, sessionID string) (string, error) {
+	if err := t.redis.SetTunnel(ctx, tunnelID, port, ownerHash, sessionID, 24*time.Hour); err != nil {
 		return "", fmt.Errorf("failed to register tunnel: %w", err)
 	}
 	return t.tunnelURL(tunnelID), nil
@@ -39,25 +37,16 @@ func (t *TunnelRegistry) Get(ctx context.Context, tunnelID string) (*TunnelData,
 	return t.redis.GetTunnel(ctx, tunnelID)
 }
 
-func (t *TunnelRegistry) Remove(tunnelID string) error {
-	return t.redis.DeleteTunnel(context.Background(), tunnelID)
+func (t *TunnelRegistry) Remove(ctx context.Context, tunnelID, sessionID string) error {
+	return t.redis.DeleteTunnel(ctx, tunnelID, sessionID)
 }
 
-func (t *TunnelRegistry) List(ctx context.Context) ([]*protocol.TunnelInfo, error) {
-	tunnels, err := t.redis.ListTunnels(ctx)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]*protocol.TunnelInfo, 0, len(tunnels))
-	for _, td := range tunnels {
-		result = append(result, &protocol.TunnelInfo{
-			TunnelID: td.ID,
-			Port:     td.Port,
-			URL:      t.tunnelURL(td.ID),
-			Status:   "active",
-		})
-	}
-	return result, nil
+func (t *TunnelRegistry) Refresh(ctx context.Context, tunnelID, sessionID string) error {
+	return t.redis.RefreshTunnel(ctx, tunnelID, sessionID, 24*time.Hour)
+}
+
+func (t *TunnelRegistry) Revoke(ctx context.Context, tunnelID, ownerHash string) error {
+	return t.redis.RevokeTunnel(ctx, tunnelID, ownerHash)
 }
 
 func ParseTunnelID(host, domain string) string {

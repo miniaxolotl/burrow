@@ -135,7 +135,7 @@ export function ManagerPreview() {
   const [view, setView] = useState(0);
   const [selectedTunnel, setSelectedTunnel] = useState(0);
   const tunnel = tunnels[selectedTunnel];
-  const command = `burrowctl tunnel create --port ${tunnel.port}`;
+  const command = `burrowctl tunnel ${tunnel.port}`;
 
   return (
     <figure className="min-w-0">
@@ -189,7 +189,7 @@ export function ManagerPreview() {
               <div>
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px]">
                   <span className="text-terminal-muted">
-                    3 tunnels. One place.
+                    3 of your tunnels. One place.
                   </span>
                   <span className="flex items-center gap-1.5 text-lime">
                     <span className="size-1.5 rounded-full bg-lime" /> All
@@ -274,7 +274,7 @@ export function ManagerPreview() {
                     onClick={() => setView(0)}
                     className="inline-flex min-h-8 items-center gap-1.5 text-lime underline-offset-4 hover:underline"
                   >
-                    <ArrowLeft size={12} aria-hidden="true" /> All tunnels
+                    <ArrowLeft size={12} aria-hidden="true" /> Your tunnels
                   </button>
                 </div>
                 <table className="manager-requests">

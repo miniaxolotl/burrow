@@ -26,7 +26,7 @@ Vercel builds `packages/website` independently. Production uses
    source-revision labels. Promotion reuses that commit's existing image.
 3. OpenTofu applies the selected environment using the image's **digest**, not
    a mutable tag. It owns the complete App Platform specification, Upstash
-   database, generated admin secret, and Cloudflare website/tunnel DNS.
+   database and Cloudflare website/tunnel DNS.
 4. App Platform supplies wildcard certificate verification tokens. Deployment
    reads these tokens and applies their TXT records through OpenTofu. A daily
    maintenance workflow refreshes them for certificate renewals.

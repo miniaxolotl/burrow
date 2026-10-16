@@ -3,9 +3,6 @@ package cmd
 import (
 	"strings"
 
-	"burrow/burrowd/cmd/auth"
-	"burrow/burrowd/cmd/tunnel"
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -31,7 +28,5 @@ func init() {
 	viper.AutomaticEnv()
 
 	rootCmd.AddCommand(serveCmd)
-	rootCmd.AddCommand(auth.AuthCmd)
-	rootCmd.AddCommand(tunnel.TunnelCmd)
 	rootCmd.AddCommand(stopCmd)
 }

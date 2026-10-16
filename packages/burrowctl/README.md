@@ -1,51 +1,25 @@
 # burrowctl
 
-[CLI client](https://github.com/miniaxolotl/burrow) for the burrow tunnel server. Expose local services to the internet via HTTPS subdomains.
-
-## Install
+Share localhost over HTTPS. No account or manual key setup.
 
 ```bash
-npm i -g @miniaxolotl/burrowctl
+npm install -g @miniaxolotl/burrowctl
+burrowctl tunnel 3000 8080
+burrowctl list
+burrowctl logs <id> --follow
+burrowctl close <id>
 ```
 
-## Quick start
+Connects to `brmbl.dev` by default. Use `--server your-server.example.com` for a
+custom server. The CLI generates a private, per-server owner credential and
+stores it under `~/.config/burrow/owners/`. Only that credential can list/count,
+inspect, reconnect, or close its tunnels. There are no privileged users.
 
-```bash
-burrowctl auth login <token>
-burrowctl tunnel create --port 3000
-```
+Shared tunnel URLs expose your local application publicly; use the application's
+authentication when access should be restricted.
 
-No account required for the default server (`brmbl.dev`). Your tunnel will be available at `https://<tunnel-id>.brmbl.dev`.
+Supports Linux and macOS on x64 and ARM64.
 
-## Usage
-
-```bash
-# Create a tunnel
-burrowctl tunnel create --port 3000
-
-# Create multiple tunnels
-burrowctl tunnel create --port 3000 --port 8080
-
-# List active tunnels
-burrowctl tunnel list
-
-# View tunnel logs
-burrowctl tunnel inspect <tunnel-id> --follow
-
-# Close a tunnel
-burrowctl tunnel close <tunnel-id>
-```
-
-## Configure a custom server
-
-```bash
-burrowctl auth set-server your-server.example.com
-burrowctl auth login <token>
-burrowctl tunnel create --port 3000
-```
-
-## Links
-
-- [GitHub Repository](https://github.com/miniaxolotl/burrow)
-- [Package Registry](https://npmjs.com/package/@miniaxolotl/burrowctl)
-- [Server Setup](https://github.com/miniaxolotl/burrow#self-hosting)
+- [Client reference](https://github.com/miniaxolotl/burrow/blob/production/documentation/client.md)
+- [Server setup](https://github.com/miniaxolotl/burrow/blob/production/documentation/server.md)
+- [Source](https://github.com/miniaxolotl/burrow)
