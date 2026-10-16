@@ -36,6 +36,8 @@ Deploy as a Node.js application from the monorepo root, using the commands above
 
 Import this repository with the **Next.js** preset and root directory **`packages/website`**. Keep workspace files outside the root directory available, use `pnpm build` as the build command, and set `SITE_URL` to the final website origin before deploying. The standard Next.js output settings apply.
 
+Vercel Web Analytics is integrated through `@vercel/analytics/next` in the root layout. Enable Web Analytics in the Vercel project, then deploy to collect page views. Reports are available in the project's Analytics dashboard.
+
 ## Checks
 
 ```bash
