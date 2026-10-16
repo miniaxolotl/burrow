@@ -10,6 +10,7 @@ Burrow is a tunneling service: expose local services to the internet via HTTPS s
 - **`burrowctl/`** — Go client (cobra CLI, TUI via charmbracelet/bubbletea in `cmd/tui/`)
 - **`protocol/`** — Shared Go module (`burrow/protocol`) with WebSocket/message/auth types; both binaries replace-directive it as `../protocol`
 - **`packages/burrowctl/`** — npm wrapper (`bin/burrowctl.js` resolves platform-specific binary)
+- **`packages/website/`** — Next.js App Router / Tailwind marketing site (workspace package `website`); SSR page, local fonts, generated social images, and small interactive client components
 - **`packages/burrowctl-{darwin,linux}-{arm64,x64}/`** — platform npm packages, each ships a pre-built Go binary
 - **`scripts/release/`** — TypeScript script that runs goreleaser and publishes npm packages
 - **`scripts/deploy/`** — TypeScript script that builds/pushes Docker images
@@ -34,9 +35,16 @@ go test ./burrowd/... ./burrowctl/... ./protocol/...
 
 # npm wrapper build (from repo root)
 pnpm install --frozen-lockfile
-pnpm run build          # builds the npm package via workspace filter
-pnpm run lint           # lints the npm package
-pnpm run format         # prettier on ts/md/json
+pnpm run build          # builds workspace packages with a build script
+pnpm run lint           # lints workspace packages with a lint script
+pnpm run format         # prettier on ts/tsx/mjs/css/md/json
+
+# Marketing website (from repo root)
+pnpm dev                # Next.js dev server on port 3000
+pnpm build:website      # production SSR build
+pnpm start:website      # production server
+pnpm lint:website
+pnpm typecheck:website
 ```
 
 ## Key constraints
@@ -49,3 +57,4 @@ pnpm run format         # prettier on ts/md/json
 - Branches: `development` → release-please creates PRs; `production` → triggers npm publish + Docker deploy with `latest` tags.
 - No Go test files exist yet, but CI runs `go test` on all three modules.
 - Node >= 22, pnpm 10, Go 1.26.
+- Website canonical URLs and sharing use `SITE_URL` (set before building; see `packages/website/.env.example`). This is the website origin, not necessarily the tunnel server. Localhost is the noindex development fallback.

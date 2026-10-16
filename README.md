@@ -41,4 +41,15 @@ burrowctl tunnel create --port 3000
 - [Server reference](documentation/server.md)
 - [Client reference](documentation/client.md)
 
+## Website
+
+The Next.js / Tailwind marketing site lives in [`packages/website`](packages/website).
+
+```bash
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+See the [website README](packages/website/README.md) for production, public URL configuration, and checks.
+
 MIT

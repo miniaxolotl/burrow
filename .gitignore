@@ -11,5 +11,6 @@ plans/
 .opencode/
 
 dist/
+.next/
+*.tsbuildinfo
 packages/burrowctl-*/burrowctl
-
