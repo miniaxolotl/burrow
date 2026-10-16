@@ -19,13 +19,28 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: inputs.sha == '' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     steps:
       - uses: googleapis/release-please-action@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+          target-branch: development
+
+  publishing-access:
+    if: github.event_name == 'workflow_dispatch' && inputs.sha == ''
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Verify npm publishing credentials before promotion
+        run: npm whoami
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish:
     if: inputs.sha != ''
