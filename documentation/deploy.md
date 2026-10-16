@@ -26,7 +26,7 @@ Vercel builds `packages/website` independently. Production uses
    source-revision labels. Promotion reuses that commit's existing image.
 3. OpenTofu applies the selected environment using the image's **digest**, not
    a mutable tag. It owns the complete App Platform specification, Upstash
-   database, generated admin secret, and Cloudflare website/tunnel DNS.
+   database and Cloudflare website/tunnel DNS.
 4. App Platform supplies wildcard certificate verification tokens. Deployment
    reads these tokens and applies their TXT records through OpenTofu. A daily
    maintenance workflow refreshes them for certificate renewals.
@@ -52,6 +52,12 @@ project `burrow-infra-state` owns separate state databases, restricted CI roles,
 and AES-GCM encryption keys for staging and production. State uses a direct TLS
 connection with PostgreSQL advisory locking. Application tunnel records live in
 Upstash, separate from infrastructure state.
+
+The random-provider declarations and lock entries are retained for the owner-only
+upgrade so deployment's read-only initialization can load existing
+`module.tunnels.random_password.admin` state and remove that obsolete resource.
+Remove those provider pins in a follow-up only after both staging and production
+have applied the removal and their state no longer contains the resource.
 
 Each GitHub environment supplies:
 

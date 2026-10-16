@@ -2,7 +2,7 @@ package internal
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -28,7 +28,14 @@ type Client struct {
 	mu      sync.RWMutex
 }
 
-var httpClient = &http.Client{Timeout: 10 * time.Second}
+var httpClient = NewManagementHTTPClient()
+
+type connectionRejected struct {
+	status  int
+	message string
+}
+
+func (e *connectionRejected) Error() string { return e.message }
 
 type TunnelConn struct {
 	ID         string
@@ -68,10 +75,11 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 	c.tunnels[port] = tc
 	c.mu.Unlock()
 
+	tunnelURL := tc.URL
 	go c.trackLatency(tc)
 	go c.handleTunnel(tc, port)
 
-	return tc.URL, nil
+	return tunnelURL, nil
 }
 
 func (c *Client) trackLatency(tc *TunnelConn) {
@@ -91,13 +99,14 @@ func (c *Client) trackLatency(tc *TunnelConn) {
 			if err != nil {
 				continue
 			}
-			req.Header.Set("X-Tunnel-Token", c.token)
 			resp, err := httpClient.Do(req)
 			if err != nil {
 				continue
 			}
 			resp.Body.Close()
+			c.mu.Lock()
 			tc.latency = time.Since(start)
+			c.mu.Unlock()
 		}
 	}
 }
@@ -108,7 +117,7 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 	if c.secure {
 		scheme = "wss"
 	}
-	wsURL := fmt.Sprintf("%s://%s/tunnel/ws?tunnel_id=%s&port=%d", scheme, c.server, tunnelID, port)
+	wsURL := fmt.Sprintf("%s://%s/tunnels/connect?tunnel_id=%s&port=%d", scheme, c.server, tunnelID, port)
 
 	start := time.Now()
 	conn, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
@@ -118,9 +127,9 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 			resp.Body.Close()
 			msg := strings.TrimSpace(string(body))
 			if msg != "" {
-				return nil, fmt.Errorf("server rejected connection: %s: %s", resp.Status, msg)
+				return nil, &connectionRejected{resp.StatusCode, fmt.Sprintf("server rejected connection: %s: %s", resp.Status, msg)}
 			}
-			return nil, fmt.Errorf("server rejected connection: %s", resp.Status)
+			return nil, &connectionRejected{resp.StatusCode, fmt.Sprintf("server rejected connection: %s", resp.Status)}
 		}
 		return nil, fmt.Errorf("failed to connect to server: %w", err)
 	}
@@ -137,6 +146,8 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 
 	cfg := yamux.DefaultConfig()
 	cfg.KeepAliveInterval = 30 * time.Second
+	// Expected disconnects and remote closure must not corrupt the TUI output.
+	cfg.LogOutput = io.Discard
 	wrappedConn := &protocol.WsConn{Conn: conn}
 	session, err := yamux.Client(wrappedConn, cfg)
 	if err != nil {
@@ -154,11 +165,6 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 	}, nil
 }
 
-// maxReconnectAttempts is the number of consecutive failures before abandoning
-// the current tunnel ID and creating a fresh one. The backoff reaches its 30s
-// cap after ~5 attempts (~62s total), so this is a reasonable switchover point.
-const maxReconnectAttempts = 5
-
 func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 	defer tc.cancel()
 	defer func() {
@@ -171,7 +177,6 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 
 	localAddr := fmt.Sprintf("localhost:%d", port)
 	reconnectDelay := time.Second
-	failCount := 0
 
 	for {
 		stream, err := tc.session.AcceptStream()
@@ -180,45 +185,45 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 				return
 			}
 
-		select {
+			select {
 			case <-tc.ctx.Done():
 				return
 			case <-time.After(reconnectDelay):
 			}
-			if reconnectDelay < 30*time.Second {
-				reconnectDelay *= 2
-			}
+			reconnectDelay = min(reconnectDelay*2, 30*time.Second)
 
-			tunnelID := tc.ID
-			if failCount >= maxReconnectAttempts {
-				tunnelID = protocol.RandomTunnelID()
-			}
-
-			newTC, err := c.createTunnelSession(tc.ctx, tunnelID, port)
+			// Persistent ownership makes the original ID safe to retry. Switching
+			// IDs after failures would bypass a closure received while offline.
+			newTC, err := c.createTunnelSession(tc.ctx, tc.ID, port)
 			if err != nil {
+				var rejected *connectionRejected
+				if errors.As(err, &rejected) && (rejected.status == http.StatusUnauthorized || rejected.status == http.StatusForbidden || rejected.status == http.StatusConflict || rejected.status == http.StatusGone) {
+					return
+				}
 				if tc.ctx.Err() != nil {
 					return
 				}
-				failCount++
 				continue
 			}
 
+			c.mu.Lock()
+			if tc.ctx.Err() != nil {
+				c.mu.Unlock()
+				newTC.session.Close()
+				newTC.wsConn.Close()
+				return
+			}
 			tc.wsConn.Close()
 			tc.wsConn, tc.session = newTC.wsConn, newTC.session
 			tc.latency = newTC.latency
 			tc.reconnects++
-			if tunnelID != tc.ID {
-				tc.ID, tc.URL = tunnelID, newTC.URL
-			} else {
-				tc.URL = newTC.URL
-			}
+			tc.URL = newTC.URL
+			c.mu.Unlock()
 			reconnectDelay = time.Second
-			failCount = 0
 			continue
 		}
 
 		reconnectDelay = time.Second
-		failCount = 0
 		go func(s *yamux.Stream) {
 			defer s.Close()
 
@@ -229,20 +234,16 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			defer conn.Close()
 
 			done := make(chan struct{}, 2)
-			var wg sync.WaitGroup
-			wg.Add(2)
 			go func() {
 				n, _ := io.Copy(conn, s)
 				atomic.AddInt64(&tc.totalSize, n)
 				conn.Close()
-				wg.Done()
 				done <- struct{}{}
 			}()
 			go func() {
 				n, _ := io.Copy(s, conn)
 				atomic.AddInt64(&tc.totalSize, n)
 				s.Close()
-				wg.Done()
 				done <- struct{}{}
 			}()
 			<-done
@@ -252,10 +253,23 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 }
 
 func (c *Client) CloseTunnel(port uint16) error {
+	c.mu.RLock()
+	tc := c.tunnels[port]
+	id := ""
+	if tc != nil {
+		id = tc.ID
+	}
+	c.mu.RUnlock()
+	if tc == nil {
+		return nil
+	}
+	if err := c.DeleteTunnel(id); err != nil {
+		return err
+	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if tc, ok := c.tunnels[port]; ok {
+	if c.tunnels[port] == tc {
 		tc.cancel()
 		tc.session.Close()
 		tc.wsConn.Close()
@@ -297,32 +311,4 @@ func (c *Client) ListTunnels() []*protocol.TunnelInfo {
 		return tunnels[i].Port < tunnels[j].Port
 	})
 	return tunnels
-}
-
-func (c *Client) GetLogs(tunnelID string) ([]*protocol.TunnelLog, error) {
-	scheme := "http"
-	if c.secure {
-		scheme = "https"
-	}
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s://%s/logs/%s", scheme, c.server, tunnelID), nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build request: %w", err)
-	}
-	req.Header.Set("X-Tunnel-Token", c.token)
-
-	resp, err := httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to contact server: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("server returned %s", resp.Status)
-	}
-
-	var logs []*protocol.TunnelLog
-	if err := json.NewDecoder(resp.Body).Decode(&logs); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-	return logs, nil
 }

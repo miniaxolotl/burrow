@@ -1,40 +1,18 @@
 package tunnel
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
 
 	"burrow/protocol"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List active tunnels",
+	Short: "List your active tunnels and count",
+	Args:  cobra.NoArgs,
 	RunE:  runTunnelList,
-}
-
-func fetchTunnels() ([]*protocol.TunnelInfo, error) {
-	server := viper.GetString("server")
-
-	resp, err := apiDo("GET", fmt.Sprintf("%s://%s/tunnels", httpScheme(), server))
-	if err != nil {
-		return nil, fmt.Errorf("failed to contact server: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("server returned %s", resp.Status)
-	}
-
-	var tunnels []*protocol.TunnelInfo
-	if err := json.NewDecoder(resp.Body).Decode(&tunnels); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
-	return tunnels, nil
 }
 
 func printTunnels(tunnels []*protocol.TunnelInfo) {
@@ -45,14 +23,18 @@ func printTunnels(tunnels []*protocol.TunnelInfo) {
 }
 
 func runTunnelList(cmd *cobra.Command, args []string) error {
-	tunnels, err := fetchTunnels()
+	client, err := configuredClient(cmd)
 	if err != nil {
 		return err
 	}
-	if len(tunnels) == 0 {
-		fmt.Println("No active tunnels")
+	result, err := client.RemoteTunnels()
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%d active tunnel(s)\n", result.Count)
+	if len(result.Tunnels) == 0 {
 		return nil
 	}
-	printTunnels(tunnels)
+	printTunnels(result.Tunnels)
 	return nil
 }

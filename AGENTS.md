@@ -55,7 +55,7 @@ pnpm typecheck:website
 - The `protocol` module is linked via `replace` directive in both `burrowd/go.mod` and `burrowctl/go.mod` — never `go install` it independently.
 - Version strings live in `burrowd/version.go` and `burrowctl/version.go`; release-please bumps them, goreleaser overrides at link time with `-X main.Version`.
 - Server requires **Redis** (see `docker-compose.yml`). Default port 25701.
-- `.env` is gitignored; copy `.env.example` and set `BURROW_SECRET` + `BURROW_DOMAIN` to run locally.
+- `.env` is gitignored; copy `.env.example` and set `BURROW_DOMAIN` to run locally. Client owner credentials are generated automatically; there is no shared admin secret.
 - Branches: `development` → release-please creates PRs; `production` → triggers npm publish + Docker deploy with `latest` tags.
 - CI runs `go test` on all three modules. Deployments also run the real HTTPS tunnel test in `burrowctl/internal/live_test.go`.
 - OpenTofu 1.12.6 is pinned in `.opentofu-version`; run `bash scripts/infra/check.sh`. Hosted apps deploy immutable GHCR digests. `development` deploys staging and `production` deploys production after successful CI.

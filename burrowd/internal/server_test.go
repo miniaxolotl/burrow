@@ -40,8 +40,8 @@ func TestTunnelHTTPKeepAlive(t *testing.T) {
 	defer local.Close()
 	go local.Serve(clientSession)
 
-	server := NewServer(nil, "example.test", "", false)
-	server.connections["probe"] = serverSession
+	server := NewServer(nil, "example.test", false)
+	server.connections["probe"] = &tunnelSession{conn: serverSession}
 	proxy := httptest.NewServer(server)
 	defer proxy.Close()
 	transport := &http.Transport{}

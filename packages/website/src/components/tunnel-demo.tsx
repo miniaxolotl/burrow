@@ -24,10 +24,7 @@ export function TunnelDemo() {
         </div>
         <div className="p-5 font-mono text-[11px] leading-6 sm:p-6">
           <p className="break-words">
-            <span className="mr-2 text-highlight">$</span>burrowctl tunnel
-            create
-            <br />
-            <span className="pl-4 text-terminal-muted">--port 3000</span>
+            <span className="mr-2 text-highlight">$</span>burrowctl tunnel 3000
           </p>
           <p className="mt-6 flex items-center gap-2 text-highlight">
             <Check size={14} aria-hidden="true" /> Tunnel connected

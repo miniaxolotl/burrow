@@ -1,109 +1,58 @@
 # burrowd
 
-Tunnel server that manages WebSocket connections from clients, proxies HTTP/TCP traffic, and assigns public subdomain URLs.
+Owner-isolated HTTP/WebSocket tunneling server. Every credential is a regular owner; there is no privileged access model.
 
-## Quick Start
+## Run
 
 ```bash
-cp .env.example .env   # set BURROW_SECRET and BURROW_DOMAIN
+cp .env.example .env              # Set BURROW_DOMAIN
 docker compose up -d
 ```
 
-## Configuration
-
-| Variable           | Description                                                  | Default              |
-| ------------------ | ------------------------------------------------------------ | -------------------- |
-| `BURROW_SECRET`    | Admin secret — if set, admin endpoints require a valid token | —                    |
-| `BURROW_DOMAIN`    | Domain for tunnel URLs                                       | `localhost`          |
-| `BURROW_PORT`      | Server port                                                  | `25701`              |
-| `BURROW_REDIS_URL` | Redis connection URL                                         | `redis://redis:6379` |
-| `BURROW_TLS`       | Generate HTTPS tunnel URLs behind a TLS-terminating proxy    | `false`              |
-
-Also accepts `PORT` and `REDIS_URL` as fallbacks.
-
-`BURROW_SECRET` is optional. Without it the server runs in open mode: anyone can create tunnels and all admin endpoints are disabled.
-
-## Auth model
-
-Tunnel **creation** is always open — no token required.
-
-Admin operations (listing all tunnels, revoking any tunnel) require a token generated from `BURROW_SECRET`:
+Or run the binary with Redis available:
 
 ```bash
-# Generate a token with burrowd:
-burrowd auth login <token>
-
-# Or with burrowctl (client-side):
-burrowctl auth login <token> --server your-server.example.com
+burrowd serve --domain localhost --port 25701 --redis-url localhost:6379
+burrowd stop
 ```
 
-Per-tunnel operations (close, logs) are available to the owner token that created the tunnel, or to any admin token. Anonymous tunnels (created without a token) can be managed by anyone with the tunnel ID.
+| Variable           | Purpose                                | Default          |
+| ------------------ | -------------------------------------- | ---------------- |
+| `BURROW_DOMAIN`    | Tunnel URL domain                      | `localhost`      |
+| `BURROW_PORT`      | Listen port (`PORT` fallback)          | `25701`          |
+| `BURROW_REDIS_URL` | Redis URL (`REDIS_URL` fallback)       | `localhost:6379` |
+| `BURROW_TLS`       | Generate HTTPS URLs behind a TLS proxy | `false`          |
 
-## Commands
+Remote deployments require TLS termination and a wildcard certificate. Production uses `brmbl.dev`; staging uses `staging.brmbl.dev`. See [deployment](deploy.md).
 
-```bash
-burrowd serve --secret mysecret --domain burrow.example.com --port 25701
-burrowd stop                          # Graceful stop via PID file
-burrowd auth login <token>            # Validate and store token locally
-burrowd auth status                   # Check stored auth status
-burrowd auth logout                   # Remove stored token
-burrowd tunnel list                   # List active tunnels
-burrowd tunnel revoke <id>            # Force-close a tunnel
-```
+## Five API routes
 
-## API
+All management requests require `X-Tunnel-Token: <owner-credential>`. The CLI creates this credential automatically; no account is needed. URL query credentials are rejected.
 
-| Endpoint       | Method    | Auth           | Description                         |
-| -------------- | --------- | -------------- | ----------------------------------- |
-| `/health`      | GET       | none           | Server health and tunnel count      |
-| `/tunnel/ws`   | WebSocket | none           | Client tunnel connection            |
-| `/tunnel/<id>` | DELETE    | owner or admin | Close a tunnel                      |
-| `/logs/<id>`   | GET       | owner or admin | Request logs for a tunnel (max 200) |
-| `/tunnels`     | GET       | admin          | List all active tunnels             |
+| Method    | Route                                         | Access / result                                |
+| --------- | --------------------------------------------- | ---------------------------------------------- |
+| GET       | `/health`                                     | Public; only `{"status":"ok"}`                 |
+| GET       | `/tunnels`                                    | Owner's connected tunnels and count            |
+| WebSocket | `/tunnels/connect?tunnel_id=<id>&port=<port>` | Create or reconnect an owned tunnel            |
+| GET       | `/tunnels/<id>/logs`                          | Owner's request history, up to 200 entries     |
+| DELETE    | `/tunnels/<id>`                               | Owner-only closure and permanent ID revocation |
 
-## Tunnel URLs
+The list response is `{"tunnels":[...],"count":N}`. Both fields use the same owner-filtered snapshot. Disconnected grace-period records are not counted. There is no global count/list endpoint, no `all` scope, and no uptime disclosure. Former admin tokens have no special meaning. Private responses use `Cache-Control: no-store` and never contain owner credentials or hashes.
 
-```
-https://{tunnel_id}.{domain}
-```
+Each log entry has an opaque `id` for deduplication. Entries are appended when requests finish; their `timestamp` records the request start, so timestamps need not be ordered. The CLI follows entry IDs to include slow requests that finish after newer ones.
 
-IDs are generated as `{adverb}-{adjective}-{adjective}-{noun}` (e.g. `swiftly-ancient-silent-dragon`). ~288M combinations.
+Traffic to `https://<id>.<domain>` goes to the exposed application. Its authentication is independent of Burrow management access. A shareable URL is never proof of ownership.
 
-## Architecture
+## Ownership lifecycle
 
-```
-┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-│  burrowctl   │◄────────│   burrowd    │◄────────│  End User    │
-│  (client)    │   WS    │   (server)   │  HTTP   │  (browser)   │
-└──────────────┘         └──────────────┘         └──────────────┘
-```
+- Redis atomically binds each ID to an owner hash. A different owner cannot replace the connection, claim its ID, read its logs, or close it.
+- Each connection has a generation identifier. Old disconnect timers and keepalive work cannot remove or renew a newer connection.
+- Disconnects retain connection metadata/logs for 20 seconds. Active records have a refreshed 24-hour TTL.
+- `tunnel-owner:<id>` reservations retain the owner hash and closure state without a TTL, preventing old URLs from becoming another user's tunnel. Preserve these records and use Redis **noeviction**; storage grows with allocated IDs.
+- Closing revokes the ID and clears its logs. The client stops reconnecting rather than silently recreating the closed session.
 
-## Deployment
+## Upgrading
 
-The hosted service uses DigitalOcean App Platform with Upstash Redis over TLS.
-Production is `brmbl.dev`; staging is `staging.brmbl.dev`. Each environment has
-its own Redis database and admin secret. See [Deploy & release](deploy.md).
+Coordinate client/server updates: the consolidated routes and list response replace the previous API. Missing owner credentials are rejected; the updated CLI creates them automatically. Startup reserves existing token-bearing records for their recorded owners and permanently retires existing tokenless IDs before serving requests. Old anonymous clients must upgrade and create new URLs. Historical IDs already absent from Redis at upgrade time cannot be recovered or reserved from missing data.
 
-### Docker Compose
-
-```bash
-cp .env.example .env
-docker compose up -d
-```
-
-### Dokku
-
-```bash
-dokku apps:create burrowd
-dokku redis:create burrowd
-dokku config:set burrowd BURROW_SECRET=your-secret BURROW_DOMAIN=burrow.example.com
-git remote add dokku dokku@your-server:dokku/burrowd
-git push dokku production:master
-```
-
-Wildcard SSL via certbot + DNS challenge (HTTP-01 doesn't work for wildcards).
-
-## Documentation
-
-- [Client reference](client.md)
-- [Deploy & release](deploy.md)
+`BURROW_SECRET`, HMAC admin authentication, and the old `burrowd auth` / `burrowd tunnel` commands are removed. There is no application-level override to access another owner's data. The server process and hosting infrastructure still handle the proxied HTTP traffic; this is owner isolation, not end-to-end encryption from the host.

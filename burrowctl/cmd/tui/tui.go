@@ -97,23 +97,23 @@ type errMsg struct{ err error }
 // ── model ─────────────────────────────────────────────────────────────────────
 
 type model struct {
-	client       *internal.Client
-	tunnels      []*protocol.TunnelInfo
-	cursor       int
-	state        viewState
-	input        textinput.Model
-	spinner      spinner.Model
-	creatingPort uint16
-	status       string
-	statusIsErr  bool
-	server       string
-	width        int
-	height       int
-	logs         []*protocol.TunnelLog
-	logCursor    int
-	logsErr      string
+	client        *internal.Client
+	tunnels       []*protocol.TunnelInfo
+	cursor        int
+	state         viewState
+	input         textinput.Model
+	spinner       spinner.Model
+	creatingPort  uint16
+	status        string
+	statusIsErr   bool
+	server        string
+	width         int
+	height        int
+	logs          []*protocol.TunnelLog
+	logCursor     int
+	logsErr       string
 	logAutoFollow bool
-	sortMode     sortMode
+	sortMode      sortMode
 	confirmTarget *protocol.TunnelInfo
 }
 
@@ -335,7 +335,13 @@ func (m model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "enter":
 		if m.confirmTarget != nil {
-			m.client.CloseTunnel(m.confirmTarget.Port)
+			if err := m.client.CloseTunnel(m.confirmTarget.Port); err != nil {
+				m.status = err.Error()
+				m.statusIsErr = true
+				m.confirmTarget = nil
+				m.state = stateList
+				return m, nil
+			}
 			m.status = fmt.Sprintf("closed :%d", m.confirmTarget.Port)
 			m.statusIsErr = false
 			m.tunnels = m.client.ListTunnels()
@@ -456,11 +462,11 @@ func (m *model) sortTunnels() {
 // ── view ──────────────────────────────────────────────────────────────────────
 
 const (
-	colIDWidth     = 34
-	colPortWidth   = 6
-	colLatWidth    = 10
-	colReconWidth  = 10
-	colSizeWidth   = 10
+	colIDWidth    = 34
+	colPortWidth  = 6
+	colLatWidth   = 10
+	colReconWidth = 10
+	colSizeWidth  = 10
 )
 
 func (m model) banner(rightText string) string {
@@ -494,8 +500,8 @@ func (m model) View() string {
 
 	var b strings.Builder
 
-	ind := bg.Render("  ")  // 2-space indent with background
-	sep := bg.Render("  ")  // 2-space column separator with background
+	ind := bg.Render("  ") // 2-space indent with background
+	sep := bg.Render("  ") // 2-space column separator with background
 
 	b.WriteString(bg.Render("\n"))
 	b.WriteString(m.banner(m.server))
@@ -528,11 +534,11 @@ func (m model) View() string {
 		b.WriteString(ind + statusStyle.Render("no active tunnels") + "\n")
 	}
 	for i, t := range m.tunnels {
-		id     := truncate(t.TunnelID, colIDWidth)
-		port   := strconv.Itoa(int(t.Port))
-		lat    := truncate(t.Latency, colLatWidth)
+		id := truncate(t.TunnelID, colIDWidth)
+		port := strconv.Itoa(int(t.Port))
+		lat := truncate(t.Latency, colLatWidth)
 		recons := strconv.Itoa(t.Reconnects)
-		size   := formatSize(t.TotalSize)
+		size := formatSize(t.TotalSize)
 
 		if i == m.cursor {
 			statusText := "● active"
@@ -752,7 +758,7 @@ func (m model) viewHelp() string {
 		{
 			title: "GENERAL",
 			keys: [][2]string{
-				{"q / Ctrl+C", "Quit (closes all tunnels)"},
+				{"q / Ctrl+C", "Quit (disconnects all tunnels)"},
 				{"esc", "Cancel input or go back"},
 				{"?", "Show/hide this help screen"},
 			},
@@ -823,7 +829,7 @@ func truncate(s string, n int) string {
 }
 
 // RunWithClient starts the TUI using an already-initialized client.
-// Called by tunnel create after tunnels are established.
+// Called by the tunnel command after connections are established.
 func RunWithClient(client *internal.Client, server string) error {
 	m := newModel(client, server)
 	_, err := tea.NewProgram(m, tea.WithAltScreen()).Run()

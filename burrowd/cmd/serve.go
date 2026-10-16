@@ -26,13 +26,11 @@ func init() {
 	serveCmd.Flags().String("port", "25701", "Port to listen on")
 	serveCmd.Flags().String("domain", "localhost", "Domain for tunnel URLs")
 	serveCmd.Flags().String("redis-url", "localhost:6379", "Redis connection URL")
-	serveCmd.Flags().String("secret", "", "Authentication secret")
 	serveCmd.Flags().Bool("tls", false, "Generate tunnel URLs with https:// (set when server is behind HTTPS)")
 
 	viper.BindPFlag("port", serveCmd.Flags().Lookup("port"))
 	viper.BindPFlag("domain", serveCmd.Flags().Lookup("domain"))
 	viper.BindPFlag("redis-url", serveCmd.Flags().Lookup("redis-url"))
-	viper.BindPFlag("secret", serveCmd.Flags().Lookup("secret"))
 	viper.BindPFlag("tls", serveCmd.Flags().Lookup("tls"))
 }
 
@@ -74,8 +72,6 @@ func runServe(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	secret := viper.GetString("secret")
-
 	pidFile := internal.ConfigDir() + "/pid"
 	if err := os.MkdirAll(internal.ConfigDir(), 0700); err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: failed to create config directory: %v\n", err)
@@ -90,10 +86,16 @@ func runServe(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to connect to redis: %w", err)
 	}
 	defer redis.Close()
+	migrationCtx, cancelMigration := context.WithTimeout(context.Background(), 30*time.Second)
+	err = redis.ReserveLegacyOwners(migrationCtx)
+	cancelMigration()
+	if err != nil {
+		return fmt.Errorf("failed to reserve existing tunnel ownership: %w", err)
+	}
 
 	registry := internal.NewTunnelRegistry(redis, domain, secure)
 
-	server := internal.NewServer(registry, domain, secret, secure)
+	server := internal.NewServer(registry, domain, secure)
 
 	addr := fmt.Sprintf(":%s", port)
 	fmt.Printf("Starting burrowd on %s\n", addr)

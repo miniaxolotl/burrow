@@ -114,12 +114,12 @@ export default async function HomePage() {
                 <h2 id="manager-heading" className="section-heading mt-3">
                   One terminal.
                   <br />
-                  <em>Every tunnel.</em>
+                  <em>Your tunnels.</em>
                 </h2>
               </div>
               <p>
-                See connection health, copy a URL, and inspect requests. Try the
-                preview below.
+                See your connection health, copy a URL, and inspect your
+                requests. Try the preview below.
               </p>
             </div>
             <ManagerPreview />

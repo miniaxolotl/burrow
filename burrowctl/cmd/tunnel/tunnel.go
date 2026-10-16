@@ -1,82 +1,64 @@
 package tunnel
 
 import (
-	"context"
 	"fmt"
-	"net"
-	"net/http"
+	"os"
 
 	"burrow/burrowctl/internal"
-	"burrow/protocol"
+	"burrow/burrowctl/internal/config"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var TunnelCmd = &cobra.Command{
-	Use:   "tunnel",
-	Short: "Tunnel management commands",
-	Long:  `Create and manage tunnels.`,
+	Use:     "tunnel <port> [port...]",
+	Short:   "Share local ports and open the tunnel manager",
+	Args:    cobra.MinimumNArgs(1),
+	Example: "  burrowctl tunnel 3000\n  burrowctl tunnel 3000 8080",
+	RunE:    runTunnelCreate,
 }
 
-func init() {
-	TunnelCmd.PersistentFlags().String("server", internal.DefaultServer, "Burrow server address")
-	TunnelCmd.PersistentFlags().String("token", "", "Authentication token")
-	TunnelCmd.PersistentFlags().String("secret", "", "Shared secret (generates a token)")
-	TunnelCmd.PersistentFlags().String("domain", internal.DefaultServer, "Fallback domain for tunnel URLs")
-	viper.BindPFlag("server", TunnelCmd.PersistentFlags().Lookup("server"))
-	viper.BindPFlag("token", TunnelCmd.PersistentFlags().Lookup("token"))
-	viper.BindPFlag("secret", TunnelCmd.PersistentFlags().Lookup("secret"))
-	viper.BindPFlag("domain", TunnelCmd.PersistentFlags().Lookup("domain"))
-
-	TunnelCmd.AddCommand(createCmd)
-	TunnelCmd.AddCommand(listCmd)
-	TunnelCmd.AddCommand(statusCmd)
-	TunnelCmd.AddCommand(inspectCmd)
-	TunnelCmd.AddCommand(closeCmd)
-}
-
-// secureTLS returns true when TLS should be used.
-// TLS is auto-enabled for any server that is not localhost / 127.0.0.1 / ::1.
-func secureTLS() bool {
-	host := viper.GetString("server")
-	if h, _, err := net.SplitHostPort(host); err == nil {
-		host = h
+func AddCommands(root *cobra.Command) {
+	flags := root.PersistentFlags()
+	flags.String("server", internal.DefaultServer, "Burrow server address")
+	flags.String("token", "", "Explicit owner credential (generated automatically by default)")
+	flags.String("domain", internal.DefaultServer, "Fallback domain for tunnel URLs")
+	for _, name := range []string{"server", "token", "domain"} {
+		viper.BindPFlag(name, flags.Lookup(name))
 	}
-	switch host {
-	case "localhost", "127.0.0.1", "::1":
-		return false
-	}
-	return true
-}
-
-// httpScheme returns "https" or "http" based on secureTLS.
-func httpScheme() string {
-	if secureTLS() {
-		return "https"
-	}
-	return "http"
+	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd)
 }
 
 // resolveToken returns the best available auth token.
 // Priority follows viper: --token flag > BURROW_TOKEN env > client.json token field.
-// Falls back to generating a token from --secret / BURROW_SECRET if no token is set.
-func resolveToken() string {
-	if t := viper.GetString("token"); t != "" {
-		return t
+// Otherwise load or generate the server-scoped private owner credential.
+func resolveToken(cmd *cobra.Command, server string) (string, error) {
+	// Explicit overrides are intentional; saved credentials are scoped to the
+	// configured server, never automatically forwarded to a --server override.
+	if cmd.Flags().Changed("token") || os.Getenv("BURROW_TOKEN") != "" {
+		if token := viper.GetString("token"); token != "" {
+			return token, nil
+		}
 	}
-	if secret := viper.GetString("secret"); secret != "" {
-		return protocol.GenerateToken(secret)
+	token, err := config.StoredToken(server)
+	if err != nil {
+		return "", err
 	}
-	return ""
+	if token != "" {
+		return token, nil
+	}
+	return config.OwnerToken(server)
 }
 
-// apiDo performs an authenticated HTTP request to the burrow server.
-func apiDo(method, url string) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(context.Background(), method, url, nil)
+func configuredClient(cmd *cobra.Command) (*internal.Client, error) {
+	server, err := internal.ServerURL(viper.GetString("server"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to build request: %w", err)
+		return nil, err
 	}
-	req.Header.Set("X-Tunnel-Token", resolveToken())
-	return http.DefaultClient.Do(req)
+	token, err := resolveToken(cmd, server.Host)
+	if err != nil {
+		return nil, fmt.Errorf("load owner credential: %w", err)
+	}
+	return internal.NewClient(server.Host, token, viper.GetString("domain"), server.Scheme == "https"), nil
 }

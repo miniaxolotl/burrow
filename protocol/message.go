@@ -12,12 +12,18 @@ type TunnelInfo struct {
 	TotalSize  int64  `json:"total_size"`
 }
 
+type TunnelList struct {
+	Tunnels []*TunnelInfo `json:"tunnels"`
+	Count   int           `json:"count"`
+}
+
 type TunnelLog struct {
-	Timestamp   time.Time `json:"timestamp"`
-	Method      string    `json:"method"`
-	Path        string    `json:"path"`
-	StatusCode  int       `json:"status_code"`
-	Size        int64     `json:"size"`
-	Duration    string    `json:"duration"`
-	IP          string    `json:"ip"`
+	ID         string    `json:"id"`
+	Timestamp  time.Time `json:"timestamp"`
+	Method     string    `json:"method"`
+	Path       string    `json:"path"`
+	StatusCode int       `json:"status_code"`
+	Size       int64     `json:"size"`
+	Duration   string    `json:"duration"`
+	IP         string    `json:"ip"`
 }
