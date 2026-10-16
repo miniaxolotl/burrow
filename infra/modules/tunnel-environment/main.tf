@@ -16,7 +16,7 @@ resource "upstash_redis_database" "tunnels" {
   tls            = true
   eviction       = false
   auto_scale     = false
-  budget         = var.environment == "production" ? 20 : 5
+  budget         = 20 # Upstash's minimum monthly usage cap, not a fixed charge.
 }
 
 resource "random_password" "admin" {
