@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/miniaxolotl/burrow/compare/v0.2.8...v0.3.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* upgrade burrowctl and burrowd together for the consolidated owner-only API and commands. Legacy anonymous tunnel IDs are retired; auth commands and shared admin secrets are removed.
+
+### Bug Fixes
+
+* address ownership PR review findings ([f037847](https://github.com/miniaxolotl/burrow/commit/f037847030af080e6e29f2b7ea8a2c443234ca21))
+* enforce private owner-only tunnel management ([dd73e59](https://github.com/miniaxolotl/burrow/commit/dd73e596b3ff1446a78810048871d0c738d57d35))
+
 ## [0.2.8](https://github.com/miniaxolotl/burrow/compare/v0.2.7...v0.2.8) (2026-10-16)
 
 
