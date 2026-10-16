@@ -39,6 +39,8 @@ All management requests require `X-Tunnel-Token: <owner-credential>`. The CLI cr
 
 The list response is `{"tunnels":[...],"count":N}`. Both fields use the same owner-filtered snapshot. Disconnected grace-period records are not counted. There is no global count/list endpoint, no `all` scope, and no uptime disclosure. Former admin tokens have no special meaning. Private responses use `Cache-Control: no-store` and never contain owner credentials or hashes.
 
+Each log entry has an opaque `id` for deduplication. Entries are appended when requests finish; their `timestamp` records the request start, so timestamps need not be ordered. The CLI follows entry IDs to include slow requests that finish after newer ones.
+
 Traffic to `https://<id>.<domain>` goes to the exposed application. Its authentication is independent of Burrow management access. A shareable URL is never proof of ownership.
 
 ## Ownership lifecycle

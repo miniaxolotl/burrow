@@ -53,6 +53,12 @@ and AES-GCM encryption keys for staging and production. State uses a direct TLS
 connection with PostgreSQL advisory locking. Application tunnel records live in
 Upstash, separate from infrastructure state.
 
+The random-provider declarations and lock entries are retained for the owner-only
+upgrade so deployment's read-only initialization can load existing
+`module.tunnels.random_password.admin` state and remove that obsolete resource.
+Remove those provider pins in a follow-up only after both staging and production
+have applied the removal and their state no longer contains the resource.
+
 Each GitHub environment supplies:
 
 - `OPENTOFU_STATE_DATABASE_URL` → `PG_CONN_STR`

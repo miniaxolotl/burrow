@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bufio"
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -9,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -138,6 +140,21 @@ func TestOwnerIsolationAndPrivateViews(t *testing.T) {
 	if !strings.Contains(string(body), "/private-a") {
 		t.Fatalf("owner lost logs: %s", body)
 	}
+	var entries []*protocol.TunnelLog
+	if err := json.Unmarshal(body, &entries); err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].ID == "" {
+		t.Fatalf("missing stable log ID: %s", body)
+	}
+	firstID := entries[0].ID
+	s.addLog("owner-a", original, &protocol.TunnelLog{Path: "/private-a", IP: "192.0.2.1"})
+	if err := json.Unmarshal(apiRequest(t, proxy, "GET", "/tunnels/owner-a/logs", "credential-a", http.StatusOK), &entries); err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 2 || entries[0].ID != firstID || entries[1].ID == "" || entries[1].ID == firstID {
+		t.Fatalf("log IDs must be stable and distinguish identical request fields: %+v", entries)
+	}
 	for _, test := range []struct {
 		token string
 		ids   []string
@@ -241,6 +258,80 @@ func TestReconnectAndStaleCleanupCannotReplaceOwnership(t *testing.T) {
 	dialOwner(t, proxy, "reconnecting", "owner", http.StatusSwitchingProtocols)
 }
 
+type failedHandshakeWriter struct {
+	http.ResponseWriter
+	entered chan struct{}
+	release chan struct{}
+}
+
+func (w *failedHandshakeWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	close(w.entered)
+	<-w.release
+	return nil, nil, errors.New("handshake transport failed")
+}
+
+func TestFailedReplacementPreservesLiveGeneration(t *testing.T) {
+	for _, transportFailure := range []bool{false, true} {
+		name := "missing-websocket-key"
+		if transportFailure {
+			name = "transport-failure-with-concurrent-refresh"
+		}
+		t.Run(name, func(t *testing.T) {
+			s, proxy, _ := privacyServer(t)
+			client := dialOwner(t, proxy, "original", "owner", http.StatusSwitchingProtocols)
+			original := activeSession(t, s, "original")
+			s.addLog("original", original, &protocol.TunnelLog{Path: "/preserved"})
+			req := httptest.NewRequest(http.MethodGet, "/tunnels/connect?tunnel_id=original&port=4000", nil)
+			req.Header.Set("X-Tunnel-Token", "owner")
+			req.Header.Set("Connection", "Upgrade")
+			req.Header.Set("Upgrade", "websocket")
+			req.Header.Set("Sec-WebSocket-Version", "13")
+			recorder := httptest.NewRecorder()
+			if transportFailure {
+				req.Header.Set("Sec-WebSocket-Key", base64.StdEncoding.EncodeToString([]byte("0123456789abcdef")))
+				writer := &failedHandshakeWriter{recorder, make(chan struct{}), make(chan struct{})}
+				done := make(chan struct{})
+				go func() { s.ServeHTTP(writer, req); close(done) }()
+				select {
+				case <-writer.entered:
+				case <-done:
+					t.Fatalf("request failed before hijacking: %d", recorder.Code)
+				}
+				// The original keepalive must remain valid throughout the upgrade,
+				// not merely be restored after the attempted replacement fails.
+				err := s.registry.Refresh(context.Background(), "original", original.id)
+				close(writer.release)
+				<-done
+				if err != nil {
+					t.Fatalf("concurrent refresh invalidated: %v", err)
+				}
+				if recorder.Code != http.StatusInternalServerError {
+					t.Fatalf("handshake status: %d", recorder.Code)
+				}
+			} else {
+				s.ServeHTTP(recorder, req)
+				if recorder.Code != http.StatusBadRequest {
+					t.Fatalf("handshake status: %d", recorder.Code)
+				}
+			}
+			data, err := s.registry.Get(context.Background(), "original")
+			if err != nil || data == nil || data.SessionID != original.id || data.Port != 3000 {
+				t.Fatalf("failed handshake changed the live record: %+v %v", data, err)
+			}
+			if activeSession(t, s, "original") != original || client.IsClosed() {
+				t.Fatal("failed handshake replaced the live connection")
+			}
+			if err := s.registry.Refresh(context.Background(), "original", original.id); err != nil {
+				t.Fatal(err)
+			}
+			body := apiRequest(t, proxy, "GET", "/tunnels/original/logs", "owner", http.StatusOK)
+			if !strings.Contains(string(body), "/preserved") {
+				t.Fatalf("failed handshake lost logs: %s", body)
+			}
+		})
+	}
+}
+
 func TestRegistryClaimsAreAtomicAndReservationsSurviveExpiry(t *testing.T) {
 	s, _, rdb := privacyServer(t)
 	ctx := context.Background()
@@ -301,6 +392,29 @@ func TestRegistryClaimsAreAtomicAndReservationsSurviveExpiry(t *testing.T) {
 	rdb.FastForward(25 * time.Hour)
 	if _, err := s.registry.Register(ctx, "contested", 3000, owner, "revived"); !errors.Is(err, ErrTunnelRevoked) {
 		t.Fatalf("revocation expired: %v", err)
+	}
+}
+
+func TestReservationCannotInstallAfterClosure(t *testing.T) {
+	s, _, _ := privacyServer(t)
+	ctx := context.Background()
+	if _, err := s.registry.Reserve(ctx, "reserved", "owner"); err != nil {
+		t.Fatal(err)
+	}
+	if data, err := s.registry.Get(ctx, "reserved"); err != nil || data != nil {
+		t.Fatalf("reservation installed a live record: %+v %v", data, err)
+	}
+	if _, err := s.registry.Reserve(ctx, "reserved", "other"); !errors.Is(err, ErrTunnelOwnership) {
+		t.Fatalf("reservation takeover: %v", err)
+	}
+	if err := s.registry.Revoke(ctx, "reserved", "owner"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.registry.Register(ctx, "reserved", 3000, "owner", "late-install"); !errors.Is(err, ErrTunnelRevoked) {
+		t.Fatalf("installation bypassed revocation after reservation: %v", err)
+	}
+	if data, err := s.registry.Get(ctx, "reserved"); err != nil || data != nil {
+		t.Fatalf("revoked ID has a live record: %+v %v", data, err)
 	}
 }
 

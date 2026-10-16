@@ -158,6 +158,9 @@ func (s *Server) addLog(tunnelID string, session *tunnelSession, entry *protocol
 	if s.connections[tunnelID] != session {
 		return
 	}
+	// Request start times can arrive out of order when forwarding completes.
+	// Opaque entry IDs allow bounded deduplication without exposing global counts.
+	entry.ID = rand.Text()
 	entries := s.logs[tunnelID]
 	if len(entries) >= maxLogsPerTunnel {
 		entries = entries[1:]
@@ -348,7 +351,7 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		return nil
 	}
 	session := &tunnelSession{ownerHash: ownerHash, id: rand.Text(), port: port}
-	tunnelURL, err := s.registry.Register(r.Context(), tunnelID, port, ownerHash, session.id)
+	tunnelURL, err := s.registry.Reserve(r.Context(), tunnelID, ownerHash)
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrTunnelOwnership):
@@ -360,15 +363,6 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		}
 		return nil
 	}
-	// A failed handshake must not remove a concurrently replaced generation.
-	installed := false
-	defer func() {
-		if !installed {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			s.registry.Remove(ctx, tunnelID, session.id)
-		}
-	}()
 	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Tunnel-URL": []string{tunnelURL}, "Cache-Control": []string{"no-store"}})
 	if err != nil {
 		return nil
@@ -381,6 +375,12 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		conn.Close()
 		return nil
 	}
+	// Commit the new generation only after the handshake succeeds. A failed
+	// upgrade cannot invalidate the previous connection or its concurrent refresh.
+	if _, err := s.registry.Register(r.Context(), tunnelID, port, ownerHash, session.id); err != nil {
+		session.conn.Close()
+		return nil
+	}
 	s.mu.Lock()
 	previous := s.connections[tunnelID]
 	s.connections[tunnelID] = session
@@ -389,7 +389,6 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		delete(s.pendingRemoves, tunnelID)
 	}
 	s.mu.Unlock()
-	installed = true
 	if previous != nil {
 		previous.conn.Close()
 	}

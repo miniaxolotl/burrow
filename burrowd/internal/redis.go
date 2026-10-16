@@ -70,7 +70,7 @@ local function reserveOwner()
 end
 `
 
-var claimTunnel = redis.NewScript(reserveOwnerScript + `
+const claimOwnerScript = reserveOwnerScript + `
 local owner = reserveOwner()
 if owner then
   if owner ~= ARGV[1] then return -1 end
@@ -78,6 +78,21 @@ if owner then
 else
   redis.call('HSET', KEYS[2], 'hash', ARGV[1])
 end
+`
+
+var reserveTunnel = redis.NewScript(claimOwnerScript + `return 1`)
+
+// ReserveTunnel claims only the durable owner, leaving any live generation and
+// its keepalive intact until the replacement transport is ready.
+func (r *RedisClient) ReserveTunnel(ctx context.Context, id, ownerHash string) error {
+	if ownerHash == "" {
+		return ErrTunnelOwnership
+	}
+	return ownershipResult(reserveTunnel.Run(ctx, r.client, []string{"tunnel:" + id, "tunnel-owner:" + id}, ownerHash).Int())
+}
+
+// Installing a generation repeats the ownership/revocation check atomically.
+var claimTunnel = redis.NewScript(claimOwnerScript + `
 redis.call('SET', KEYS[1], ARGV[2], 'PX', ARGV[3])
 return 1
 `)
@@ -99,7 +114,10 @@ func (r *RedisClient) SetTunnel(ctx context.Context, id string, port uint16, own
 	if err != nil {
 		return fmt.Errorf("failed to marshal tunnel data: %w", err)
 	}
-	result, err := claimTunnel.Run(ctx, r.client, []string{key, "tunnel-owner:" + id}, ownerHash, b, ttl.Milliseconds()).Int()
+	return ownershipResult(claimTunnel.Run(ctx, r.client, []string{key, "tunnel-owner:" + id}, ownerHash, b, ttl.Milliseconds()).Int())
+}
+
+func ownershipResult(result int, err error) error {
 	if err != nil {
 		return err
 	}
@@ -108,8 +126,10 @@ func (r *RedisClient) SetTunnel(ctx context.Context, id string, port uint16, own
 		return ErrTunnelOwnership
 	case -2:
 		return ErrTunnelRevoked
-	default:
+	case 1:
 		return nil
+	default:
+		return fmt.Errorf("unexpected ownership result: %d", result)
 	}
 }
 

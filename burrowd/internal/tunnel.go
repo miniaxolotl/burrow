@@ -33,6 +33,13 @@ func (t *TunnelRegistry) Register(ctx context.Context, tunnelID string, port uin
 	return t.tunnelURL(tunnelID), nil
 }
 
+func (t *TunnelRegistry) Reserve(ctx context.Context, tunnelID, ownerHash string) (string, error) {
+	if err := t.redis.ReserveTunnel(ctx, tunnelID, ownerHash); err != nil {
+		return "", fmt.Errorf("failed to reserve tunnel: %w", err)
+	}
+	return t.tunnelURL(tunnelID), nil
+}
+
 func (t *TunnelRegistry) Get(ctx context.Context, tunnelID string) (*TunnelData, error) {
 	return t.redis.GetTunnel(ctx, tunnelID)
 }

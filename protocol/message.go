@@ -18,6 +18,7 @@ type TunnelList struct {
 }
 
 type TunnelLog struct {
+	ID         string    `json:"id"`
 	Timestamp  time.Time `json:"timestamp"`
 	Method     string    `json:"method"`
 	Path       string    `json:"path"`
