@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.2.8](https://github.com/miniaxolotl/burrow/compare/v0.2.7...v0.2.8) (2026-10-16)
+
+
+### Features
+
+* **client:** replace default HTTP client with custom client and set read limit for WebSocket messages ([c4b2846](https://github.com/miniaxolotl/burrow/commit/c4b2846ab5b5acae5764a2c3adb927b4f6cb6212))
+* **deploy:** manage Burrow environments with OpenTofu ([f59671f](https://github.com/miniaxolotl/burrow/commit/f59671f8b0084be93e488125e40f50155c921f5f))
+* **deploy:** manage Burrow environments with OpenTofu ([0004e10](https://github.com/miniaxolotl/burrow/commit/0004e105fe893d026a27ff76f9232bc30c89344e))
+* **docs:** add comprehensive Stripe best practices and integration guides ([76a075c](https://github.com/miniaxolotl/burrow/commit/76a075c799c9a4bb42396d8c9e7671cb509f3d4d))
+* **docs:** add UI images to README for Tunnel Manager section ([3f90557](https://github.com/miniaxolotl/burrow/commit/3f90557dc97e2c6a0a175487e4b637bca7aeabd7))
+* **server:** set read limit for WebSocket connections ([2ba6e81](https://github.com/miniaxolotl/burrow/commit/2ba6e8100952da54db0567d2121e0510ef0b2526))
+* **skills:** add initial skills configuration for Stripe best practices and projects ([7c0aa6b](https://github.com/miniaxolotl/burrow/commit/7c0aa6b475fe506e2b6d410fea0c7f7a44d7c5da))
+* **website:** add polished Bramble Labs marketing site ([b811081](https://github.com/miniaxolotl/burrow/commit/b8110814f2d34e0116d61904807e196fb46b4d80))
+* **website:** add polished Bramble Labs marketing site ([49c83d3](https://github.com/miniaxolotl/burrow/commit/49c83d30a569fd744dfbb7f9cc28e5195c96a17f))
+* **website:** enable Vercel Web Analytics ([a82943a](https://github.com/miniaxolotl/burrow/commit/a82943ace424b0c07ae3f1451f466c399023bb97))
+* **website:** enable Vercel Web Analytics ([f8d1f2e](https://github.com/miniaxolotl/burrow/commit/f8d1f2e0bb0b09d0789a10b06b79967613c7f443))
+
+
+### Bug Fixes
+
+* **deploy:** honor Upstash budget minimum and verify reconnects ([1fa2176](https://github.com/miniaxolotl/burrow/commit/1fa217681523880a5c5a99939ee874997e07216f))
+* **deploy:** honor Upstash budget minimum and verify reconnects ([6378d4a](https://github.com/miniaxolotl/burrow/commit/6378d4a4dd671a4a7d60f159e1e94e395097f7d7))
+* **release:** isolate release preparation and check publishing access ([11c45d4](https://github.com/miniaxolotl/burrow/commit/11c45d4bd42170195714b2b6231f7f37804b95c3))
+* **release:** isolate release preparation and check publishing access ([d9a4408](https://github.com/miniaxolotl/burrow/commit/d9a44083fbbdde5783705f400061280ba75d43c9))
+* **server:** improve handling of tunnel cancellation and cleanup logic ([c27b8e4](https://github.com/miniaxolotl/burrow/commit/c27b8e487f72522b7b42daef39fe32991c45b42a))
+* **server:** preserve HTTP request bytes after hijacking ([34fb0b5](https://github.com/miniaxolotl/burrow/commit/34fb0b5feffe286c75fec5cbf9adb0cd92a8c3a5))
+* **server:** preserve HTTP request bytes after hijacking ([e17d1d9](https://github.com/miniaxolotl/burrow/commit/e17d1d980720ce4300240c3ee444e61e62a08b88))
+
 ## [0.2.7](https://github.com/miniaxolotl/burrow/compare/v0.2.6...v0.2.7) (2026-04-26)
 
 
