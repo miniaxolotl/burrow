@@ -56,5 +56,28 @@ func TestLiveTunnel(t *testing.T) {
 			t.Fatalf("forwarding failed for %s: status=%d body=%s err=%v", path, resp.StatusCode, body, err)
 		}
 	}
-	t.Logf("Verified HTTPS tunnel forwarding through %s", url)
+	// Drop the transport to exercise the same reconnect path used during a
+	// deployment. The existing public URL must keep working after reconnection.
+	client.mu.RLock()
+	connection := client.tunnels[uint16(port)].wsConn
+	client.mu.RUnlock()
+	connection.Close()
+	deadline := time.Now().Add(30 * time.Second)
+	for {
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, url+"/reconnected", nil)
+		resp, err := httpClient.Do(req)
+		if err == nil {
+			body, readErr := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if readErr == nil && resp.StatusCode == http.StatusOK &&
+				string(body) == marker+" GET /reconnected " {
+				break
+			}
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("tunnel did not reconnect at %s: %v", url, err)
+		}
+		time.Sleep(time.Second)
+	}
+	t.Logf("Verified HTTPS forwarding and reconnection through %s", url)
 }

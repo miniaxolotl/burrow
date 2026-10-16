@@ -6,6 +6,8 @@ actual="$(tofu version -json | python3 -c 'import json,sys; print(json.load(sys.
 [[ "$actual" == "$expected" ]] || { echo "OpenTofu $expected required" >&2; exit 1; }
 tofu fmt -check -recursive infra
 unset PG_CONN_STR
+data_root="$(mktemp -d)"
+trap 'rm -rf "$data_root"' EXIT
 export TF_ENCRYPTION
 TF_ENCRYPTION="$(python3 - <<'PY'
 import secrets
@@ -16,6 +18,7 @@ print('plan { method = method.aes_gcm.state }')
 PY
 )"
 for environment in staging production; do
+  export TF_DATA_DIR="$data_root/$environment"
   tofu -chdir="infra/$environment" init -backend=false -input=false -lockfile=readonly
   tofu -chdir="infra/$environment" validate
 done
