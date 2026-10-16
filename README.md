@@ -14,7 +14,7 @@ npm i -g @miniaxolotl/burrowctl
 burrowctl tunnel create --port 3000
 ```
 
-Connects to `burrow.mawa.dev` by default. No account or token required.
+Connects to `brmbl.dev` by default. No account or token required. Visit [useburrow.app](https://useburrow.app).
 
 ## Self-hosting
 

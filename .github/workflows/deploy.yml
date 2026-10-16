@@ -1,84 +1,196 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [development, production]
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version to deploy (e.g., 0.2.6) — leave empty for dev deploy"
-        required: false
-        default: ""
+      environment:
+        description: Environment to deploy from the selected branch
+        type: choice
+        required: true
+        options: [staging, production]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: deploy-${{ inputs.environment || (github.event.workflow_run.head_branch == 'production' && 'production' || 'staging') }}
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  candidate:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.candidate.outputs.sha }}
+      environment: ${{ steps.candidate.outputs.environment }}
+    steps:
+      - id: candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+          BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
+          TARGET: ${{ inputs.environment }}
+        run: |
+          if [[ -z "$TARGET" ]]; then
+            if [[ "$BRANCH" == production ]]; then TARGET=production; else TARGET=staging; fi
+          fi
+          if [[ "$TARGET" == production && "$BRANCH" != production ]]; then
+            echo 'Production deploys must select the production branch' >&2
+            exit 1
+          fi
+          gh api "repos/$REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$SHA&per_page=100" |
+            jq -e 'any(.workflow_runs[]; .conclusion == "success")' >/dev/null
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+          echo "environment=$TARGET" >> "$GITHUB_OUTPUT"
+
+  image:
+    needs: candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
+    outputs:
+      digest: ${{ steps.result.outputs.digest }}
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
         with:
-          node-version: 24
-
-      - name: Resolve tags
-        id: meta
-        run: |
-          if [ -n "${{ github.event.inputs.version }}" ]; then
-            VERSION="${{ github.event.inputs.version }}"
-          elif [ "${{ github.ref_name }}" = "production" ]; then
-            VERSION=$(node -p "require('./package.json').version")
-          fi
-
-          if [ -n "$VERSION" ]; then
-            echo "TAGS<<EOF" >> $GITHUB_OUTPUT
-            echo "ghcr.io/miniaxolotl/burrowd:latest" >> $GITHUB_OUTPUT
-            echo "ghcr.io/miniaxolotl/burrowd:v${VERSION}" >> $GITHUB_OUTPUT
-            echo "miniaxolotl/burrowd:latest" >> $GITHUB_OUTPUT
-            echo "miniaxolotl/burrowd:v${VERSION}" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "VERSION=${VERSION}" >> $GITHUB_OUTPUT
-          else
-            PREVIEW_VERSION=$(node -p "require('./package.json').version")
-            echo "TAGS<<EOF" >> $GITHUB_OUTPUT
-            echo "ghcr.io/miniaxolotl/burrowd:preview" >> $GITHUB_OUTPUT
-            echo "ghcr.io/miniaxolotl/burrowd:preview-v${PREVIEW_VERSION}" >> $GITHUB_OUTPUT
-            echo "miniaxolotl/burrowd:preview" >> $GITHUB_OUTPUT
-            echo "miniaxolotl/burrowd:preview-v${PREVIEW_VERSION}" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "VERSION=preview-v${PREVIEW_VERSION}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Login to GHCR
-        uses: docker/login-action@v3
+          ref: ${{ needs.candidate.outputs.sha }}
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+          password: ${{ github.token }}
+      - uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
+      - id: metadata
+        env:
+          SHA: ${{ needs.candidate.outputs.sha }}
+          TARGET: ${{ needs.candidate.outputs.environment }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          {
+            echo 'tags<<EOF'
+            echo "ghcr.io/miniaxolotl/burrowd:sha-$SHA"
+            echo "miniaxolotl/burrowd:sha-$SHA"
+            if [[ "$TARGET" == production ]]; then
+              echo "ghcr.io/miniaxolotl/burrowd:v$version"
+              echo "miniaxolotl/burrowd:v$version"
+              echo 'ghcr.io/miniaxolotl/burrowd:latest'
+              echo 'miniaxolotl/burrowd:latest'
+            else
+              echo 'ghcr.io/miniaxolotl/burrowd:preview'
+              echo 'miniaxolotl/burrowd:preview'
+            fi
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+          digest="$(docker buildx imagetools inspect "ghcr.io/miniaxolotl/burrowd:sha-$SHA" --format '{{.Manifest.Digest}}' 2>/dev/null || true)"
+          echo "existing=$digest" >> "$GITHUB_OUTPUT"
+      - id: build
+        if: steps.metadata.outputs.existing == ''
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          build-args: |
-            VERSION=${{ steps.meta.outputs.VERSION }}
-          tags: ${{ steps.meta.outputs.TAGS }}
+          build-args: VERSION=${{ steps.metadata.outputs.version }}
+          tags: ${{ steps.metadata.outputs.tags }}
           labels: |
-            org.opencontainers.image.version=${{ steps.meta.outputs.VERSION }}
-            org.opencontainers.image.revision=${{ github.sha }}
-            org.opencontainers.image.created=${{ github.event.head_commit.timestamp }}
+            org.opencontainers.image.version=${{ steps.metadata.outputs.version }}
+            org.opencontainers.image.revision=${{ needs.candidate.outputs.sha }}
+          provenance: mode=max
+          sbom: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Promote the existing immutable image
+        if: steps.metadata.outputs.existing != ''
+        env:
+          TAGS: ${{ steps.metadata.outputs.tags }}
+          DIGEST: ${{ steps.metadata.outputs.existing }}
+          SHA: ${{ needs.candidate.outputs.sha }}
+        run: |
+          while IFS= read -r tag; do
+            repository="${tag%:*}"
+            docker buildx imagetools create --prefer-index=false --tag "$tag" "$repository:sha-$SHA"
+          done <<< "$TAGS"
+      - id: result
+        env:
+          DIGEST: ${{ steps.metadata.outputs.existing || steps.build.outputs.digest }}
+          SHA: ${{ needs.candidate.outputs.sha }}
+          VERSION: ${{ steps.metadata.outputs.version }}
+        run: |
+          [[ "$DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
+          echo "digest=$DIGEST" >> "$GITHUB_OUTPUT"
+          jq -n --arg sha "$SHA" --arg version "$VERSION" --arg digest "$DIGEST" \
+            '{sha:$sha,version:$version,image:"ghcr.io/miniaxolotl/burrowd",digest:$digest}' > manifest.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-image-${{ needs.candidate.outputs.sha }}
+          path: manifest.json
+
+  infrastructure:
+    needs: [candidate, image]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: ${{ needs.candidate.outputs.environment }}
+    concurrency:
+      group: infra-${{ needs.candidate.outputs.environment }}
+      cancel-in-progress: false
+    env:
+      PG_CONN_STR: ${{ secrets.OPENTOFU_STATE_DATABASE_URL }}
+      TF_ENCRYPTION: ${{ secrets.OPENTOFU_STATE_ENCRYPTION }}
+      DIGITALOCEAN_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      UPSTASH_EMAIL: ${{ secrets.UPSTASH_EMAIL }}
+      UPSTASH_API_KEY: ${{ secrets.UPSTASH_API_KEY }}
+      TF_VAR_image_digest: ${{ needs.image.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.candidate.outputs.sha }}
+          persist-credentials: false
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: "1.12.6"
+          tofu_wrapper: false
+      - name: Apply environment and wildcard certificates
+        env:
+          TARGET: ${{ needs.candidate.outputs.environment }}
+        run: bash scripts/infra/apply.sh "$TARGET"
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: burrowctl/go.mod
+          cache-dependency-path: "**/go.sum"
+      - name: Verify real HTTPS tunnel forwarding
+        env:
+          TARGET: ${{ needs.candidate.outputs.environment }}
+        run: |
+          domain=brmbl.dev
+          if [[ "$TARGET" == staging ]]; then domain=staging.brmbl.dev; fi
+          BURROW_SMOKE_SERVER="$domain" go test ./burrowctl/internal -run TestLiveTunnel -count=1 -v
+
+  packages:
+    needs: [candidate, infrastructure]
+    if: needs.candidate.outputs.environment == 'production'
+    permissions:
+      contents: write
+      id-token: write
+      pull-requests: write
+    uses: ./.github/workflows/release.yml
+    with:
+      sha: ${{ needs.candidate.outputs.sha }}
+    secrets: inherit

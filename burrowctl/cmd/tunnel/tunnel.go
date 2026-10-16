@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 
+	"burrow/burrowctl/internal"
 	"burrow/protocol"
 
 	"github.com/spf13/cobra"
@@ -19,10 +20,10 @@ var TunnelCmd = &cobra.Command{
 }
 
 func init() {
-	TunnelCmd.PersistentFlags().String("server", "burrow.mawa.dev", "Burrow server address")
+	TunnelCmd.PersistentFlags().String("server", internal.DefaultServer, "Burrow server address")
 	TunnelCmd.PersistentFlags().String("token", "", "Authentication token")
 	TunnelCmd.PersistentFlags().String("secret", "", "Shared secret (generates a token)")
-	TunnelCmd.PersistentFlags().String("domain", "burrow.mawa.dev", "Domain for tunnel URLs")
+	TunnelCmd.PersistentFlags().String("domain", internal.DefaultServer, "Fallback domain for tunnel URLs")
 	viper.BindPFlag("server", TunnelCmd.PersistentFlags().Lookup("server"))
 	viper.BindPFlag("token", TunnelCmd.PersistentFlags().Lookup("token"))
 	viper.BindPFlag("secret", TunnelCmd.PersistentFlags().Lookup("secret"))

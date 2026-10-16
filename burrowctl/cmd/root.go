@@ -8,6 +8,7 @@ import (
 
 	"burrow/burrowctl/cmd/auth"
 	"burrow/burrowctl/cmd/tunnel"
+	"burrow/burrowctl/internal"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -47,10 +48,10 @@ func loadClientConfig() {
 	cfgFile := filepath.Join(dir, "client.json")
 	if _, err := os.Stat(cfgFile); os.IsNotExist(err) {
 		defaults := map[string]any{
-			"server": "burrow.mawa.dev",
+			"server": internal.DefaultServer,
 			"token":  "",
 			"secret": "",
-			"domain": "burrow.mawa.dev",
+			"domain": internal.DefaultServer,
 		}
 		if b, err := json.MarshalIndent(defaults, "", "  "); err == nil {
 			os.WriteFile(cfgFile, append(b, '\n'), 0600)

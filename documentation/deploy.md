@@ -1,97 +1,95 @@
-# Deploy & Release
+# Deploy & release
 
-## Releases
+## Environments
 
-Burrow uses [release-please](https://github.com/googleapis/release-please) for automated versioning.
+|                  | Production               | Staging                          |
+| ---------------- | ------------------------ | -------------------------------- |
+| Git branch       | `production`             | `development`                    |
+| Website (Vercel) | `https://useburrow.app`  | `https://staging.useburrow.app`  |
+| Tunnel server    | `https://brmbl.dev`      | `https://staging.brmbl.dev`      |
+| Tunnel URLs      | `https://<id>.brmbl.dev` | `https://<id>.staging.brmbl.dev` |
+| DigitalOcean app | `burrow`                 | `burrow-staging`                 |
+| Upstash Redis    | `burrow`                 | `burrow-staging`                 |
+| OpenTofu root    | `infra/production`       | `infra/staging`                  |
 
-### Workflow
+Vercel builds `packages/website` independently. Production uses
+`SITE_URL=https://useburrow.app`; previews use
+`SITE_URL=https://staging.useburrow.app` and are marked `noindex`.
+`www.useburrow.app` redirects to the production apex.
 
-1. Push conventional commits to `development`
-2. Release-please creates a release PR
-3. Merge → GitHub release + `v*` tag created
-4. Deploy workflow triggers on push to `development` or `production` → pushes Docker images
+## Pipeline
 
-### Conventional Commits
+1. **CI** runs website lint/types/build, Go vet/build/tests, OpenTofu formatting
+   and validation, workflow lint, and a Docker build.
+2. After successful branch CI, **Deploy** publishes multi-architecture images
+   to GHCR and Docker Hub. Each image has an immutable `sha-<commit>` tag and
+   source-revision labels. Promotion reuses that commit's existing image.
+3. OpenTofu applies the selected environment using the image's **digest**, not
+   a mutable tag. It owns the complete App Platform specification, Upstash
+   database, generated admin secret, and Cloudflare website/tunnel DNS.
+4. App Platform supplies wildcard certificate verification tokens. Deployment
+   reads these tokens and applies their TXT records through OpenTofu. A daily
+   maintenance workflow refreshes them for certificate renewals.
+5. Deployment waits for HTTPS health, then creates a real WSS/yamux tunnel and
+   checks HTTP body, headers, query strings, and API-like paths end to end.
+6. After a successful production deployment, **Release** uploads GoReleaser
+   archives/checksums to GitHub and publishes all four native npm packages,
+   followed by `@miniaxolotl/burrowctl`.
 
-| Prefix | Effect |
-| ------ | ------ |
-| `feat:` | Minor bump |
-| `fix:` | Patch bump |
-| `BREAKING CHANGE:` | Major bump |
-| `docs:`, `chore:`, `refactor:` | No bump |
+The npm registry serves npm, pnpm, Yarn, and Bun. Native archives cover Linux and
+macOS on amd64/arm64. Docker images cover Linux amd64/arm64. There is currently
+no Homebrew tap, winget package, or apt repository in this project.
 
-### Config
+Release-please prepares the version/changelog PR on `development`. Merge the
+release PR, let staging pass, then fast-forward `production` to the release-tag
+commit. Package publication checks that the tag matches the deployed commit.
+The `latest` container tags follow production; `preview` follows staging.
 
-- `release-please-config.json` — single package (`.`) with `simple` release type
-- `.release-please-manifest.json` — current version
-- Updates `package.json`, platform `package.json` files, `burrowd/version.go`, `burrowctl/version.go`
+## Infrastructure and secrets
 
-## Deploy
+OpenTofu **1.12.6** follows Fern's encrypted PostgreSQL-backend pattern. Neon
+project `burrow-infra-state` owns separate state databases, restricted CI roles,
+and AES-GCM encryption keys for staging and production. State uses a direct TLS
+connection with PostgreSQL advisory locking. Application tunnel records live in
+Upstash, separate from infrastructure state.
 
-### Docker Compose
+Each GitHub environment supplies:
+
+- `OPENTOFU_STATE_DATABASE_URL` → `PG_CONN_STR`
+- `OPENTOFU_STATE_ENCRYPTION` → `TF_ENCRYPTION`
+- `DIGITALOCEAN_ACCESS_TOKEN`
+- `CLOUDFLARE_API_TOKEN`
+- `UPSTASH_EMAIL` and `UPSTASH_API_KEY`
+
+Repository secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, and `NPM_TOKEN`
+support publishing. GHCR uses the workflow's scoped `GITHUB_TOKEN`.
+Backend connection strings and encryption keys must be backed up together;
+neither belongs in source control or a normal build artifact.
+
+```bash
+# Local validation, without cloud credentials or a state connection
+mise exec opentofu@1.12.6 -- bash scripts/infra/check.sh
+
+# Apply using environment-scoped credentials and an exact image digest
+TF_VAR_image_digest=sha256:<64-hex-digest> bash scripts/infra/apply.sh staging
+
+# Exercise the real public tunnel path
+BURROW_SMOKE_SERVER=staging.brmbl.dev go test ./burrowctl/internal -run TestLiveTunnel -count=1 -v
+```
+
+App Platform runs **one instance per environment** because active WebSocket and
+yamux sessions live in Go memory. During a deployment, clients reconnect using
+their existing reconnect behavior. Horizontal scaling requires connection-aware
+routing and is not enabled by changing the replica count alone.
+
+## Local Docker
 
 ```bash
 cp .env.example .env
 docker compose up -d
-```
-
-### Docker Run
-
-```bash
-docker run -p 25701:25701 \
-  -e BURROW_SECRET=your-secret \
-  -e BURROW_DOMAIN=burrow.example.com \
-  -e BURROW_REDIS_URL=redis://redis:6379 \
-  ghcr.io/miniaxolotl/burrowd:latest
-```
-
-### Dokku
-
-```bash
-dokku apps:create burrowd
-dokku redis:create burrowd
-dokku config:set burrowd BURROW_SECRET=secret BURROW_DOMAIN=burrow.example.com
-git remote add dokku dokku@your-server:dokku/burrowd
-git push dokku production:master
-```
-
-### Wildcard SSL
-
-HTTP-01 challenge doesn't work for wildcards. Use DNS challenge:
-
-```bash
-certbot certonly --dns-cloudflare -d "burrow.example.com" -d "*.burrow.example.com"
-dokku certs:add burrowd /etc/letsencrypt/live/burrow.example.com/fullchain.pem /etc/letsencrypt/live/burrow.example.com/privkey.pem
-```
-
-## CI/CD
-
-| Workflow | Trigger | Action |
-| -------- | ------- | ------ |
-| `ci.yml` | Push/PR | Lint, build, test |
-| `release.yml` | Push to `development` or `production` | Release PR on dev → npm publish on prod branch |
-| `deploy.yml` | Push to `development` or `production`, or manual | Push Docker to GHCR + Docker Hub |
-
-## Updating
-
-```bash
-# Docker
-docker pull ghcr.io/miniaxolotl/burrowd:latest
-docker compose down && docker compose up -d
-
-# npm
-npm update -g @miniaxolotl/burrowctl
-```
-
-## Troubleshooting
-
-```bash
-# Server health
 curl http://localhost:25701/health
-
-# Docker logs
-docker compose logs -f burrowd
-
-# Verify Redis
-docker compose exec redis redis-cli ping
 ```
+
+For self-hosted HTTPS, set `BURROW_DOMAIN` to your tunnel domain and
+`BURROW_TLS=true`, and terminate TLS in front of port 25701. Upstash connections
+use `rediss://`; the container includes public CA certificates.

@@ -9,7 +9,7 @@ services:
       --port ${BURROW_PORT:-25701}
       --domain ${BURROW_DOMAIN:-localhost}
       --redis-url ${BURROW_REDIS_URL:-redis://redis:6379}
-      --secret ${BURROW_SECRET}
+      --tls=${BURROW_TLS:-false}
     ports:
       - "${BURROW_PORT:-25701}:${BURROW_PORT:-25701}"
     depends_on:

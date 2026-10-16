@@ -36,7 +36,7 @@ export function TunnelDemo() {
             <p className="text-[10px] text-terminal-muted">PUBLIC HTTPS URL</p>
             <p className="mt-2 break-all text-paper">
               https://softly-brave-little-fox
-              <span className="text-highlight">.burrow.mawa.dev</span>
+              <span className="text-highlight">.brmbl.dev</span>
             </p>
             <p className="mt-3 flex items-center gap-2 text-terminal-muted">
               <ArrowRight size={12} aria-hidden="true" /> localhost:3000

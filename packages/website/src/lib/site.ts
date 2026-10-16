@@ -21,7 +21,10 @@ export const site = {
   description:
     "Turn your localhost into a public HTTPS link. Share a work in progress, test webhooks, and manage your tunnels from the terminal. Open source. No account required.",
   url: url.origin,
-  indexable: !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname),
+  indexable:
+    process.env.SITE_NOINDEX !== "true" &&
+    process.env.VERCEL_ENV !== "preview" &&
+    !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname),
   github: "https://github.com/miniaxolotl/burrow",
   npm: "https://www.npmjs.com/package/@miniaxolotl/burrowctl",
   releases: "https://github.com/miniaxolotl/burrow/releases",

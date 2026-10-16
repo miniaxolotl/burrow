@@ -14,6 +14,8 @@ Burrow is a tunneling service: expose local services to the internet via HTTPS s
 - **`packages/burrowctl-{darwin,linux}-{arm64,x64}/`** — platform npm packages, each ships a pre-built Go binary
 - **`scripts/release/`** — TypeScript script that runs goreleaser and publishes npm packages
 - **`scripts/deploy/`** — TypeScript script that builds/pushes Docker images
+- **`infra/`** — OpenTofu staging/production roots for DigitalOcean, Upstash, and Cloudflare; encrypted Neon state
+- **`scripts/infra/`** — Infrastructure validation, deployment, and wildcard certificate reconciliation
 - **`lib/`** — shared pnpm workspace configs (eslint, typescript)
 
 ## Build & dev commands
@@ -30,7 +32,7 @@ bash scripts/build.sh
 # Lint (CI does this)
 go vet ./burrowd/... ./burrowctl/... ./protocol/...
 
-# Test (no test files exist yet)
+# Test (live smoke test skips unless BURROW_SMOKE_SERVER is set)
 go test ./burrowd/... ./burrowctl/... ./protocol/...
 
 # npm wrapper build (from repo root)
@@ -55,6 +57,7 @@ pnpm typecheck:website
 - Server requires **Redis** (see `docker-compose.yml`). Default port 25701.
 - `.env` is gitignored; copy `.env.example` and set `BURROW_SECRET` + `BURROW_DOMAIN` to run locally.
 - Branches: `development` → release-please creates PRs; `production` → triggers npm publish + Docker deploy with `latest` tags.
-- No Go test files exist yet, but CI runs `go test` on all three modules.
+- CI runs `go test` on all three modules. Deployments also run the real HTTPS tunnel test in `burrowctl/internal/live_test.go`.
+- OpenTofu 1.12.6 is pinned in `.opentofu-version`; run `bash scripts/infra/check.sh`. Hosted apps deploy immutable GHCR digests. `development` deploys staging and `production` deploys production after successful CI.
 - Node >= 22, pnpm 10, Go 1.26.
 - Website canonical URLs and sharing use `SITE_URL` (set before building; see `packages/website/.env.example`). This is the website origin, not necessarily the tunnel server. Localhost is the noindex development fallback.

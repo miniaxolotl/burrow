@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"burrow/burrowctl/internal"
+
 	"github.com/spf13/cobra"
 )
 
@@ -24,13 +26,16 @@ func runLogin(cmd *cobra.Command, args []string) error {
 	cfg, cfgFile, err := readConfig()
 	if err != nil {
 		cfg = &clientConfig{
-			Server: "burrow.mawa.dev",
-			Domain: "burrow.mawa.dev",
+			Server: internal.DefaultServer,
+			Domain: internal.DefaultServer,
 		}
 	}
 
 	serverOverride, _ := cmd.Flags().GetString("server")
 	if serverOverride != "" {
+		if cfg.Domain == "" || cfg.Domain == cfg.Server {
+			cfg.Domain = serverOverride
+		}
 		cfg.Server = serverOverride
 	}
 

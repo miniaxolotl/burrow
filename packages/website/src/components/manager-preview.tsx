@@ -181,7 +181,7 @@ export function ManagerPreview() {
             </span>
             <span className="h-px flex-1 bg-lime/20" aria-hidden="true" />
             <span className="font-mono text-[10px] text-terminal-muted">
-              burrow.mawa.dev
+              brmbl.dev
             </span>
           </div>
           <div id="manager-preview-content" className="mt-6 min-h-[260px]">
@@ -259,7 +259,7 @@ export function ManagerPreview() {
                     {tunnel.port}
                   </div>
                   <p className="break-all font-mono text-[11px] leading-6 text-lime">
-                    https://{tunnel.id}.burrow.mawa.dev
+                    https://{tunnel.id}.brmbl.dev
                   </p>
                 </div>
               </div>

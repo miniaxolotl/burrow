@@ -15,7 +15,7 @@ burrowctl auth login <token>
 burrowctl tunnel create --port 3000
 ```
 
-No account required for the default server (`burrow.mawa.dev`). Your tunnel will be available at `https://<tunnel-id>.burrow.mawa.dev`.
+No account required for the default server (`brmbl.dev`). Your tunnel will be available at `https://<tunnel-id>.brmbl.dev`.
 
 ## Usage
 
