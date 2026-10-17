@@ -4,7 +4,7 @@ The `website` workspace package is Burrow’s marketing site. It uses Next.js Ap
 
 ## Bramble Labs Inc. design family
 
-Burrow and Grove share a developer-focused design: neutral surfaces, sans-serif headings, monospace details, terminal previews, and direct installation paths. Clay accents distinguish Burrow from Grove’s green. Fern has a separate, photography-led consumer identity. All three are products of Bramble Labs Inc.
+Burrow and Grove share a developer-focused design: warm ivory surfaces, DM Sans with Instrument Serif accents, monospace details, terminal previews, and direct installation paths. Clay accents distinguish Burrow from Grove’s green. Fern shares the visual foundations with a photography-led consumer experience. All three link through a common product-family footer to the company at https://bramblelabs.co.
 
 ## Development
 
@@ -36,7 +36,7 @@ Deploy as a Node.js application from the monorepo root, using the commands above
 
 The primary website is <https://useburrow.app>. Use the **Next.js** preset and root directory **`packages/website`**. Keep workspace files outside the root directory available, use `pnpm build` as the build command, and set `SITE_URL=https://useburrow.app`. The standard Next.js output settings apply.
 
-Vercel Web Analytics is integrated through `@vercel/analytics/next` in the root layout. Enable Web Analytics in the Vercel project, then deploy to collect page views. Reports are available in the project's Analytics dashboard.
+Vercel Web Analytics is integrated through `@vercel/analytics/next` in the root layout and enabled in the Vercel project. Reports are available in the project's Analytics dashboard. The footer links to website privacy information at https://bramblelabs.co/privacy.
 
 ## Checks
 

@@ -1,4 +1,5 @@
 import { Brand } from "@/components/brand";
+import { BrambleFamily } from "@/components/bramble-family";
 import { ShareSite } from "@/components/share-site";
 import { site } from "@/lib/site";
 
@@ -23,6 +24,9 @@ export function SiteFooter() {
           <a href={site.github} className="text-link">
             GitHub
           </a>
+          <a href="https://bramblelabs.co/privacy" className="text-link">
+            Website privacy
+          </a>
           <a
             href={`${site.github}/blob/production/LICENSE`}
             className="text-link"
@@ -31,6 +35,7 @@ export function SiteFooter() {
           </a>
         </nav>
       </div>
+      <BrambleFamily current="burrow" />
       <div className="footer-bottom">
         <span>© {new Date().getFullYear()} Bramble Labs Inc.</span>
         <ShareSite url={site.url} />

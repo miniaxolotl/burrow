@@ -27,7 +27,12 @@ export default async function HomePage() {
       <div className="lab-bar">
         <div className="page-container">
           <span>
-            Bramble Labs Inc.{" "}
+            <a
+              href="https://bramblelabs.co"
+              className="underline-offset-4 hover:underline"
+            >
+              Bramble Labs Inc.
+            </a>{" "}
             <span className="hidden text-paper/65 sm:inline">
               / Developer tools
             </span>

@@ -1,16 +1,17 @@
 @import "tailwindcss";
+@import "./bramble-family.css";
 
 @theme {
-  --color-paper: #f7f8f5;
-  --color-ink: #1d2d26;
+  --color-paper: #f7f6f0;
+  --color-ink: #253e31;
   --color-muted: #5d6962;
-  --color-line: #dce2db;
+  --color-line: #dce0d3;
   --color-accent: #9d4930;
   --color-accent-soft: #f0e7df;
   --color-highlight: #efbc96;
   --color-terminal: #1d2d26;
   --color-terminal-muted: #b8c4bc;
-  --color-forest: #1d2d26;
+  --color-forest: #253e31;
   --color-lime: #efbc96;
   --color-mist: #f1dace;
 }
@@ -50,7 +51,10 @@
     @apply bg-accent-soft text-ink;
   }
   em {
-    @apply font-sans font-semibold not-italic;
+    @apply font-editorial font-normal italic;
+  }
+  p {
+    text-wrap: pretty;
   }
 }
 
@@ -65,10 +69,11 @@
     @apply font-mono text-[10px] font-medium leading-5 tracking-[0.12em] text-accent;
   }
   .section-heading {
-    @apply text-[34px] font-semibold leading-[1.12] tracking-[-1.4px] sm:text-[44px] lg:text-[48px];
+    @apply text-[34px] font-medium leading-[1.12] tracking-[-1.4px] sm:text-[44px] lg:text-[48px];
+    text-wrap: balance;
   }
   .section-heading em {
-    @apply text-accent;
+    @apply text-[1.12em] text-accent;
   }
   .section-intro {
     @apply mb-10 flex flex-col justify-between gap-6 md:mb-12 md:flex-row md:items-end;
@@ -90,22 +95,22 @@
     @apply inline-flex min-h-11 items-center gap-2 text-xs font-medium underline-offset-4 transition-colors hover:text-accent hover:underline;
   }
   .button-primary {
-    @apply inline-flex min-h-12 items-center justify-center gap-4 rounded-md border border-ink bg-ink px-5 py-3 text-[13px] font-medium text-paper transition-colors hover:bg-accent active:brightness-90;
+    @apply inline-flex min-h-12 items-center justify-center gap-4 rounded-lg border border-ink bg-ink px-5 py-3 text-[13px] font-medium text-paper transition-colors hover:bg-accent active:brightness-90;
   }
   .hero-section {
     @apply grid grid-cols-1 items-center gap-10 py-14 sm:py-20 lg:min-h-[650px] lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-14 lg:py-24;
   }
   .hero-heading {
-    @apply mt-6 text-[clamp(2.5rem,11vw,4.25rem)] font-semibold leading-[1.04] tracking-[-2px] sm:text-[72px] lg:text-[64px] xl:text-[76px];
+    @apply mt-6 text-[clamp(2.5rem,11vw,4.25rem)] font-medium leading-[1.08] tracking-[-2px] sm:text-[72px] lg:text-[64px] xl:text-[76px];
   }
   .hero-heading em {
-    @apply text-accent;
+    @apply text-[1.12em] text-accent;
   }
   .hero-description {
     @apply mt-6 max-w-[420px] text-[15px] leading-[1.85] text-muted sm:text-base;
   }
   .product-preview {
-    @apply mx-auto w-full min-w-0 max-w-[540px] rounded-xl border border-line bg-accent-soft/40 p-4 sm:p-6;
+    @apply mx-auto w-full min-w-0 max-w-[540px] rounded-xl border border-line bg-accent-soft/55 p-4 shadow-[0_16px_40px_-28px_#253e3140] sm:p-6;
     background-image: radial-gradient(#84988a40 0.7px, transparent 0.7px);
     background-size: 12px 12px;
   }
