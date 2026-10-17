@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/miniaxolotl/burrow/compare/v0.3.0...v0.3.1) (2026-10-17)
+
+
+### Features
+
+* **website:** align Burrow developer site with Bramble Labs branding ([2f65efb](https://github.com/miniaxolotl/burrow/commit/2f65efb16a78c5d6a28e69d23dc0b23e45c5e5d5))
+
 ## [0.3.0](https://github.com/miniaxolotl/burrow/compare/v0.2.8...v0.3.0) (2026-10-16)
 
 
