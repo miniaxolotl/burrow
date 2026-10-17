@@ -28,6 +28,7 @@ export const metadata: Metadata = {
   applicationName: site.name,
   authors: [{ name: site.creator }],
   creator: site.creator,
+  publisher: site.creator,
   category: "technology",
   alternates: { canonical: "/" },
   robots: { index: site.indexable, follow: site.indexable },
@@ -46,7 +47,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = { themeColor: "#faf7f2" };
+export const viewport: Viewport = { themeColor: "#f7f8f5" };
 
 export default function RootLayout({
   children,

@@ -2,14 +2,15 @@
   "name": "@monorepo/burrow",
   "private": true,
   "version": "0.3.0",
-  "description": "Network tunneling service",
+  "description": "Public HTTPS tunnels for localhost by Bramble Labs Inc.",
+  "author": "Bramble Labs Inc.",
   "license": "MIT",
   "packageManager": "pnpm@10.33.2",
   "repository": {
     "type": "git",
     "url": "https://github.com/miniaxolotl/burrow.git"
   },
-  "homepage": "https://github.com/miniaxolotl/burrow#readme",
+  "homepage": "https://useburrow.app",
   "engines": {
     "node": ">=22.0.0"
   },

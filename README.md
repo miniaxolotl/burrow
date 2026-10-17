@@ -1,53 +1,39 @@
-# burrow
+# Burrow
 
-[![npm](https://img.shields.io/npm/v/@miniaxolotl/burrowctl)](https://npmjs.com/package/@miniaxolotl/burrowctl)
-[![GHCR](https://img.shields.io/github/v/release/miniaxolotl/burrow?label=ghcr&color=light)](https://github.com/miniaxolotl/burrow/pkgs/container/burrowd)
-[![Docker Hub](https://img.shields.io/docker/v/miniaxolotl/burrowd?label=dockerhub&color=light)](https://hub.docker.com/r/miniaxolotl/burrowd)
-[![License](https://img.shields.io/github/license/miniaxolotl/burrow)](LICENSE)
+Public HTTPS tunnels for localhost, by **Bramble Labs Inc.**
 
-Expose local services to the internet via HTTPS subdomains.
+Share a local app, receive webhooks, and manage tunnels and request logs from
+your terminal. Open source and self-hostable.
 
-## Client
+[Website](https://useburrow.app) · [Client reference](documentation/client.md) · [Self-hosting](documentation/server.md)
+
+## Quick start
 
 ```bash
 npm i -g @miniaxolotl/burrowctl
 burrowctl tunnel 3000
 ```
 
-Connects to `brmbl.dev` by default. No account or manual key setup: the CLI stores a private owner credential automatically. Only your credential can list, inspect, reconnect, or close your tunnels. Visit [useburrow.app](https://useburrow.app).
+Connects to `brmbl.dev` by default. The CLI creates a private owner credential
+automatically, so only you can list, inspect, reconnect, or close your tunnels.
+No account or manual key setup is required.
 
-## Self-hosting
+The CLI supports macOS and Linux on x64 and ARM64. To operate your own server,
+follow the [server setup](documentation/server.md) and
+[deployment guide](documentation/deploy.md).
 
-```bash
-cp .env.example .env   # set BURROW_DOMAIN
-docker compose up -d
-```
+## Website development
 
-Then point your client at it:
-
-```bash
-burrowctl tunnel 3000 --server your-server.example.com
-```
-
-### Tunnel Manager
-
-<img src=".assets/ui_main.png" width="280"> <img src=".assets/ui_logs.png" width="280"> <img src=".assets/ui_help.png" width="280">
-
-## Docs
-
-- [Deploy & release](documentation/deploy.md)
-- [Server reference](documentation/server.md)
-- [Client reference](documentation/client.md)
-
-## Website
-
-The Next.js / Tailwind marketing site lives in [`packages/website`](packages/website).
+Requires Node.js 22+ and pnpm 10.
 
 ```bash
 pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-See the [website README](packages/website/README.md) for production, public URL configuration, and checks.
+The marketing site runs at `http://localhost:3000`. See the
+[website guide](packages/website/README.md) for builds and checks.
 
-MIT
+## License
+
+[MIT](LICENSE)

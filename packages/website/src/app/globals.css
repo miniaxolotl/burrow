@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
 @theme {
-  --color-paper: #faf7f2;
-  --color-ink: #352b28;
-  --color-muted: #74665e;
-  --color-line: #e5dbd1;
+  --color-paper: #f7f8f5;
+  --color-ink: #1d2d26;
+  --color-muted: #5d6962;
+  --color-line: #dce2db;
   --color-accent: #9d4930;
-  --color-accent-soft: #f1dace;
+  --color-accent-soft: #f0e7df;
   --color-highlight: #efbc96;
-  --color-terminal: #282321;
-  --color-terminal-muted: #c2b5aa;
-  --color-forest: #352b28;
+  --color-terminal: #1d2d26;
+  --color-terminal-muted: #b8c4bc;
+  --color-forest: #1d2d26;
   --color-lime: #efbc96;
   --color-mist: #f1dace;
 }
@@ -50,28 +50,28 @@
     @apply bg-accent-soft text-ink;
   }
   em {
-    @apply font-editorial font-normal;
+    @apply font-sans font-semibold not-italic;
   }
 }
 
 @layer components {
   .page-container {
-    @apply mx-auto w-full max-w-[1200px] px-5 sm:px-8 lg:px-12;
+    @apply mx-auto w-full max-w-[1280px] px-5 sm:px-8 lg:px-12;
   }
   .section-space {
-    @apply py-14 sm:py-18;
+    @apply py-16 sm:py-20 lg:py-24;
   }
   .eyebrow {
-    @apply text-[10px] font-semibold leading-5 tracking-[0.14em] text-accent;
+    @apply font-mono text-[10px] font-medium leading-5 tracking-[0.12em] text-accent;
   }
   .section-heading {
-    @apply text-[34px] font-medium leading-[1.13] tracking-[-1.2px] sm:text-[42px];
+    @apply text-[34px] font-semibold leading-[1.12] tracking-[-1.4px] sm:text-[44px] lg:text-[48px];
   }
   .section-heading em {
-    @apply text-[1.12em] tracking-[-0.8px];
+    @apply text-accent;
   }
   .section-intro {
-    @apply mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end;
+    @apply mb-10 flex flex-col justify-between gap-6 md:mb-12 md:flex-row md:items-end;
   }
   .section-intro > p {
     @apply max-w-[330px] text-sm leading-6 text-muted;
@@ -79,27 +79,35 @@
   .site-header {
     @apply sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur-md;
   }
+  .lab-bar {
+    @apply bg-ink text-paper;
+  }
+  .lab-bar > div {
+    @apply flex min-h-9 items-center justify-between gap-3 py-2 text-[10px];
+  }
   .nav-link,
   .text-link {
     @apply inline-flex min-h-11 items-center gap-2 text-xs font-medium underline-offset-4 transition-colors hover:text-accent hover:underline;
   }
   .button-primary {
-    @apply inline-flex min-h-11 items-center justify-center gap-4 rounded-md bg-accent px-5 py-3 text-xs font-medium text-white transition-colors hover:bg-ink active:brightness-90;
+    @apply inline-flex min-h-12 items-center justify-center gap-4 rounded-md border border-ink bg-ink px-5 py-3 text-[13px] font-medium text-paper transition-colors hover:bg-accent active:brightness-90;
   }
   .hero-section {
-    @apply grid grid-cols-1 items-center gap-10 py-12 sm:py-16 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-16 lg:py-20;
+    @apply grid grid-cols-1 items-center gap-10 py-14 sm:py-20 lg:min-h-[650px] lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)] lg:gap-14 lg:py-24;
   }
   .hero-heading {
-    @apply mt-5 text-[clamp(2.625rem,13.5vw,3.375rem)] font-medium leading-[1.04] tracking-[-2.4px] sm:text-[68px] lg:text-[64px] xl:text-[76px];
+    @apply mt-6 text-[clamp(2.5rem,11vw,4.25rem)] font-semibold leading-[1.04] tracking-[-2px] sm:text-[72px] lg:text-[64px] xl:text-[76px];
   }
   .hero-heading em {
-    @apply text-[1.12em] tracking-[-1.8px] text-accent;
+    @apply text-accent;
   }
   .hero-description {
-    @apply mt-6 max-w-[390px] text-base leading-7 text-muted;
+    @apply mt-6 max-w-[420px] text-[15px] leading-[1.85] text-muted sm:text-base;
   }
   .product-preview {
-    @apply mx-auto w-full min-w-0 max-w-[490px] rounded-xl border border-line bg-accent-soft/35 p-4 sm:p-6;
+    @apply mx-auto w-full min-w-0 max-w-[540px] rounded-xl border border-line bg-accent-soft/40 p-4 sm:p-6;
+    background-image: radial-gradient(#84988a40 0.7px, transparent 0.7px);
+    background-size: 12px 12px;
   }
   .preview-caption {
     @apply mt-4 text-center text-[10px] leading-5 text-muted;

@@ -11,6 +11,7 @@ export function StructuredData() {
         name: site.name,
         url: site.url,
         description: site.description,
+        publisher: { "@type": "Organization", name: site.creator },
       },
       {
         "@type": "SoftwareApplication",

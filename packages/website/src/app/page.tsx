@@ -9,6 +9,7 @@ import {
   Webhook,
 } from "lucide-react";
 import { connection } from "next/server";
+import { CopyButton } from "@/components/copy-button";
 import { InstallCommands } from "@/components/install-commands";
 import { ManagerPreview } from "@/components/manager-preview";
 import { Navigation } from "@/components/navigation";
@@ -23,6 +24,22 @@ export default async function HomePage() {
 
   return (
     <>
+      <div className="lab-bar">
+        <div className="page-container">
+          <span>
+            Bramble Labs Inc.{" "}
+            <span className="hidden text-paper/65 sm:inline">
+              / Developer tools
+            </span>
+          </span>
+          <a
+            href="https://grove-six-rosy.vercel.app"
+            className="inline-flex items-center gap-1.5 text-highlight hover:underline"
+          >
+            Meet Grove <ArrowUpRight size={12} aria-hidden="true" />
+          </a>
+        </div>
+      </div>
       <Navigation github={site.github} />
       <main id="main">
         <section
@@ -30,15 +47,22 @@ export default async function HomePage() {
           aria-labelledby="hero-heading"
         >
           <div className="min-w-0">
-            <p className="eyebrow">BURROW / HTTPS TUNNELS</p>
+            <p className="eyebrow flex items-center gap-2">
+              <span className="size-1.5 rounded-full bg-accent" /> BURROW /
+              HTTPS TUNNELS
+            </p>
             <h1 id="hero-heading" className="hero-heading">
               Localhost,
               <br />
               <em>shared.</em>
             </h1>
             <p className="hero-description">
-              Give your local app a public HTTPS link. Share a preview, test
-              webhooks, and keep building.
+              A public HTTPS link for the app on your machine. Share a working
+              preview, receive real webhooks, and inspect requests from your
+              terminal.
+            </p>
+            <p className="mt-3 text-xs leading-6 text-muted">
+              One CLI. Your local workflow. Ready to share.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
               <a href="#install" className="button-primary">
@@ -48,11 +72,26 @@ export default async function HomePage() {
                 View source <ArrowUpRight size={14} aria-hidden="true" />
               </a>
             </div>
-            <p className="mt-5 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
+            <div className="mt-6 flex w-fit max-w-full flex-wrap items-center gap-x-4 rounded-lg border border-line bg-white/40 px-3 py-0.5">
+              <code className="min-w-0 py-2 font-mono text-[10px] text-muted sm:text-[11px]">
+                <span className="mr-2 select-none text-accent">$</span>npm i -g
+                @miniaxolotl/burrowctl
+              </code>
+              <CopyButton
+                text="npm i -g @miniaxolotl/burrowctl"
+                label="Copy npm install command"
+              />
+            </div>
+            <p className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[10px] text-muted">
               <span className="inline-flex items-center gap-1.5">
                 <Check size={12} aria-hidden="true" /> No account required
               </span>
-              <span>Free & open source</span>
+              <span className="inline-flex items-center gap-1.5">
+                <Check size={12} aria-hidden="true" /> Free & open source
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Check size={12} aria-hidden="true" /> Self-hostable
+              </span>
             </p>
           </div>
           <TunnelDemo />
@@ -133,7 +172,7 @@ export default async function HomePage() {
         >
           <div className="page-container grid items-center gap-9 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
             <div>
-              <p className="eyebrow">GET STARTED</p>
+              <p className="eyebrow">QUICKSTART</p>
               <h2 id="install-heading" className="section-heading mt-3">
                 Two commands.
                 <br />
@@ -179,6 +218,29 @@ export default async function HomePage() {
                 <p>{answer}</p>
               </details>
             ))}
+          </div>
+        </section>
+        <section
+          className="border-y border-line bg-accent-soft/50"
+          aria-labelledby="closing-heading"
+        >
+          <div className="page-container flex flex-col items-start justify-between gap-8 py-16 md:flex-row md:items-center lg:py-20">
+            <div>
+              <p className="eyebrow">
+                BUILT FOR DEVELOPERS. BY BRAMBLE LABS INC.
+              </p>
+              <h2 id="closing-heading" className="section-heading mt-5">
+                Keep it local.
+                <br />
+                <em>Let people in.</em>
+              </h2>
+              <p className="mt-5 max-w-md text-sm leading-7 text-muted">
+                Your next demo is already running. Give it a link.
+              </p>
+            </div>
+            <a href="#install" className="button-primary">
+              Install Burrow <ArrowRight size={16} aria-hidden="true" />
+            </a>
           </div>
         </section>
         <StructuredData />

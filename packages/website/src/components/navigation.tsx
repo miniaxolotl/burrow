@@ -15,13 +15,8 @@ export function Navigation({ github }: { github: string }) {
 
   return (
     <header className="site-header">
-      <div className="page-container flex h-20 items-center justify-between gap-2 sm:gap-4">
-        <div className="flex items-center gap-4">
-          <Brand />
-          <span className="hidden border-l border-line pl-4 text-[11px] text-muted xl:block">
-            by Bramble Labs
-          </span>
-        </div>
+      <div className="page-container flex h-[76px] items-center justify-between gap-2 sm:gap-4">
+        <Brand />
         <nav
           aria-label="Main navigation"
           className="hidden items-center gap-8 lg:flex"

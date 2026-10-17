@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "The Burrow website — localhost, meet the world.",
+  "description": "Burrow by Bramble Labs Inc. — public HTTPS tunnels for localhost.",
   "engines": {
     "node": ">=22.0.0"
   },

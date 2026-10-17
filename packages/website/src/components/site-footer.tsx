@@ -8,8 +8,9 @@ export function SiteFooter() {
       <div className="footer-top">
         <div>
           <Brand />
-          <p className="mt-3 text-xs text-muted">
-            Made by <span className="font-medium text-ink">Bramble Labs</span>.
+          <p className="mt-3 text-xs leading-6 text-muted">
+            HTTPS tunnels for local development.
+            <br />A developer tool by Bramble Labs Inc.
           </p>
         </div>
         <nav
@@ -31,7 +32,7 @@ export function SiteFooter() {
         </nav>
       </div>
       <div className="footer-bottom">
-        <span>Burrow · HTTPS tunnels for local development</span>
+        <span>© {new Date().getFullYear()} Bramble Labs Inc.</span>
         <ShareSite url={site.url} />
       </div>
     </footer>
