@@ -176,8 +176,10 @@ export const privacy: LegalDocument = {
             Vercel Web Analytics measures aggregate page visits, referrals, and
             broad device/region information without tracking cookies. We do not
             send tunnel traffic or request-history content as website analytics.
-            Hosting can separately process IP addresses, URLs, browser details,
-            and request times.
+            Vercel Speed Insights measures public-page loading, responsiveness,
+            and visual stability without tracking cookies. Its reported URLs
+            exclude query strings and fragments. Hosting can separately process
+            IP addresses, URLs, browser details, and request times.
           </p>
           <p>
             The terminal previews contain example data, not live tunnels or
