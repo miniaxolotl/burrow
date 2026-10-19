@@ -38,6 +38,15 @@ The primary website is <https://useburrow.app>. Use the **Next.js** preset and r
 
 Vercel Web Analytics is integrated through `@vercel/analytics/next` in the root layout and enabled in the Vercel project. Reports are available in the project's Analytics dashboard. The footer links to website privacy information at https://bramblelabs.co/privacy.
 
+Vercel Speed Insights uses `@vercel/speed-insights/next` through
+`WebsiteSpeedInsights` only when `VERCEL_ENV=production`. It measures loading,
+responsiveness, and visual stability on `/`, `/privacy`, and `/terms`. The
+`beforeSend` filter removes query strings and fragments and drops all other paths;
+it does not instrument tunnels. Local and preview builds do not collect
+performance metrics. View results in the project's **Speed Insights** dashboard.
+The SDK uses Vercel's injected intake configuration without an extra key. Update
+`publicPaths` in the component when adding public pages.
+
 ## Checks
 
 ```bash
