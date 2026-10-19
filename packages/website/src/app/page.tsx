@@ -16,6 +16,8 @@ import { Navigation } from "@/components/navigation";
 import { SiteFooter } from "@/components/site-footer";
 import { StructuredData } from "@/components/structured-data";
 import { TunnelDemo } from "@/components/tunnel-demo";
+import { WorkflowStories } from "@/components/workflow-stories";
+import { MarketingMotion } from "@/components/marketing-motion";
 import { faqs } from "@/content/faq";
 import { site } from "@/lib/site";
 
@@ -23,7 +25,7 @@ export default async function HomePage() {
   await connection();
 
   return (
-    <>
+    <MarketingMotion>
       <div className="lab-bar">
         <div className="page-container">
           <span>
@@ -38,7 +40,7 @@ export default async function HomePage() {
             </span>
           </span>
           <a
-            href="https://grove-six-rosy.vercel.app"
+            href="https://usegrove.cloud"
             className="inline-flex items-center gap-1.5 text-highlight hover:underline"
           >
             Meet Grove <ArrowUpRight size={12} aria-hidden="true" />
@@ -62,12 +64,12 @@ export default async function HomePage() {
               <em>shared.</em>
             </h1>
             <p className="hero-description">
-              A public HTTPS link for the app on your machine. Share a working
-              preview, receive real webhooks, and inspect requests from your
-              terminal.
+              Your next demo is already running. Give it a public HTTPS link.
+              Share local apps, catch real webhooks, and inspect requests—all
+              without leaving your terminal.
             </p>
             <p className="mt-3 text-xs leading-6 text-muted">
-              One CLI. Your local workflow. Ready to share.
+              Keep your flow. Skip the “let me deploy that first.”
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
               <a href="#install" className="button-primary">
@@ -128,7 +130,7 @@ export default async function HomePage() {
                   "Manage your frontend, API, and request logs in one place.",
               },
             ].map(({ icon: Icon, title, description }) => (
-              <article key={title}>
+              <article key={title} data-reveal>
                 <Icon
                   size={20}
                   strokeWidth={1.5}
@@ -146,9 +148,11 @@ export default async function HomePage() {
           </div>
         </section>
 
+        <WorkflowStories />
+
         <section
           id="how-it-works"
-          className="dark-section section-space mt-16 sm:mt-20"
+          className="dark-section section-space"
           aria-labelledby="manager-heading"
         >
           <div className="page-container">
@@ -251,6 +255,6 @@ export default async function HomePage() {
         <StructuredData />
       </main>
       <SiteFooter />
-    </>
+    </MarketingMotion>
   );
 }
