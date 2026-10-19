@@ -2,47 +2,104 @@ import { ArrowRight, Check, Globe2, Terminal } from "lucide-react";
 
 export function TunnelDemo() {
   return (
-    <figure className="product-preview">
-      <div className="mb-5 flex items-center justify-between gap-3 text-xs text-muted">
-        <span className="flex items-center gap-2">
-          <Terminal size={14} aria-hidden="true" /> Your machine
-        </span>
-        <ArrowRight size={14} aria-hidden="true" />
-        <span className="flex items-center gap-2">
-          <Globe2 size={14} aria-hidden="true" /> The internet
+    <figure
+      className="tunnel-landscape"
+      aria-label="A local development server connects through Burrow to a public HTTPS URL"
+    >
+      <div className="tunnel-scene">
+        <div className="tunnel-scene-label">
+          <span>SMALL TUNNEL. BIG POSSIBILITIES.</span>
+          <span aria-hidden="true">↗</span>
+        </div>
+        <svg
+          className="tunnel-portal"
+          viewBox="0 -20 500 280"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M75 260V180a175 175 0 0 1 350 0v80"
+            stroke="#dcb399"
+            strokeWidth="34"
+          />
+          <path
+            d="M121 260V180a129 129 0 0 1 258 0v80"
+            stroke="#bf8060"
+            strokeWidth="28"
+          />
+          <path
+            d="M163 260V180a87 87 0 0 1 174 0v80"
+            stroke="#9d4930"
+            strokeWidth="23"
+          />
+          <path
+            d="M205 260V180a45 45 0 0 1 90 0v80"
+            stroke="#253e31"
+            strokeWidth="19"
+          />
+          <path
+            className="tunnel-packet"
+            d="M121 260V180a129 129 0 0 1 258 0v80"
+            stroke="#fff8e9"
+            strokeWidth="5"
+            strokeLinecap="round"
+            pathLength="100"
+          />
+        </svg>
+        <div className="tunnel-endpoint endpoint-local">
+          <Terminal size={17} aria-hidden="true" />
+          <span>
+            Your machine<strong>localhost:3000</strong>
+          </span>
+        </div>
+        <div className="tunnel-endpoint endpoint-world">
+          <Globe2 size={17} aria-hidden="true" />
+          <span>
+            The internet<strong>Hello, world.</strong>
+          </span>
+        </div>
+        <span className="tunnel-seal">
+          LOCAL
+          <br />
+          <ArrowRight size={18} aria-hidden="true" />
+          <br />
+          LIVE
         </span>
       </div>
-      <div className="overflow-hidden rounded-lg border border-ink/10 bg-terminal text-paper">
+      <div className="tunnel-terminal">
         <div className="terminal-titlebar">
-          <span className="flex gap-1.5" aria-hidden="true">
-            <i className="size-2 rounded-full bg-[#c18b7b]" />
-            <i className="size-2 rounded-full bg-[#c3b777]" />
-            <i className="size-2 rounded-full bg-[#82a682]" />
+          <span className="terminal-dots" aria-hidden="true">
+            <i />
+            <i />
+            <i />
           </span>
           <span>burrowctl</span>
-          <span className="text-[9px] tracking-wider">DEMO</span>
+          <span>EXAMPLE</span>
         </div>
-        <div className="p-5 font-mono text-[11px] leading-6 sm:p-6">
-          <p className="break-words">
-            <span className="mr-2 text-highlight">$</span>burrowctl tunnel 3000
+        <div className="tunnel-terminal-body">
+          <p>
+            <span className="terminal-prompt">$</span> burrowctl tunnel 3000
           </p>
-          <p className="mt-6 flex items-center gap-2 text-highlight">
+          <p className="tunnel-connected">
             <Check size={14} aria-hidden="true" /> Tunnel connected
           </p>
-          <div className="mt-4 border-t border-white/10 pt-4">
-            <p className="text-[10px] text-terminal-muted">PUBLIC HTTPS URL</p>
-            <p className="mt-2 break-all text-paper">
-              https://softly-brave-little-fox
-              <span className="text-highlight">.brmbl.dev</span>
+          <div className="tunnel-public-url">
+            <span>PUBLIC HTTPS URL</span>
+            <p>
+              https://softly-brave-little-fox<strong>.brmbl.dev</strong>
             </p>
-            <p className="mt-3 flex items-center gap-2 text-terminal-muted">
-              <ArrowRight size={12} aria-hidden="true" /> localhost:3000
-            </p>
+          </div>
+          <div className="tunnel-request">
+            <span>GET /</span>
+            <span>200 OK</span>
+            <span>→ localhost:3000</span>
           </div>
         </div>
       </div>
-      <figcaption className="preview-caption">
-        Illustrated preview · example URL
+      <figcaption>
+        Keep coding locally. Send the link. See what comes through.
+        <br />
+        <span>Illustrated preview · example URL and request</span>
       </figcaption>
     </figure>
   );

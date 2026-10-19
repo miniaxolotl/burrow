@@ -24,8 +24,14 @@ export function SiteFooter() {
           <a href={site.github} className="text-link">
             GitHub
           </a>
-          <a href="https://bramblelabs.co/privacy" className="text-link">
-            Website privacy
+          <a href="/privacy" className="text-link">
+            Privacy policy
+          </a>
+          <a href="/terms" className="text-link">
+            Terms & conditions
+          </a>
+          <a href="mailto:burrow@mawa.dev" className="text-link">
+            Contact
           </a>
           <a
             href={`${site.github}/blob/production/LICENSE`}
