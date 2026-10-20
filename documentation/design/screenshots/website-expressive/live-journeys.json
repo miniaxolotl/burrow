@@ -1,0 +1,19 @@
+[
+  {
+    "site": "burrow",
+    "checks": [
+      "canonical URL",
+      "robots/sitemap",
+      "social image",
+      "footer policy links",
+      "section anchors",
+      "mobile navigation"
+    ],
+    "status": "passed"
+  },
+  {
+    "site": "burrow",
+    "checks": ["package-manager switch", "install-command clipboard"],
+    "status": "passed"
+  }
+]

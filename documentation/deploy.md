@@ -1,49 +1,85 @@
 # Deploy & release
 
-## Environments
+## Branch and release policy
 
-|                  | Production               | Staging                          |
-| ---------------- | ------------------------ | -------------------------------- |
-| Git branch       | `production`             | `development`                    |
-| Website (Vercel) | `https://useburrow.app`  | `https://staging.useburrow.app`  |
-| Tunnel server    | `https://brmbl.dev`      | `https://staging.brmbl.dev`      |
-| Tunnel URLs      | `https://<id>.brmbl.dev` | `https://<id>.staging.brmbl.dev` |
-| DigitalOcean app | `burrow`                 | `burrow-staging`                 |
-| Upstash Redis    | `burrow`                 | `burrow-staging`                 |
-| OpenTofu root    | `infra/production`       | `infra/staging`                  |
+Feature PRs integrate into `development`. Release Please prepares a single product
+version and changelog there; all native packages, the wrapper and both Go binaries
+share it. Both `feat` and `feature` produce feature notes. A source GitHub release
+is metadata, not a deployment.
 
-Vercel builds `packages/website` independently. Production uses
-`SITE_URL=https://useburrow.app`; previews use
-`SITE_URL=https://staging.useburrow.app` and are marked `noindex`.
+Only `production` publishes npm, binary archives, container images and the Vercel
+production site. Development runs CI and Release Please. Existing staging resources
+are retained; this policy does not retire their data, DNS or certificates.
+
+## Retained environments
+
+|                   | Production               | Staging                          |
+| ----------------- | ------------------------ | -------------------------------- |
+| Deployment branch | `production`             | Disabled; retained resources     |
+| Website (Vercel)  | `https://useburrow.app`  | `https://staging.useburrow.app`  |
+| Tunnel server     | `https://brmbl.dev`      | `https://staging.brmbl.dev`      |
+| Tunnel URLs       | `https://<id>.brmbl.dev` | `https://<id>.staging.brmbl.dev` |
+| DigitalOcean app  | `burrow`                 | `burrow-staging`                 |
+| Upstash Redis     | `burrow`                 | `burrow-staging`                 |
+| OpenTofu root     | `infra/production`       | `infra/staging`                  |
+
+Vercel builds `packages/website` from `production` only, with
+`SITE_URL=https://useburrow.app`. Preview deployments are disabled and the project
+ignore command skips every ref except production. Protected promotion CI validates
+the complete website tree before the production merge.
 `www.useburrow.app` redirects to the production apex.
 
 ## Pipeline
 
 1. **CI** runs website lint/types/build, Go vet/build/tests, OpenTofu formatting
    and validation, workflow lint, and a Docker build.
-2. After successful branch CI, **Deploy** publishes multi-architecture images
-   to GHCR and Docker Hub. Each image has an immutable `sha-<commit>` tag and
-   source-revision labels. Promotion reuses that commit's existing image.
-3. OpenTofu applies the selected environment using the image's **digest**, not
+2. **CI Gate** aggregates every job. A downstream PR must come from the owner's
+   frozen `promote/production/vX.Y.Z` ref, have Release Please provenance and match
+   the tag's tree. Independent source CI is required; PR/self evidence is rejected.
+3. **Deploy** waits for complete production CI, resolves the tag source separately
+   from the production merge SHA and rejects stale production runs. It builds
+   GoReleaser artifacts, checks every npm tarball and existing GitHub asset before
+   publication, and preserves the Release Please release body. Conflicting bytes
+   under an existing version fail; identical artifacts are reused on retry.
+4. It publishes packages and archives, then promotes the exact source image in
+   GHCR/Docker Hub with `sha-<source>`, version and `latest` tags. Readback verifies
+   the source revision and manifest digest. Repeat runs reuse the immutable image.
+5. OpenTofu applies production using the image's **digest**, not
    a mutable tag. It owns the complete App Platform specification, Upstash
    database and Cloudflare website/tunnel DNS.
-4. App Platform supplies wildcard certificate verification tokens. Deployment
-   reads these tokens and applies their TXT records through OpenTofu. A daily
-   maintenance workflow refreshes them for certificate renewals.
-5. Deployment waits for HTTPS health, then creates a real WSS/yamux tunnel and
+6. App Platform supplies wildcard certificate verification tokens. Deployment
+   refreshes their TXT records through OpenTofu. **Infrastructure Maintenance**
+   may also be dispatched explicitly on production for certificate reconciliation.
+7. Deployment waits for HTTPS health, then creates a real WSS/yamux tunnel and
    checks HTTP body, headers, query strings, and API-like paths end to end.
-6. After a successful production deployment, **Release** uploads GoReleaser
-   archives/checksums to GitHub and publishes all four native npm packages,
-   followed by `@miniaxolotl/burrowctl`.
 
 The npm registry serves npm, pnpm, Yarn, and Bun. Native archives cover Linux and
 macOS on amd64/arm64. Docker images cover Linux amd64/arm64. There is currently
 no Homebrew tap, winget package, or apt repository in this project.
 
-Release-please prepares the version/changelog PR on `development`. Merge the
-release PR, let staging pass, then fast-forward `production` to the release-tag
-commit. Package publication checks that the tag matches the deployed commit.
-The `latest` container tags follow production; `preview` follows staging.
+## Select and promote
+
+1. Merge the green Release Please PR into development and wait for its immutable
+   `vX.Y.Z` source release and complete development CI.
+2. Run **Select Release Candidate** from development with that exact tag. It uses
+   the job-scoped `GITHUB_TOKEN`, freezes the tag tree and current production parent, and opens
+   a labelled PR assigned to `miniaxolotl`. It never follows later development.
+   A run-scoped candidate artifact binds the operator, tooling revision, source,
+   tree, frozen head and PR. CI verifies this record for bot-authored promotions.
+   Records expire after 90 days; rerun the original selection run to refresh them.
+3. Review the identity in the PR and enable auto-merge using **merge**, not squash
+   or rebase. Strict `CI Gate`, conversation resolution and no-bypass protection
+   apply. Source tags and frozen candidate refs cannot be rewritten or deleted.
+4. Verify Deploy, Vercel production readiness, npm versions, GitHub archives and
+   the real tunnel smoke test. The branch trees may match with different SHAs.
+
+Rerun a failed Deploy on the same current production commit. Publication is
+non-atomic across providers: an error remains visible, and successful immutable
+artifacts are reused. Never delete or overwrite an existing version to retry.
+Conflicting base changes require integration into development and a new release;
+a rejected/closed candidate is not reopened automatically. Rollbacks use a reviewed
+new release/revert, preserving immutable history. Ordinary development pushes do
+not open or merge promotions.
 
 ## Infrastructure and secrets
 
@@ -69,6 +105,9 @@ Each GitHub environment supplies:
 
 Repository secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, and `NPM_TOKEN`
 support publishing. GHCR uses the workflow's scoped `GITHUB_TOKEN`.
+Release Please and candidate selection use `GITHUB_TOKEN` with contents/PR write
+and Actions dispatch permissions. They explicitly dispatch CI on generated refs,
+because token-created PRs do not trigger ordinary PR workflows. No PAT is needed.
 Backend connection strings and encryption keys must be backed up together;
 neither belongs in source control or a normal build artifact.
 
@@ -76,11 +115,11 @@ neither belongs in source control or a normal build artifact.
 # Local validation, without cloud credentials or a state connection
 mise exec opentofu@1.12.6 -- bash scripts/infra/check.sh
 
-# Apply using environment-scoped credentials and an exact image digest
-TF_VAR_image_digest=sha256:<64-hex-digest> bash scripts/infra/apply.sh staging
+# Apply via Deploy or Infrastructure Maintenance on the production workflow ref.
+# Local apply is an explicit operator repair, not the release path.
 
 # Exercise the real public tunnel path
-BURROW_SMOKE_SERVER=staging.brmbl.dev go test ./burrowctl/internal -run TestLiveTunnel -count=1 -v
+BURROW_SMOKE_SERVER=brmbl.dev go test ./burrowctl/internal -run TestLiveTunnel -count=1 -v
 ```
 
 App Platform runs **one instance per environment** because active WebSocket and

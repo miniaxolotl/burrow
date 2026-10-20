@@ -1,0 +1,15 @@
+{
+  "repository": "miniaxolotl/burrow",
+  "operator": "miniaxolotl",
+  "label": "enhancement",
+  "branches": ["development", "production"],
+  "ciJobs": [
+    "infrastructure",
+    "website",
+    "lint",
+    "build",
+    "test",
+    "Promotion Admission",
+    "CI Gate"
+  ]
+}

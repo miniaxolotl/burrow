@@ -2,6 +2,7 @@ import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { site } from "@/lib/site";
+import { WebsiteSpeedInsights } from "@/components/website-speed-insights";
 import "./globals.css";
 
 const sans = localFont({
@@ -63,6 +64,7 @@ export default function RootLayout({
         </a>
         {children}
         <Analytics />
+        {process.env.VERCEL_ENV === "production" && <WebsiteSpeedInsights />}
       </body>
     </html>
   );

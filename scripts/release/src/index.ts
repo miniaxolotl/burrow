@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { publishPackages } from "../publication.mjs";
 
 const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
 const platforms = {
@@ -20,51 +21,21 @@ type Artifact = {
   goarch: string;
 };
 
-function published(name: string, version: string): boolean {
-  try {
-    return (
-      JSON.parse(
-        execFileSync(
-          "npm",
-          ["view", `${name}@${version}`, "version", "--json"],
-          {
-            encoding: "utf8",
-            stdio: ["ignore", "pipe", "pipe"],
-          },
-        ),
-      ) === version
+async function release() {
+  const dryRun = process.argv.includes("--dry-run");
+  if (
+    !dryRun &&
+    (process.env.GITHUB_ACTIONS !== "true" ||
+      process.env.GITHUB_REF !== "refs/heads/production")
+  ) {
+    throw new Error(
+      "Publish through the protected production Deploy workflow; local checks use --dry-run",
     );
-  } catch (error) {
-    const stderr = String((error as { stderr?: Buffer }).stderr ?? "");
-    if (/E404|No match found for version/.test(stderr)) return false;
-    throw error;
   }
-}
-
-function publish(directory: string, name: string, version: string) {
-  if (published(name, version)) {
-    console.log(`${name}@${version} already published`);
-    return;
-  }
-  const args = ["publish", "--access", "public"];
-  if (process.env.GITHUB_ACTIONS === "true") args.push("--provenance");
-  execFileSync("npm", args, { cwd: directory, stdio: "inherit" });
-}
-
-function release() {
   const mainDirectory = path.join(ROOT, "packages/burrowctl");
   const mainPath = path.join(mainDirectory, "package.json");
   const main = JSON.parse(fs.readFileSync(mainPath, "utf8"));
   const version: string = main.version;
-  if (process.argv.includes("--dry-run")) {
-    for (const suffix of [...Object.keys(platforms), ""]) {
-      const name = suffix ? `${main.name}-${suffix}` : main.name;
-      console.log(
-        `${name}@${version}: ${published(name, version) ? "published" : "pending"}`,
-      );
-    }
-    return;
-  }
 
   const artifactsPath = path.join(ROOT, "dist/artifacts.json");
   if (!fs.existsSync(artifactsPath)) {
@@ -86,7 +57,19 @@ function release() {
       `Built version ${metadata.version} does not match package version ${version}`,
     );
   }
+  const source = execFileSync("git", ["rev-parse", "HEAD"], {
+    cwd: ROOT,
+    encoding: "utf8",
+  }).trim();
+  if (
+    metadata.commit !== source ||
+    (process.env.RELEASE_SOURCE_SHA &&
+      source !== process.env.RELEASE_SOURCE_SHA)
+  ) {
+    throw new Error("Built source does not match the admitted release source");
+  }
 
+  const directories: string[] = [];
   for (const [platform, [goos, goarch]] of Object.entries(platforms)) {
     const artifact = artifacts.find(
       (item) =>
@@ -104,24 +87,15 @@ function release() {
     const binary = path.join(directory, "burrowctl");
     fs.copyFileSync(path.resolve(ROOT, artifact.path), binary);
     fs.chmodSync(binary, 0o755);
-    publish(directory, pkg.name, version);
+    directories.push(directory);
   }
 
-  // npm does not resolve pnpm workspace ranges when publishing directly.
-  const original = fs.readFileSync(mainPath, "utf8");
-  try {
-    for (const dependency of Object.keys(main.optionalDependencies)) {
-      main.optionalDependencies[dependency] = version;
-    }
-    fs.writeFileSync(mainPath, JSON.stringify(main, null, 2) + "\n");
-    publish(mainDirectory, main.name, version);
-  } finally {
-    fs.writeFileSync(mainPath, original);
-  }
+  // pnpm pack resolves workspace ranges. Preflight every tarball before any write.
+  await publishPackages([...directories, mainDirectory], dryRun);
 }
 
 try {
-  release();
+  await release();
 } catch (error) {
   console.error("Release failed:", error);
   process.exitCode = 1;

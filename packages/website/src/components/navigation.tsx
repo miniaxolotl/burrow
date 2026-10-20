@@ -1,17 +1,34 @@
 "use client";
 
 import { ArrowUpRight, Menu, X } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { GithubIcon } from "@/components/github-icon";
 
 const links = [
-  ["Features", "#features"],
-  ["How it works", "#how-it-works"],
+  ["Features", "/#features"],
+  ["How it works", "/#how-it-works"],
 ] as const;
 
 export function Navigation({ github }: { github: string }) {
   const menu = useRef<HTMLDetailsElement>(null);
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const close = () => {
+      if (menu.current) menu.current.open = false;
+    };
+    const dismissOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !menu.current?.contains(event.target))
+        close();
+    };
+    document.addEventListener("pointerdown", dismissOutside);
+    desktop.addEventListener("change", close);
+    return () => {
+      document.removeEventListener("pointerdown", dismissOutside);
+      desktop.removeEventListener("change", close);
+    };
+  }, []);
 
   return (
     <header className="site-header">
@@ -22,17 +39,17 @@ export function Navigation({ github }: { github: string }) {
           className="hidden items-center gap-8 lg:flex"
         >
           {links.map(([label, href]) => (
-            <a href={href} className="nav-link" key={href}>
+            <Link href={href} className="nav-link" key={href}>
               {label}
-            </a>
+            </Link>
           ))}
           <a href={github} className="nav-link flex items-center gap-2">
             <GithubIcon size={16} /> GitHub
           </a>
         </nav>
         <div className="flex items-center gap-2 sm:gap-3">
-          <a
-            href="#install"
+          <Link
+            href="/#install"
             className="button-primary min-h-11! shrink-0 gap-3! whitespace-nowrap px-3! py-2.5! text-xs! sm:px-4!"
           >
             Install Burrow{" "}
@@ -41,10 +58,14 @@ export function Navigation({ github }: { github: string }) {
               className="hidden sm:block"
               aria-hidden="true"
             />
-          </a>
+          </Link>
           <details
             ref={menu}
             className="group lg:hidden"
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget))
+                event.currentTarget.open = false;
+            }}
             onKeyDown={(event) => {
               if (event.key === "Escape" && menu.current) {
                 menu.current.open = false;
@@ -72,9 +93,9 @@ export function Navigation({ github }: { github: string }) {
               {[
                 ...links,
                 ["GitHub", github],
-                ["Install Burrow", "#install"],
+                ["Install Burrow", "/#install"],
               ].map(([label, href]) => (
-                <a
+                <Link
                   key={href}
                   href={href}
                   className="nav-link flex border-b border-line py-3 last:border-0"
@@ -88,7 +109,7 @@ export function Navigation({ github }: { github: string }) {
                     className="ml-auto"
                     aria-hidden="true"
                   />
-                </a>
+                </Link>
               ))}
             </nav>
           </details>
