@@ -6,6 +6,7 @@ import (
 
 	"burrow/burrowctl/internal"
 	"burrow/burrowctl/internal/config"
+	"burrow/protocol/telemetry"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -60,5 +61,5 @@ func configuredClient(cmd *cobra.Command) (*internal.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load owner credential: %w", err)
 	}
-	return internal.NewClient(server.Host, token, viper.GetString("domain"), server.Scheme == "https"), nil
+	return internal.NewClient(server.Host, token, viper.GetString("domain"), server.Scheme == "https", telemetry.FromContext(cmd.Context())), nil
 }

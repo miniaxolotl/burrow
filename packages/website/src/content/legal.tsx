@@ -168,10 +168,66 @@ export const privacy: LegalDocument = {
       ),
     },
     {
+      id: "developer-telemetry",
+      title: "CLI and service diagnostics",
+      content: (
+        <>
+          <p>
+            Official CLI releases use a separate random installation identifier
+            for anonymous command and tunnel outcomes. PostHog receives these
+            outcomes; Sentry receives sanitized error stacks, sampled traces and
+            operation metrics and logs. We exclude arguments, ports, hostnames,
+            tunnel IDs, credentials, request histories, headers and payloads.
+            Browser and CLI identities are not joined.
+          </p>
+          <p>
+            Run <code>burrowctl telemetry disable</code> to opt out and clear
+            the local analytics identity, or set <code>DO_NOT_TRACK=1</code> or
+            <code>BURROW_TELEMETRY=0</code>. Running commands honor opt-out
+            before uploads. Re-enable with{" "}
+            <code>burrowctl telemetry enable</code>; a new identity is created
+            on the next invocation. CI and local builds do not initialize
+            telemetry. Our hosted server separately reports content-free
+            operational diagnostics; self-hosted reporting is off unless the
+            operator enables it. Both providers process data in the United
+            States. Opt-out does not erase previously received data; contact us
+            for information or deletion requests.
+          </p>
+        </>
+      ),
+    },
+    {
       id: "website",
       title: "Website analytics and demos",
       content: (
         <>
+          <p>
+            PostHog measures public-page visits, install-command copies, product
+            referrals and performance with a random browser identifier in local
+            storage. We do not attach names, email addresses or tunnel
+            credentials to that identifier. We use small website experiments and
+            optional rating surveys. Analytics URLs omit queries and fragments;
+            unknown paths are generalized.
+          </p>
+          <p>
+            PostHog samples masked website recordings at 10%, retained for 30
+            days. Text and inputs are masked, media and private regions are
+            blocked, and console logs, network headers and bodies are excluded.
+            Link attributes are redacted separately. Sentry receives sanitized
+            website error stacks, sampled performance traces and bounded
+            clipboard outcome metrics and logs. It does not record website
+            sessions.
+          </p>
+          <p>
+            Disable browser PostHog and Sentry collection with the website
+            telemetry control below. Global Privacy Control and Do Not Track
+            also disable browser collection. Opt-out clears the stored analytics
+            identity and stops further collection; previously received data is
+            not automatically erased. These providers process data in the United
+            States. Contact us with information or deletion requests. Server
+            diagnostics are separate from this browser preference and exclude
+            request content.
+          </p>
           <p>
             Vercel Web Analytics measures aggregate page visits, referrals, and
             broad device/region information without tracking cookies. We do not

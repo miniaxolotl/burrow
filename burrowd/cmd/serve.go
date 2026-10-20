@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"burrow/burrowd/internal"
+	"burrow/protocol/telemetry"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -95,7 +96,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	registry := internal.NewTunnelRegistry(redis, domain, secure)
 
-	server := internal.NewServer(registry, domain, secure)
+	server := internal.NewServer(registry, domain, secure, telemetry.FromContext(cmd.Context()))
 
 	addr := fmt.Sprintf(":%s", port)
 	fmt.Printf("Starting burrowd on %s\n", addr)

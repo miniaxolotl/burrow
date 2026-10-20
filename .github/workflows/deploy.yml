@@ -52,6 +52,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       RELEASE_SOURCE_SHA: ${{ needs.candidate.outputs.sha }}
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      BURROW_TELEMETRY_BUILD: production
+      BURROW_POSTHOG_KEY: ${{ secrets.BURROW_POSTHOG_KEY }}
+      BURROW_CLI_SENTRY_DSN: ${{ secrets.BURROW_CLI_SENTRY_DSN }}
+      BURROW_SERVER_SENTRY_DSN: ${{ secrets.BURROW_SERVER_SENTRY_DSN }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -72,6 +76,10 @@ jobs:
       - run: npm whoami
       - name: Reject a superseded publication
         run: test "$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/production" --jq .object.sha)" = "$GITHUB_SHA"
+      - name: Verify telemetry configuration and exact source release linkage
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: node scripts/release/telemetry.mjs
       - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
         with:
           distribution: goreleaser
@@ -123,7 +131,12 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          build-args: VERSION=${{ needs.candidate.outputs.version }}
+          build-args: |
+            VERSION=${{ needs.candidate.outputs.version }}
+            REVISION=${{ needs.candidate.outputs.sha }}
+            BURROW_TELEMETRY_BUILD=production
+            BURROW_POSTHOG_KEY=${{ secrets.BURROW_POSTHOG_KEY }}
+            BURROW_SERVER_SENTRY_DSN=${{ secrets.BURROW_SERVER_SENTRY_DSN }}
           tags: ghcr.io/miniaxolotl/burrowd:sha-${{ needs.candidate.outputs.sha }}
           labels: |
             org.opencontainers.image.version=${{ needs.candidate.outputs.version }}

@@ -78,6 +78,12 @@ jobs:
     name: Website
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      VERCEL_ENV: production
+      NEXT_PUBLIC_POSTHOG_ENABLED: "true"
+      NEXT_PUBLIC_POSTHOG_KEY: phc_playwright_only
+      NEXT_PUBLIC_SENTRY_ENABLED: "true"
+      NEXT_PUBLIC_SENTRY_DSN: https://00000000000000000000000000000000@o0.ingest.us.sentry.io/1
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -93,6 +99,8 @@ jobs:
       - run: pnpm typecheck:website
       - run: pnpm --filter website exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 ../../scripts/release/src/index.ts
       - run: pnpm build:website
+      - run: pnpm --filter website exec playwright install --with-deps chromium
+      - run: pnpm --filter website test
 
   lint:
     name: Go Quality

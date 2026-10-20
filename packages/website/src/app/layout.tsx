@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { site } from "@/lib/site";
 import { WebsiteSpeedInsights } from "@/components/website-speed-insights";
+import { WebsiteTelemetry } from "@/components/website-telemetry";
 import "./globals.css";
 import "./brand-family.css";
 
@@ -87,6 +88,7 @@ export default function RootLayout({
           Skip to content
         </a>
         {children}
+        <WebsiteTelemetry />
         <Analytics />
         {process.env.VERCEL_ENV === "production" && <WebsiteSpeedInsights />}
       </body>

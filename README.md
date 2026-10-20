@@ -18,6 +18,11 @@ Connects to `brmbl.dev` by default. The CLI creates a private owner credential
 automatically, so only you can list, inspect, reconnect, or close your tunnels.
 No account or manual key setup is required.
 
+Official CLI releases collect anonymous command/tunnel outcomes and sanitized
+diagnostics. Disable with `burrowctl telemetry disable`, `DO_NOT_TRACK=1`, or
+`BURROW_TELEMETRY=0`. No command arguments, ports, URLs, credentials or tunnel
+content are sent. See [telemetry and privacy](documentation/client.md#telemetry-and-privacy).
+
 The CLI supports macOS and Linux on x64 and ARM64. To operate your own server,
 follow the [server setup](documentation/server.md) and
 [deployment guide](documentation/deploy.md).
