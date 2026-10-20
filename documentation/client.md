@@ -46,6 +46,41 @@ A saved explicit token is used only for its configured server, never forwarded t
 
 TLS is required for remote servers. `localhost`, `127.0.0.1`, and `::1` use HTTP for local development.
 
+## Telemetry and privacy
+
+Official release binaries send anonymous operation outcomes to PostHog and
+sanitized errors, sampled traces and operation metrics/logs to Sentry in the US.
+There is no account identity: `~/.config/burrow/telemetry-id` is a random local UUID
+(0600), separate from owner credentials and browser analytics. No command
+arguments, filesystem paths, hostnames, target ports, tunnel IDs, URLs, IPs,
+headers, bodies or clipboard contents are collected. Telemetry headers are never
+added to tunnels or local requests.
+
+```bash
+burrowctl telemetry status
+burrowctl telemetry disable          # Persist opt-out and clear analytics identity
+burrowctl telemetry enable           # New identity on the next invocation
+DO_NOT_TRACK=1 burrowctl tunnel 3000  # Disable for this process
+BURROW_TELEMETRY=0 burrowctl list     # Equivalent environment opt-out
+```
+
+Running commands honor persisted opt-out before uploading. Re-enabling never
+revives an older process's cleared identity. CI and local source builds do not
+initialize telemetry. Help, version and telemetry preference commands do not emit
+events. Opt-out does not erase already received provider data; contact
+burrow@mawa.dev for requests. Random IDs are not linked across website/CLI or
+products, and do not provide access to tunnels.
+
+First-value activation means the first forwarding stream in a tunnel session
+returned bytes from the local service. It does not inspect HTTP response status
+or content, and subsequent requests do not repeat the activation event. TUI and
+CLI creation share that same owner. Expected network/authorization failures are
+bounded `unavailable` outcomes; unexpected operational failures use `error`.
+
+Telemetry uses bounded nonblocking queues and a maximum 550ms shutdown wait;
+provider failure or queue overflow drops telemetry rather than delaying tunnels.
+See [the observability contract](product-observability.md) for provider settings.
+
 ## Interactive controls
 
 | Key            | Action                         |

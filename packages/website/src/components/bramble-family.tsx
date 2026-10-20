@@ -57,7 +57,13 @@ export function BrambleFamily({ current }: { current: string }) {
               <small>{product.detail}</small>
             </span>
           ) : (
-            <a key={product.id} href={product.url}>
+            <a
+              key={product.id}
+              href={`${product.url}/?utm_source=burrow&utm_medium=referral&utm_campaign=product_family`}
+              data-analytics-event="product_link_clicked"
+              data-analytics-product={product.id}
+              data-analytics-placement="footer"
+            >
               <strong>
                 {product.name}
                 <ArrowUpRight size={11} aria-hidden="true" />

@@ -20,6 +20,7 @@ import { WorkflowStories } from "@/components/workflow-stories";
 import { MarketingMotion } from "@/components/marketing-motion";
 import { faqs } from "@/content/faq";
 import { site } from "@/lib/site";
+import { HeroCtaCopy } from "@/components/website-telemetry";
 
 export default async function HomePage() {
   await connection();
@@ -72,8 +73,13 @@ export default async function HomePage() {
               It works locally. Now let someone try it.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <a href="#install" className="button-primary">
-                Install Burrow <ArrowRight size={16} aria-hidden="true" />
+              <a
+                href="#install"
+                className="button-primary"
+                data-analytics-event="cta_clicked"
+                data-analytics-placement="hero"
+              >
+                <HeroCtaCopy /> <ArrowRight size={16} aria-hidden="true" />
               </a>
               <a href={site.github} className="text-link">
                 View source <ArrowUpRight size={14} aria-hidden="true" />
@@ -87,6 +93,7 @@ export default async function HomePage() {
               <CopyButton
                 text="npm i -g @miniaxolotl/burrowctl"
                 label="Copy npm install command"
+                installPlacement="hero"
               />
             </div>
             <p className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[10px] text-muted">

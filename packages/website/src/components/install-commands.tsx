@@ -65,6 +65,7 @@ export function InstallCommands({ releases }: { releases: string }) {
               key={command}
               text={command}
               label={`Copy ${title.toLowerCase()} command`}
+              installPlacement={number === "01" ? "install" : undefined}
             />
           </div>
         </div>

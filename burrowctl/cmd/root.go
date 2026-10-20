@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"strings"
+	"time"
 
 	"burrow/burrowctl/cmd/tunnel"
 	"burrow/burrowctl/internal/config"
+	"burrow/protocol/telemetry"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -19,7 +21,46 @@ var rootCmd = &cobra.Command{
 
 var configErr error
 
-func Execute() error {
+func Execute(config telemetry.Config) (err error) {
+	var reporter *telemetry.Reporter
+	started := time.Now()
+	operation := telemetry.Command
+	rootCmd.PersistentPreRunE = func(command *cobra.Command, _ []string) error {
+		if configErr != nil {
+			return configErr
+		}
+		switch command.Name() {
+		case "tunnel":
+			operation = telemetry.Command
+		case "list":
+			operation = telemetry.List
+		case "logs":
+			operation = telemetry.Logs
+		case "close":
+			operation = telemetry.Close
+		default:
+			return nil
+		}
+		reporter = telemetry.New(config)
+		command.SetContext(telemetry.WithObserver(command.Context(), reporter))
+		started = time.Now()
+		return nil
+	}
+	defer func() {
+		defer reporter.Close()
+		if failure := recover(); failure != nil {
+			reporter.Operation(operation, started, telemetry.Failure)
+			panic(failure)
+		}
+		outcome := telemetry.Success
+		if err != nil {
+			outcome = telemetry.Unavailable
+		}
+		reporter.Operation(operation, started, outcome)
+		if err == nil {
+			reporter.Track(telemetry.CommandCompleted)
+		}
+	}()
 	return rootCmd.Execute()
 }
 
@@ -35,6 +76,7 @@ func init() {
 	viper.AutomaticEnv()
 
 	tunnel.AddCommands(rootCmd)
+	rootCmd.AddCommand(telemetryCommand())
 }
 
 func loadClientConfig() {

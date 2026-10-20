@@ -26,3 +26,5 @@ tfplan
 *.auto.tfvars.json
 !*.example.tfvars
 crash.log
+test-results/
+playwright-report/
