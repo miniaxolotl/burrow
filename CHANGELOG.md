@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.3.1](https://github.com/miniaxolotl/burrow/compare/v0.3.0...v0.3.1) (2026-10-20)
+
+
+### Features
+
+* **website:** add Vercel Speed Insights ([#18](https://github.com/miniaxolotl/burrow/issues/18)) ([b471880](https://github.com/miniaxolotl/burrow/commit/b47188019d530cf2a266e634bab58e8c3c5ed94b))
+* **website:** align Burrow developer site with Bramble Labs branding ([2f65efb](https://github.com/miniaxolotl/burrow/commit/2f65efb16a78c5d6a28e69d23dc0b23e45c5e5d5))
+* **website:** polish burrow identity, journeys and policies ([#17](https://github.com/miniaxolotl/burrow/issues/17)) ([70dbbc4](https://github.com/miniaxolotl/burrow/commit/70dbbc41b7cbac48dea5d5c2925e7012acd8eab8))
+* **website:** refine Bramble family styling and product navigation ([b76185c](https://github.com/miniaxolotl/burrow/commit/b76185cb7d28b16663b6b5288848a8b96642efe6))
+
+
+### Bug Fixes
+
+* **release:** gate production publication on frozen source candidates ([#20](https://github.com/miniaxolotl/burrow/issues/20)) ([b851a4f](https://github.com/miniaxolotl/burrow/commit/b851a4f743986120a14177982a8edd29ee8ab3fc))
+
 ## [0.3.0](https://github.com/miniaxolotl/burrow/compare/v0.2.8...v0.3.0) (2026-10-16)
 
 
