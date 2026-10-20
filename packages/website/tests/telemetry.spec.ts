@@ -217,6 +217,85 @@ test("clipboard failure is an outcome rather than an installation conversion", a
   ).toBe(false);
 });
 
+test("cross-tab re-enable never revives a cleared identity", async ({
+  page,
+  context,
+  telemetry,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/");
+  const other = await context.newPage();
+  await other.goto("/");
+  const views = () =>
+    telemetry.events.filter((event) => event.event === "$pageview");
+  await expect.poll(() => views().length, { timeout: 15000 }).toBe(2);
+  const oldIdentity = views()[0].properties.distinct_id;
+  await page.getByRole("button", { name: "Disable website telemetry" }).click();
+  await expect(
+    other.getByRole("button", { name: "Enable website telemetry" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Enable website telemetry" }).click();
+  await expect.poll(() => views().length, { timeout: 15000 }).toBe(3);
+  const before = telemetry.events.length;
+  await other
+    .getByRole("button", { name: "Copy npm install command", exact: true })
+    .click();
+  await other.evaluate(() => {
+    setTimeout(() => {
+      throw new Error("cleared identity");
+    }, 0);
+  });
+  await page
+    .getByRole("button", { name: "Copy npm install command", exact: true })
+    .click();
+  await expect
+    .poll(
+      () =>
+        telemetry.events
+          .slice(before)
+          .filter((event) => event.event === "install_command_copied").length,
+      { timeout: 15000 },
+    )
+    .toBe(1);
+  expect(
+    telemetry.events
+      .slice(before)
+      .some((event) => event.properties.distinct_id === oldIdentity),
+  ).toBe(false);
+});
+
+test("a failed preference write disables collection in the current tab", async ({
+  page,
+  context,
+  telemetry,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.goto("/");
+  await expect
+    .poll(() => telemetry.events.some((event) => event.event === "$pageview"), {
+      timeout: 15000,
+    })
+    .toBe(true);
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new DOMException("Storage full", "QuotaExceededError");
+    };
+  });
+  await page.getByRole("button", { name: "Disable website telemetry" }).click();
+  await expect(
+    page.getByRole("button", { name: "Enable website telemetry" }),
+  ).toBeVisible();
+  telemetry.requests.length = 0;
+  await page
+    .getByRole("button", { name: "Copy npm install command", exact: true })
+    .click();
+  // Keep the injected write failure active: a full navigation creates a fresh
+  // document with healthy storage. Exercise the in-page action instead.
+  await page.locator("[data-analytics-event=cta_clicked]").click();
+  await expect(page).toHaveURL(/#install$/);
+  expect(telemetry.requests).toEqual([]);
+});
+
 test("provider failures leave the product usable", async ({
   page,
   context,

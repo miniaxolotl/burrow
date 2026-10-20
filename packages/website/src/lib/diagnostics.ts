@@ -8,7 +8,12 @@ import {
   sanitizeMetric,
   sanitizeSpan,
 } from "./diagnostics-policy";
-import { subscribePreference, telemetryOptedOut } from "./telemetry-choice";
+import {
+  activateTelemetryGeneration,
+  subscribePreference,
+  telemetryAllowed,
+  telemetryOptedOut,
+} from "./telemetry-choice";
 
 let initialized = false;
 export function initializeDiagnostics() {
@@ -21,6 +26,7 @@ export function initializeDiagnostics() {
   )
     return;
   try {
+    activateTelemetryGeneration();
     Sentry.init({
       dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
       environment: "production",
@@ -31,19 +37,18 @@ export function initializeDiagnostics() {
       tracesSampleRate: 0.1,
       tracePropagationTargets: [/^https:\/\/useburrow\.app\//],
       beforeBreadcrumb: () => null,
-      beforeSend: (event) =>
-        telemetryOptedOut() ? null : sanitizeError(event),
+      beforeSend: (event) => (telemetryAllowed() ? sanitizeError(event) : null),
       beforeSendSpan: sanitizeSpan,
-      beforeSendLog: (log) => (telemetryOptedOut() ? null : sanitizeLog(log)),
+      beforeSendLog: (log) => (telemetryAllowed() ? sanitizeLog(log) : null),
       beforeSendMetric: (metric) =>
-        telemetryOptedOut() ? null : sanitizeMetric(metric),
+        telemetryAllowed() ? sanitizeMetric(metric) : null,
       // Covers every envelope type, including streamed spans and queued batches.
       transport: (options) => {
         const transport = Sentry.makeFetchTransport(options);
         return {
           ...transport,
           send: (envelope) =>
-            telemetryOptedOut()
+            !telemetryAllowed()
               ? Promise.resolve({ statusCode: 200 })
               : transport.send(envelope),
         };
@@ -63,7 +68,7 @@ export function recordClipboardOutcome(
   outcome: "success" | "unavailable",
   duration: number,
 ) {
-  if (!initialized || telemetryOptedOut()) return;
+  if (!initialized || !telemetryAllowed()) return;
   try {
     const attributes = { operation, outcome };
     Sentry.logger.info("Clipboard operation completed", attributes);
