@@ -3,6 +3,11 @@
   "version": "0.3.2",
   "description": "Linux x64 binary for burrowctl",
   "license": "MIT",
+  "publishConfig": {
+    "executableFiles": [
+      "burrowctl"
+    ]
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/miniaxolotl/burrow"

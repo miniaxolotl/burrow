@@ -79,6 +79,12 @@ artifacts are reused. Never delete or overwrite an existing version to retry.
 After each npm upload, registry integrity is read back up to 60 times, five seconds
 apart. Only a missing version is retried; conflicting bytes or provider errors fail
 immediately. This accommodates npm's asynchronous processing without republishing.
+Native package metadata explicitly preserves the binary's executable bit through
+`pnpm pack`. Before any publication, all five tarballs are extracted, every native
+binary's mode and version pin is checked, and the packed wrapper must launch the
+host binary with the exact release version. This gate also runs on dry-run.
+Final packing canonicalizes resolved manifest keys so asynchronous workspace-range
+conversion cannot change tarball integrity across retries.
 Conflicting base changes require integration into development and a new release;
 a rejected/closed candidate is not reopened automatically. Rollbacks use a reviewed
 new release/revert, preserving immutable history. Ordinary development pushes do
