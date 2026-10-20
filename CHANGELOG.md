@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/miniaxolotl/burrow/compare/v0.3.1...v0.3.2) (2026-10-20)
+
+
+### Bug Fixes
+
+* **release:** wait for npm publication propagation ([#22](https://github.com/miniaxolotl/burrow/issues/22)) ([cc3771d](https://github.com/miniaxolotl/burrow/commit/cc3771d7bac56e1cd4274928106a86dcc8cf3668))
+
 ## [0.3.1](https://github.com/miniaxolotl/burrow/compare/v0.3.0...v0.3.1) (2026-10-20)
 
 
