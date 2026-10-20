@@ -3,7 +3,7 @@ FROM --platform=$BUILDPLATFORM golang:1.26-alpine AS builder
 WORKDIR /app
 
 COPY burrowd/go.mod burrowd/go.sum ./burrowd/
-COPY protocol/go.mod ./protocol/
+COPY protocol/go.mod protocol/go.sum ./protocol/
 
 RUN go -C burrowd mod download
 
@@ -13,9 +13,14 @@ COPY protocol/ ./protocol/
 ARG TARGETOS=linux
 ARG TARGETARCH
 ARG VERSION=dev
+ARG REVISION
+ARG BURROW_TELEMETRY_BUILD
+# Public ingestion configuration only, never management/upload credentials.
+ARG BURROW_POSTHOG_KEY
+ARG BURROW_SERVER_SENTRY_DSN
 WORKDIR /app/burrowd
 RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH:-$(go env GOARCH)} \
-    go build -trimpath -ldflags="-s -w -X main.Version=${VERSION}" -o /bin/burrowd .
+    go build -trimpath -ldflags="-s -w -X main.Version=${VERSION} -X main.Revision=${REVISION} -X main.TelemetryBuild=${BURROW_TELEMETRY_BUILD} -X main.PostHogKey=${BURROW_POSTHOG_KEY} -X main.SentryDSN=${BURROW_SERVER_SENTRY_DSN}" -o /bin/burrowd .
 
 FROM alpine:3.23
 

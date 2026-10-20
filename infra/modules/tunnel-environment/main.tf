@@ -70,6 +70,11 @@ resource "digitalocean_app" "tunnels" {
         scope = "RUN_TIME"
       }
       env {
+        key   = "BURROW_TELEMETRY_ENABLED"
+        value = var.environment == "production" ? "true" : "false"
+        scope = "RUN_TIME"
+      }
+      env {
         key   = "BURROW_REDIS_URL"
         value = "rediss://default:${urlencode(upstash_redis_database.tunnels.password)}@${upstash_redis_database.tunnels.endpoint}:${upstash_redis_database.tunnels.port}"
         scope = "RUN_TIME"

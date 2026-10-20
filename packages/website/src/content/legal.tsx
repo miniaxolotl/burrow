@@ -168,6 +168,35 @@ export const privacy: LegalDocument = {
       ),
     },
     {
+      id: "developer-telemetry",
+      title: "CLI and service diagnostics",
+      content: (
+        <>
+          <p>
+            Official CLI releases use a separate random installation identifier
+            for anonymous command and tunnel outcomes. PostHog receives these
+            outcomes; Sentry receives sanitized error stacks, sampled traces and
+            operation metrics and logs. We exclude arguments, ports, hostnames,
+            tunnel IDs, credentials, request histories, headers and payloads.
+            Browser and CLI identities are not joined.
+          </p>
+          <p>
+            Run <code>burrowctl telemetry disable</code> to opt out and clear
+            the local analytics identity, or set <code>DO_NOT_TRACK=1</code> or
+            <code>BURROW_TELEMETRY=0</code>. Running commands honor opt-out
+            before uploads. Re-enable with{" "}
+            <code>burrowctl telemetry enable</code>; a new identity is created
+            on the next invocation. CI and local builds do not initialize
+            telemetry. Our hosted server separately reports content-free
+            operational diagnostics; self-hosted reporting is off unless the
+            operator enables it. Both providers process data in the United
+            States. Opt-out does not erase previously received data; contact us
+            for information or deletion requests.
+          </p>
+        </>
+      ),
+    },
+    {
       id: "website",
       title: "Website analytics and demos",
       content: (

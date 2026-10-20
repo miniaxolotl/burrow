@@ -19,6 +19,10 @@ builds:
     ldflags:
       - -s -w
       - -X main.Version={{.Version}}
+      - -X main.Revision={{.FullCommit}}
+      - -X main.TelemetryBuild={{.Env.BURROW_TELEMETRY_BUILD}}
+      - -X main.PostHogKey={{.Env.BURROW_POSTHOG_KEY}}
+      - -X main.SentryDSN={{.Env.BURROW_SERVER_SENTRY_DSN}}
 
   - id: burrowctl
     mod_timestamp: "{{ .CommitTimestamp }}"
@@ -32,6 +36,10 @@ builds:
     ldflags:
       - -s -w
       - -X main.Version={{.Version}}
+      - -X main.Revision={{.FullCommit}}
+      - -X main.TelemetryBuild={{.Env.BURROW_TELEMETRY_BUILD}}
+      - -X main.PostHogKey={{.Env.BURROW_POSTHOG_KEY}}
+      - -X main.SentryDSN={{.Env.BURROW_CLI_SENTRY_DSN}}
 
 archives:
   - id: burrowd
