@@ -104,6 +104,11 @@ All nine browser tests pass, including real streamed Sentry envelopes.
 
 ## Go CLI, TUI and service
 
+Browser opt-out also rotates a local identity generation. Every event and Sentry
+envelope checks it, so re-enabling in one tab cannot revive another tab's cleared
+identity. Preference-write failures stop collection in the affected document.
+The real-SDK browser suite covers both cases.
+
 The `protocol/telemetry` package exposes only closed event/operation/outcome enums
 and monotonic timing. Bounded nonblocking queues isolate the SDKs from tunnel
 work. Payload projection independently drops private/unknown fields at the SDK

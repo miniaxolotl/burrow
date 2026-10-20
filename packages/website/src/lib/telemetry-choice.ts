@@ -1,5 +1,8 @@
 const preferenceKey = "burrow.telemetry.optout";
+const generationKey = "burrow.telemetry.generation";
 const preferenceEvent = "burrow:telemetry-preference";
+let generation: string | null | undefined;
+let storageFailed = false;
 
 export function browserOptOut(): boolean {
   return (
@@ -12,9 +15,28 @@ export function browserOptOut(): boolean {
 export function telemetryOptedOut(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return browserOptOut() || localStorage.getItem(preferenceKey) === "true";
+    return (
+      storageFailed ||
+      browserOptOut() ||
+      localStorage.getItem(preferenceKey) === "true"
+    );
   } catch {
     return true;
+  }
+}
+export function activateTelemetryGeneration() {
+  try {
+    generation = localStorage.getItem(generationKey);
+  } catch {
+    generation = undefined;
+  }
+}
+export function telemetryAllowed(): boolean {
+  if (telemetryOptedOut() || generation === undefined) return false;
+  try {
+    return generation === localStorage.getItem(generationKey);
+  } catch {
+    return false;
   }
 }
 export function subscribePreference(callback: () => void) {
@@ -26,7 +48,13 @@ export function subscribePreference(callback: () => void) {
   };
 }
 export function storePreference(disabled: boolean) {
-  localStorage.setItem(preferenceKey, String(disabled));
+  try {
+    localStorage.setItem(preferenceKey, String(disabled));
+    if (disabled) localStorage.setItem(generationKey, crypto.randomUUID());
+  } catch (error) {
+    storageFailed = true;
+    throw error;
+  }
 }
 export function notifyPreference() {
   window.dispatchEvent(new Event(preferenceEvent));

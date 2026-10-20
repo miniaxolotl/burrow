@@ -11,14 +11,17 @@ import {
   type Placement,
 } from "./analytics-policy";
 import {
+  activateTelemetryGeneration,
   browserOptOut,
   notifyPreference,
   storePreference,
   subscribePreference,
   telemetryOptedOut,
+  telemetryAllowed,
 } from "./telemetry-choice";
 
 let initialized = false;
+let suspended = false;
 let lastPage: string | undefined;
 function registerContext() {
   posthog.register({
@@ -44,6 +47,7 @@ export function initializeAnalytics() {
   )
     return;
   try {
+    activateTelemetryGeneration();
     posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
       api_host: "https://us.i.posthog.com",
       ui_host: "https://us.posthog.com",
@@ -81,13 +85,13 @@ export function initializeAnalytics() {
         }),
       },
       before_send: (event) =>
-        telemetryOptedOut()
+        !telemetryAllowed()
           ? null
           : sanitizeEvent(event, location.href, document.referrer),
       loaded: (client) => {
         registerContext();
         client.onFeatureFlags(() => {
-          if (!telemetryOptedOut())
+          if (telemetryAllowed())
             client.set_config({
               disable_session_recording:
                 client.getFeatureFlag("session-replay", {
@@ -100,7 +104,8 @@ export function initializeAnalytics() {
     });
     initialized = true;
     subscribePreference(() => {
-      if (telemetryOptedOut()) {
+      if (!telemetryAllowed() && !suspended) {
+        suspended = true;
         posthog.opt_out_capturing();
         posthog.stopSessionRecording();
       }
@@ -114,9 +119,12 @@ export function setTelemetryOptOut(disabled: boolean) {
   try {
     storePreference(disabled);
     if (disabled && initialized) {
+      suspended = true;
       posthog.opt_out_capturing();
       posthog.stopSessionRecording();
     } else if (!disabled && !browserOptOut()) {
+      suspended = false;
+      activateTelemetryGeneration();
       if (initialized) posthog.reset(true);
       else initializeAnalytics();
       if (initialized) {
@@ -144,7 +152,7 @@ export function capture(
     duration_ms?: number;
   } = {},
 ) {
-  if (!initialized || telemetryOptedOut()) return;
+  if (!initialized || !telemetryAllowed()) return;
   try {
     posthog.capture(event, properties);
   } catch {
@@ -153,7 +161,7 @@ export function capture(
 }
 export function capturePageview(path: string) {
   initializeAnalytics();
-  if (!initialized || telemetryOptedOut()) return;
+  if (!initialized || !telemetryAllowed()) return;
   const route = pagePath(path);
   if (route === lastPage) return;
   lastPage = route;
@@ -168,7 +176,7 @@ export function subscribeCtaVariant(callback: () => void) {
   const update = () => {
     unsubscribeFlags?.();
     unsubscribeFlags =
-      initialized && !telemetryOptedOut()
+      initialized && telemetryAllowed()
         ? posthog.onFeatureFlags(callback)
         : undefined;
     callback();
@@ -182,14 +190,14 @@ export function subscribeCtaVariant(callback: () => void) {
 }
 export function ctaVariant(): "control" | "benefit" {
   return initialized &&
-    !telemetryOptedOut() &&
+    telemetryAllowed() &&
     posthog.getFeatureFlag("website-cta-copy", { send_event: false }) ===
       "benefit"
     ? "benefit"
     : "control";
 }
 export function captureCtaExposure() {
-  if (initialized && !telemetryOptedOut())
+  if (initialized && telemetryAllowed())
     posthog.getFeatureFlag("website-cta-copy");
 }
 export function captureLinkClick(event: MouseEvent) {
