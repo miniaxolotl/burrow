@@ -76,6 +76,9 @@ no Homebrew tap, winget package, or apt repository in this project.
 Rerun a failed Deploy on the same current production commit. Publication is
 non-atomic across providers: an error remains visible, and successful immutable
 artifacts are reused. Never delete or overwrite an existing version to retry.
+After each npm upload, registry integrity is read back up to 60 times, five seconds
+apart. Only a missing version is retried; conflicting bytes or provider errors fail
+immediately. This accommodates npm's asynchronous processing without republishing.
 Conflicting base changes require integration into development and a new release;
 a rejected/closed candidate is not reopened automatically. Rollbacks use a reviewed
 new release/revert, preserving immutable history. Ordinary development pushes do
