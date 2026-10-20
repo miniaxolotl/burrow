@@ -9,6 +9,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import { setTimeout } from "node:timers/promises";
 
 export async function publicationPlan(artifacts, lookup) {
   const pending = [];
@@ -29,16 +30,38 @@ export async function publishPlan(plan, publish) {
 
 export function registryIntegrity(name) {
   try {
-    const integrity = execFileSync("npm", ["view", name, "dist.integrity"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    }).trim();
+    const integrity = execFileSync(
+      "npm",
+      ["view", name, "dist.integrity", "--prefer-online"],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    ).trim();
     if (!integrity) throw new Error(`Missing registry integrity for ${name}`);
     return integrity;
   } catch (error) {
     if (/E404/.test(String(error.stderr))) return null;
     throw error;
   }
+}
+
+export async function waitForPublication(
+  artifact,
+  { lookup = registryIntegrity, wait = setTimeout, attempts = 60 } = {},
+) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const integrity = await lookup(artifact.name);
+    if (integrity === artifact.integrity) return;
+    if (integrity)
+      throw new Error(
+        `Publication readback differs for ${artifact.name}; inspect before retrying`,
+      );
+    if (attempt + 1 < attempts) await wait(5000);
+  }
+  throw new Error(
+    `Publication not visible for ${artifact.name}; inspect and retry without overwriting`,
+  );
 }
 
 export async function publishPackages(directories, dryRun) {
@@ -84,10 +107,7 @@ export async function publishPackages(directories, dryRun) {
           ],
           { stdio: "inherit" },
         );
-        if (registryIntegrity(pkg.name) !== pkg.integrity)
-          throw new Error(
-            `Publication readback differs for ${pkg.name}; inspect and retry`,
-          );
+        await waitForPublication(pkg);
       }
     });
   } finally {
