@@ -13,7 +13,7 @@ export function ShareSite({ url }: { url: string }) {
       if (navigator.share) {
         try {
           await navigator.share({
-            title: "Burrow — Share localhost over HTTPS",
+            title: "Burrow | Share localhost over HTTPS",
             text: "A public HTTPS link for your local app. Open source, no account required.",
             url,
           });

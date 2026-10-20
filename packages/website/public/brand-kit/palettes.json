@@ -1,0 +1,66 @@
+[
+  {
+    "id": "01-clay-forest",
+    "name": "Clay & forest",
+    "background": "#f7f6f0",
+    "symbol": "#9d4930",
+    "wordmark": "#253e31",
+    "note": "The selected Arc palette: clay, forest and paper."
+  },
+  {
+    "id": "02-forest",
+    "name": "Forest",
+    "background": "#253e31",
+    "symbol": "#f7f6f0",
+    "wordmark": "#f7f6f0",
+    "note": "The approved reversed identity on forest green."
+  },
+  {
+    "id": "03-clay",
+    "name": "Clay",
+    "background": "#9d4930",
+    "symbol": "#f7f6f0",
+    "wordmark": "#f7f6f0",
+    "note": "A warm, high-contrast avatar and profile colourway."
+  },
+  {
+    "id": "04-sandstone",
+    "name": "Sandstone",
+    "background": "#eee0c9",
+    "symbol": "#855036",
+    "wordmark": "#44372b",
+    "note": "Ochre paper with a dark clay owl."
+  },
+  {
+    "id": "05-moss",
+    "name": "Moss",
+    "background": "#e2e7d3",
+    "symbol": "#4e633b",
+    "wordmark": "#2c3e30",
+    "note": "A quieter woodland palette."
+  },
+  {
+    "id": "06-nightfall",
+    "name": "Nightfall",
+    "background": "#283b48",
+    "symbol": "#e9bfa5",
+    "wordmark": "#faf5eb",
+    "note": "Copper light on a blue-grey evening ground."
+  },
+  {
+    "id": "07-black",
+    "name": "Black",
+    "background": "#ffffff",
+    "symbol": "#000000",
+    "wordmark": "#000000",
+    "note": "Single-colour reproduction on white or a light surface."
+  },
+  {
+    "id": "08-white",
+    "name": "White",
+    "background": "#000000",
+    "symbol": "#ffffff",
+    "wordmark": "#ffffff",
+    "note": "White artwork for dark surfaces; transparent logo exports."
+  }
+]

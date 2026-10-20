@@ -65,11 +65,11 @@ export default async function HomePage() {
             </h1>
             <p className="hero-description">
               Your next demo is already running. Give it a public HTTPS link.
-              Share local apps, catch real webhooks, and inspect requests—all
+              Share local apps, catch real webhooks, and inspect requests, all
               without leaving your terminal.
             </p>
             <p className="mt-3 text-xs leading-6 text-muted">
-              Keep your flow. Skip the “let me deploy that first.”
+              It works locally. Now let someone try it.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
               <a href="#install" className="button-primary">

@@ -4,22 +4,46 @@ import localFont from "next/font/local";
 import { site } from "@/lib/site";
 import { WebsiteSpeedInsights } from "@/components/website-speed-insights";
 import "./globals.css";
+import "./brand-family.css";
 
 const sans = localFont({
-  src: "../../node_modules/@fontsource-variable/dm-sans/files/dm-sans-latin-wght-normal.woff2",
-  variable: "--font-dm-sans",
-  weight: "100 1000",
+  src: [
+    {
+      path: "../../public/brand-kit/fonts/ibm-plex-sans-400.woff2",
+      weight: "400",
+    },
+    {
+      path: "../../public/brand-kit/fonts/ibm-plex-sans-500.woff2",
+      weight: "500",
+    },
+    {
+      path: "../../public/brand-kit/fonts/ibm-plex-sans-600.woff2",
+      weight: "600",
+    },
+    {
+      path: "../../public/brand-kit/fonts/ibm-plex-sans-700.woff2",
+      weight: "700",
+    },
+  ],
+  variable: "--font-plex-sans",
   display: "swap",
   adjustFontFallback: "Arial",
 });
 
-const editorial = localFont({
-  src: "../../node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2",
-  variable: "--font-instrument-serif",
-  weight: "400",
-  style: "italic",
+const mono = localFont({
+  src: [
+    {
+      path: "../../public/brand-kit/fonts/ibm-plex-mono-400.woff2",
+      weight: "400",
+    },
+    {
+      path: "../../public/brand-kit/fonts/ibm-plex-mono-500.woff2",
+      weight: "500",
+    },
+  ],
+  variable: "--font-plex-mono",
   display: "swap",
-  adjustFontFallback: "Times New Roman",
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -58,7 +82,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${sans.variable} ${editorial.variable}`}>
+      <body className={`${sans.variable} ${mono.variable}`}>
         <a href="#main" className="skip-link">
           Skip to content
         </a>

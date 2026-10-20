@@ -16,7 +16,7 @@ if (!["http:", "https:"].includes(url.protocol)) {
 
 export const site = {
   name: "Burrow",
-  title: "Burrow — Share localhost over HTTPS",
+  title: "Burrow | Share localhost over HTTPS",
   creator: "Bramble Labs Inc.",
   description:
     "Turn your localhost into a public HTTPS link. Share a work in progress, test webhooks, and manage your tunnels from the terminal. Open source. No account required.",
