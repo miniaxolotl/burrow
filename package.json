@@ -1,7 +1,7 @@
 {
   "name": "@monorepo/burrow",
   "private": true,
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Public HTTPS tunnels for localhost by Bramble Labs Inc.",
   "author": "Bramble Labs Inc.",
   "license": "MIT",
