@@ -15,9 +15,11 @@ export default function NotFound() {
       <Brand />
       <main
         id="main"
-        className="flex min-h-[75vh] flex-col items-center justify-center py-16 text-center"
+        className="recovery-page flex min-h-[75vh] flex-col items-center justify-center py-16 text-center"
       >
-        <BurrowMark className="mb-8 size-20 text-forest/40" />
+        <span className="recovery-mark">
+          <BurrowMark className="size-14 text-accent" />
+        </span>
         <p className="eyebrow">404 / THIS TUNNEL ENDS HERE</p>
         <h1 className="section-heading mt-5">
           A little off
@@ -30,6 +32,10 @@ export default function NotFound() {
         <Link href="/" className="button-primary mt-8">
           <ArrowLeft size={16} aria-hidden="true" /> Back to Burrow
         </Link>
+        <nav className="recovery-links" aria-label="Helpful links">
+          <Link href="/#install">Installation</Link>
+          <a href="mailto:burrow@mawa.dev">Get help</a>
+        </nav>
       </main>
     </div>
   );

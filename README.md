@@ -34,6 +34,13 @@ pnpm dev
 The marketing site runs at `http://localhost:3000`. See the
 [website guide](packages/website/README.md) for builds and checks.
 
+## Releases
+
+Release Please manages versions and changelogs on `development`. A deliberately
+selected, immutable release is promoted through a protected PR to `production`.
+Only production publishes packages, archives, containers and the website.
+See the [release runbook](documentation/deploy.md) for selection, retries and checks.
+
 ## License
 
 [MIT](LICENSE)

@@ -8,6 +8,7 @@ before:
 
 builds:
   - id: burrowd
+    mod_timestamp: "{{ .CommitTimestamp }}"
     dir: burrowd
     binary: burrowd
     env:
@@ -20,6 +21,7 @@ builds:
       - -X main.Version={{.Version}}
 
   - id: burrowctl
+    mod_timestamp: "{{ .CommitTimestamp }}"
     dir: burrowctl
     binary: burrowctl
     env:
@@ -56,12 +58,4 @@ release:
   prerelease: auto
 
 changelog:
-  sort: asc
-  use: github
-  filters:
-    exclude:
-      - "^docs:"
-      - "^test:"
-      - "^ci:"
-      - Merge pull request
-      - Merge branch
+  disable: true # Release Please owns the release body and CHANGELOG.md.
