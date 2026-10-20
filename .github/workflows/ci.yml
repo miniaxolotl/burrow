@@ -6,11 +6,44 @@ on:
   pull_request:
     branches: [production, development]
   workflow_dispatch:
+    inputs:
+      promotion_pr:
+        description: Frozen promotion PR number (automation only; omit for source CI)
+        type: string
+        default: ""
 
 permissions:
   contents: read
+  actions: read
+  pull-requests: read
 
 jobs:
+  promotion:
+    name: Promotion Admission
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: node --test scripts/release/*.test.mjs
+      - run: node scripts/release/promotion.mjs admit
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  gate:
+    name: CI Gate
+    if: always()
+    needs: [promotion, infrastructure, website, lint, build, test]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: jq -e 'all(.[]; .result == "success")' <<< "$RESULTS"
+
   infrastructure:
     runs-on: ubuntu-latest
     steps:
