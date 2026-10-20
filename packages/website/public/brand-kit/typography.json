@@ -1,0 +1,43 @@
+{
+  "brand": "Burrow",
+  "families": {
+    "display": "IBM Plex Sans",
+    "body": "IBM Plex Sans",
+    "code": "IBM Plex Mono"
+  },
+  "weights": {
+    "display": 600,
+    "heading": 600,
+    "body": 400,
+    "label": 500
+  },
+  "scale": {
+    "display": {
+      "minRem": 2.5,
+      "maxRem": 5,
+      "lineHeight": 1.08,
+      "letterSpacing": "-0.025em"
+    },
+    "heading": {
+      "minRem": 1.75,
+      "maxRem": 2.5,
+      "lineHeight": 1.2
+    },
+    "body": {
+      "rem": 1,
+      "lineHeight": 1.6,
+      "maxWidth": "65ch"
+    },
+    "label": {
+      "rem": 0.875,
+      "lineHeight": 1.4
+    },
+    "caption": {
+      "rem": 0.75,
+      "lineHeight": 1.5
+    }
+  },
+  "emphasis": "ibm-plex-sans-500",
+  "character": "Direct. Capable. Ready to ship.",
+  "rationale": "IBM Plex Sans balances an engineered structure with enough warmth to sit beside the Arc owl. IBM Plex Mono makes commands, ports, requests and logs legible and unmistakably technical."
+}

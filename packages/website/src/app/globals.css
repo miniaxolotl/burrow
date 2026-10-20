@@ -19,9 +19,9 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-dm-sans), Arial, sans-serif;
-  --font-editorial: var(--font-instrument-serif), Georgia, serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --font-sans: var(--font-plex-sans), Arial, sans-serif;
+  --font-editorial: var(--font-plex-sans), Arial, sans-serif;
+  --font-mono: var(--font-plex-mono), monospace;
 }
 
 @layer base {

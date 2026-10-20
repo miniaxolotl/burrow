@@ -1,0 +1,150 @@
+{
+  "collection": "04",
+  "assets": [
+    {
+      "file": "public/brand-kit/fonts/ibm-plex-sans-400.woff2",
+      "source": "identity-library/burrow/typography/fonts/ibm-plex-sans-400.woff2",
+      "sha256": "e2bdc3035ea3ecb40f6163262f14f3f95daf58c89b5b5ce08a14b049bd603012"
+    },
+    {
+      "file": "public/brand-kit/fonts/ibm-plex-sans-500.woff2",
+      "source": "identity-library/burrow/typography/fonts/ibm-plex-sans-500.woff2",
+      "sha256": "4c4108a764ec29ce91bd56f6ac0930970f39d2b90e133ad144ba90f4047d3ac4"
+    },
+    {
+      "file": "public/brand-kit/fonts/ibm-plex-sans-600.woff2",
+      "source": "identity-library/burrow/typography/fonts/ibm-plex-sans-600.woff2",
+      "sha256": "f9dc6905b8463e9274ddd8b927da196fceb57f041ce22d287f917ee03211b50a"
+    },
+    {
+      "file": "public/brand-kit/fonts/ibm-plex-sans-700.woff2",
+      "source": "identity-library/burrow/typography/fonts/ibm-plex-sans-700.woff2",
+      "sha256": "31ae0c177a9a03fd242291e51d7fe825715698338d02ef78906583c2a904da15"
+    },
+    {
+      "file": "public/brand-kit/fonts/ibm-plex-mono-400.woff2",
+      "source": "identity-library/burrow/typography/fonts/ibm-plex-mono-400.woff2",
+      "sha256": "13b16cd770a73f60304510221c3e7186d396ba6ca5d64c52b5c6fb983d0e900a"
+    },
+    {
+      "file": "public/brand-kit/fonts/ibm-plex-mono-500.woff2",
+      "source": "identity-library/burrow/typography/fonts/ibm-plex-mono-500.woff2",
+      "sha256": "0498bcb48294756b5ac9062290e1639e907b1ec69b5dc2e8cfdec3fab58e0bc8"
+    },
+    {
+      "file": "public/brand-kit/licenses/ibm-plex-sans-OFL.txt",
+      "source": "identity-library/burrow/typography/licenses/ibm-plex-sans-OFL.txt",
+      "sha256": "37784b44044a4ffd9256702b7c0982c37e5c8887ba90c6dca0479aea93dc898d"
+    },
+    {
+      "file": "public/brand-kit/licenses/ibm-plex-mono-OFL.txt",
+      "source": "identity-library/burrow/typography/licenses/ibm-plex-mono-OFL.txt",
+      "sha256": "37784b44044a4ffd9256702b7c0982c37e5c8887ba90c6dca0479aea93dc898d"
+    },
+    {
+      "file": "public/brand-kit/licenses/dm-sans-LICENSE.txt",
+      "source": "identity-library/burrow/01-clay-forest/licenses/dm-sans-LICENSE.txt",
+      "sha256": "6fbd040a29c2037a765dfb9f2561e9965b5c95c6dcb5dce516089d63d5f17af7"
+    },
+    {
+      "file": "public/brand-kit/identity/primary/logos/horizontal.svg",
+      "source": "identity-library/burrow/01-clay-forest/logos/horizontal.svg",
+      "sha256": "7e4acffed3109a9016cbc4334258d0145440a5aa99e9b38c52953c72d13ba71d"
+    },
+    {
+      "file": "public/brand-kit/identity/primary/logos/domain.svg",
+      "source": "identity-library/burrow/01-clay-forest/logos/domain.svg",
+      "sha256": "1ba5eea05eec4bf82b7eab68591e1c35fe4d54457f4e4298585a96525d62e9a7"
+    },
+    {
+      "file": "public/brand-kit/identity/primary/wordmarks/wordmark.svg",
+      "source": "identity-library/burrow/01-clay-forest/wordmarks/wordmark.svg",
+      "sha256": "50261e806b496524805536a30244ce82a735e9dae86c9d261a7d5f86466ecf2f"
+    },
+    {
+      "file": "public/brand-kit/identity/primary/symbols/symbol.svg",
+      "source": "identity-library/burrow/01-clay-forest/symbols/symbol.svg",
+      "sha256": "95c2d9e9cbe077f8ebbb94fa3313b48c6742fc4c067ca11af7f21377177ba113"
+    },
+    {
+      "file": "public/brand-kit/identity/inverse/logos/horizontal.svg",
+      "source": "identity-library/burrow/08-white/logos/horizontal.svg",
+      "sha256": "79fef154e645c9d9bc06fb6befb799bc35d659556f6def1c076ebbefd471373d"
+    },
+    {
+      "file": "public/brand-kit/identity/inverse/logos/domain.svg",
+      "source": "identity-library/burrow/08-white/logos/domain.svg",
+      "sha256": "014502e815c72a4e04ba2c17de987cc104ff579c504adcabf34a1eb463e12121"
+    },
+    {
+      "file": "public/brand-kit/identity/inverse/wordmarks/wordmark.svg",
+      "source": "identity-library/burrow/08-white/wordmarks/wordmark.svg",
+      "sha256": "efbc2aa0e476d24baea2b188b9a0914f5940bada8460d019c2cc3dd59da4fc53"
+    },
+    {
+      "file": "public/brand-kit/identity/inverse/symbols/symbol.svg",
+      "source": "identity-library/burrow/08-white/symbols/symbol.svg",
+      "sha256": "61d50d378c7e4544017d52281ef315149b31b773aa16d8a1cb9e86d13b4b2988"
+    },
+    {
+      "file": "public/brand-kit/icons/favicon.svg",
+      "source": "identity-library/burrow/01-clay-forest/icons/favicon.svg",
+      "sha256": "0419999d3f2a9f117affe05f72d2d3a1003a4154cea38f836c4ec63279ba2522"
+    },
+    {
+      "file": "public/brand-kit/icons/favicon.ico",
+      "source": "identity-library/burrow/01-clay-forest/icons/favicon.ico",
+      "sha256": "b1789f7c5dba40f334463153da72900bdb9d0a5eba01fd7fc9b09b0c549141bc"
+    },
+    {
+      "file": "public/brand-kit/icons/apple-touch-icon-180.png",
+      "source": "identity-library/burrow/01-clay-forest/icons/apple-touch-icon-180.png",
+      "sha256": "db0fd527e96a79e7aa4d46ed8673c4b23902d5701c8768ceacb4c2b2a3269c43"
+    },
+    {
+      "file": "public/brand-kit/icons/icon-192.png",
+      "source": "identity-library/burrow/01-clay-forest/icons/icon-192.png",
+      "sha256": "de18aac7f23020bbbce7a953a7ecdc0280d55ffe8e270cac6e5a5987eac42ef7"
+    },
+    {
+      "file": "public/brand-kit/icons/icon-512.png",
+      "source": "identity-library/burrow/01-clay-forest/icons/icon-512.png",
+      "sha256": "a4aede202419ccd0fe79af566f41d38a98d0ca6375ebf1a9baac541db548840f"
+    },
+    {
+      "file": "public/brand-kit/palettes.json",
+      "source": "identity-library/burrow/palettes.json",
+      "sha256": "68efc9cb687f168e739d490c37fdc78f3fef48c590b15804a0de9cc76af7d89b"
+    },
+    {
+      "file": "public/brand-kit/typography.json",
+      "source": "identity-library/burrow/typography/tokens.json",
+      "sha256": "55b2ebacdd4c67be7d02c7bc1506281f2db6bc408001c43bf231ada604a1cee6"
+    },
+    {
+      "file": "src/app/icon.svg",
+      "source": "identity-library/burrow/01-clay-forest/icons/favicon.svg",
+      "sha256": "0419999d3f2a9f117affe05f72d2d3a1003a4154cea38f836c4ec63279ba2522"
+    },
+    {
+      "file": "src/app/favicon.ico",
+      "source": "identity-library/burrow/01-clay-forest/icons/favicon.ico",
+      "sha256": "b1789f7c5dba40f334463153da72900bdb9d0a5eba01fd7fc9b09b0c549141bc"
+    },
+    {
+      "file": "public/brand-kit/images/social.png",
+      "source": "burrow/social/01-localhost-shared-landscape-1200x628.png",
+      "sha256": "68e1c2f7b400d2b76665931df66dc125e7631119acc641613c4ad6a0e6867b27"
+    },
+    {
+      "file": "public/brand-kit/images/banner.png",
+      "source": "burrow/display-banners/burrow-display-970x250.png",
+      "sha256": "d651d067e9abde19b0b7f5b80219f0fee221e8a43dec1078ea2552717a719862"
+    },
+    {
+      "file": "design-kit/burrow.pdf",
+      "source": "guidelines/burrow.pdf",
+      "sha256": "8972271de97625807fb2bcaa42866cfed9a3139af3e45bce901c99c19f402b3f"
+    }
+  ]
+}
