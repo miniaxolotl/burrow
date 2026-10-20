@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.4](https://github.com/miniaxolotl/burrow/compare/v0.3.3...v0.3.4) (2026-10-20)
+
+
+### Bug Fixes
+
+* **release:** align shared CI/CD workflows and reproducible packing ([2cb7768](https://github.com/miniaxolotl/burrow/commit/2cb7768acd1f78a86460d097e59f479f475220a9))
+* **release:** preserve packed permissions across runner umasks ([e5dccfb](https://github.com/miniaxolotl/burrow/commit/e5dccfb4b995a5330708c291b0aea61659112113))
+
 ## [0.3.3](https://github.com/miniaxolotl/burrow/compare/v0.3.2...v0.3.3) (2026-10-20)
 
 
