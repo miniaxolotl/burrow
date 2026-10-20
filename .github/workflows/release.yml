@@ -1,90 +1,37 @@
-name: Release
-
+name: Source Release
 on:
   push:
     branches: [development]
   workflow_dispatch:
-  workflow_call:
-    inputs:
-      sha:
-        type: string
-        required: true
-
 permissions:
-  contents: read
-
+  contents: write
+  pull-requests: write
+  actions: write
+concurrency:
+  group: release-please-development
+  cancel-in-progress: false
 jobs:
   release-please:
+    if: github.ref == 'refs/heads/development'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    if: inputs.sha == '' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0; release-please 17.6.0
+        id: release
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ github.token }}
+          target-branch: development
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          target-branch: development
-
-  publishing-access:
-    if: github.event_name == 'workflow_dispatch' && inputs.sha == ''
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          registry-url: https://registry.npmjs.org
-      - name: Verify npm publishing credentials before promotion
-        run: npm whoami
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  publish:
-    if: inputs.sha != ''
-    runs-on: ubuntu-latest
-    environment: production
-    permissions:
-      contents: write
-      id-token: write
-    steps:
       - uses: actions/checkout@v4
+        if: steps.release.outputs.prs_created == 'true'
         with:
-          ref: ${{ inputs.sha }}
-          fetch-depth: 0
           persist-credentials: false
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-          registry-url: https://registry.npmjs.org
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: burrowd/go.mod
-          cache-dependency-path: "**/go.sum"
-      - run: pnpm install --frozen-lockfile
-      - name: Verify npm publishing credentials
-        run: npm whoami
+        if: steps.release.outputs.prs_created == 'true'
+        with: { node-version: 24 }
+      - name: Explicit CI dispatch for token-authored release PRs
+        if: steps.release.outputs.prs_created == 'true'
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      - id: version
-        run: echo "tag=v$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
-      - name: Verify the release tag points to the deployed commit
-        env:
-          TAG: ${{ steps.version.outputs.tag }}
-          SHA: ${{ inputs.sha }}
-        run: test "$(git rev-list -n 1 "$TAG")" = "$SHA"
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: "v2.18.3"
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Publish all npm platform packages and wrapper
-        run: pnpm run release
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PRS: ${{ steps.release.outputs.prs }}
+        run: node scripts/release/dispatch-ci.mjs

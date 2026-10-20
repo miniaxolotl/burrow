@@ -12,8 +12,8 @@ Burrow is a tunneling service: expose local services to the internet via HTTPS s
 - **`packages/burrowctl/`** — npm wrapper (`bin/burrowctl.js` resolves platform-specific binary)
 - **`packages/website/`** — Next.js App Router / Tailwind marketing site (workspace package `website`); SSR page, local fonts, generated social images, and small interactive client components
 - **`packages/burrowctl-{darwin,linux}-{arm64,x64}/`** — platform npm packages, each ships a pre-built Go binary
-- **`scripts/release/`** — TypeScript script that runs goreleaser and publishes npm packages
-- **`scripts/deploy/`** — TypeScript script that builds/pushes Docker images
+- **`scripts/release/`** — frozen promotion admission, release provenance, archive and npm publication
+- **`scripts/deploy/`** — local-only Docker image build
 - **`infra/`** — OpenTofu staging/production roots for DigitalOcean, Upstash, and Cloudflare; encrypted Neon state
 - **`scripts/infra/`** — Infrastructure validation, deployment, and wildcard certificate reconciliation
 - **`lib/`** — shared pnpm workspace configs (eslint, typescript)
@@ -56,8 +56,11 @@ pnpm typecheck:website
 - Version strings live in `burrowd/version.go` and `burrowctl/version.go`; release-please bumps them, goreleaser overrides at link time with `-X main.Version`.
 - Server requires **Redis** (see `docker-compose.yml`). Default port 25701.
 - `.env` is gitignored; copy `.env.example` and set `BURROW_DOMAIN` to run locally. Client owner credentials are generated automatically; there is no shared admin secret.
-- Branches: `development` → release-please creates PRs; `production` → triggers npm publish + Docker deploy with `latest` tags.
+- Branches: feature PR → `development` → explicitly selected `promote/production/vX.Y.Z` PR → `production`. Use merge commits for promotions. Release Please owns all versions/changelogs on development. Never push directly to a protected branch or move a released tag/frozen candidate.
+- `CI Gate` is the stable required GitHub Actions check. It requires every CI job, including promotion admission. Auto-merge may wait for this gate; it grants no bypass.
+- Production alone publishes npm, binary archives and container images, deploys the tunnel service and builds the Vercel production site. Resolve the tag's source SHA independently of the production merge SHA; their trees must match. All artifact preflights precede publication and server rollout follows publication.
 - CI runs `go test` on all three modules. Deployments also run the real HTTPS tunnel test in `burrowctl/internal/live_test.go`.
-- OpenTofu 1.12.6 is pinned in `.opentofu-version`; run `bash scripts/infra/check.sh`. Hosted apps deploy immutable GHCR digests. `development` deploys staging and `production` deploys production after successful CI.
+- OpenTofu 1.12.6 is pinned in `.opentofu-version`; run `bash scripts/infra/check.sh`. Hosted apps deploy immutable GHCR digests. Development performs validation only. Infrastructure maintenance is dispatched on production. Existing staging resources are retained pending an explicit retirement decision.
+- Work under `worktrees/`, keep local execution plans under `plans/`, and create minimally labelled PRs assigned to `miniaxolotl`. Follow `documentation/deploy.md`; run `node --test scripts/release/*.test.mjs` for release tooling changes.
 - Node >= 22, pnpm 10, Go 1.26.
 - Website canonical URLs and sharing use `SITE_URL` (set before building; see `packages/website/.env.example`). This is the website origin, not necessarily the tunnel server. Localhost is the noindex development fallback.

@@ -1,7 +1,5 @@
 name: Infrastructure Maintenance
 on:
-  schedule:
-    - cron: "17 8 * * *"
   workflow_dispatch:
 
 permissions:
@@ -9,15 +7,12 @@ permissions:
 
 jobs:
   reconcile:
+    if: github.ref == 'refs/heads/production'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        environment: [staging, production]
-    environment: ${{ matrix.environment }}
+    environment: production
     concurrency:
-      group: infra-${{ matrix.environment }}
+      group: infra-production
       cancel-in-progress: false
     env:
       PG_CONN_STR: ${{ secrets.OPENTOFU_STATE_DATABASE_URL }}
@@ -29,13 +24,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ matrix.environment == 'production' && 'production' || 'development' }}
+          ref: ${{ github.sha }}
           persist-credentials: false
       - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
         with:
           tofu_version: "1.12.6"
           tofu_wrapper: false
       - name: Reconcile DNS and certificate verification
-        env:
-          TARGET: ${{ matrix.environment }}
-        run: bash scripts/infra/apply.sh "$TARGET"
+        run: bash scripts/infra/apply.sh production
