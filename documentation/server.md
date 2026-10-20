@@ -1,5 +1,21 @@
 # burrowd
 
+## Operational telemetry
+
+Official server releases can report content-free connection/forwarding outcomes,
+sanitized errors, 10% sampled traces, and operation metrics to the same Burrow
+providers. Enable with `BURROW_TELEMETRY_ENABLED=true`; the hosted production
+service sets this through its infrastructure definition. Self-hosted servers are
+off by default. `DO_NOT_TRACK=1` or `BURROW_TELEMETRY=0` disables collection.
+
+The server uses a random identity under its service account's
+`~/.config/burrow/telemetry-id`; it never derives identity from a tunnel owner.
+It receives no request object or tunnel content in its telemetry layer. Headers,
+URLs, credentials, user IPs, ports, request histories and payloads remain outside
+provider reporting. The bounded queue and shutdown behavior match the
+[client contract](client.md#telemetry-and-privacy). Server diagnostics are an
+operator-controlled setting independent of a connecting client's local choice.
+
 Owner-isolated HTTP/WebSocket tunneling server. Every credential is a regular owner; there is no privileged access model.
 
 ## Run

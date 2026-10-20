@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"strings"
+	"time"
+
+	"burrow/protocol/telemetry"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -17,7 +20,28 @@ func SetVersion(v string) {
 	rootCmd.Version = v
 }
 
-func Execute() error {
+func Execute(config telemetry.Config) (err error) {
+	var reporter *telemetry.Reporter
+	started := time.Now()
+	rootCmd.PersistentPreRun = func(command *cobra.Command, _ []string) {
+		if command.Name() != "serve" {
+			return
+		}
+		reporter = telemetry.New(config)
+		command.SetContext(telemetry.WithObserver(command.Context(), reporter))
+	}
+	defer func() {
+		defer reporter.Close()
+		if failure := recover(); failure != nil {
+			reporter.Operation(telemetry.Serve, started, telemetry.Failure)
+			panic(failure)
+		}
+		outcome := telemetry.Success
+		if err != nil {
+			outcome = telemetry.Failure
+		}
+		reporter.Operation(telemetry.Serve, started, outcome)
+	}()
 	return rootCmd.Execute()
 }
 

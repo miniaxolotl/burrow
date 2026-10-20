@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.6](https://github.com/miniaxolotl/burrow/compare/v0.3.5...v0.3.6) (2026-10-20)
+
+
+### Features
+
+* **observability:** integrate privacy-bounded PostHog and Sentry ([#34](https://github.com/miniaxolotl/burrow/issues/34)) ([7df3486](https://github.com/miniaxolotl/burrow/commit/7df3486526d6dd190b375b796ae56b0ea7b9007e))
+
 ## [0.3.5](https://github.com/miniaxolotl/burrow/compare/v0.3.4...v0.3.5) (2026-10-20)
 
 
