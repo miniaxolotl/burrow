@@ -4,7 +4,13 @@ The `website` workspace package is Burrow’s marketing site. It uses Next.js Ap
 
 ## Bramble Labs Inc. design family
 
-Burrow and Grove share a developer-focused design: warm ivory surfaces, DM Sans with Instrument Serif accents, monospace details, terminal previews, and direct installation paths. Clay accents distinguish Burrow from Grove’s green. Fern shares the visual foundations with a photography-led consumer experience. All three link through a common product-family footer to the company at https://bramblelabs.co.
+The family shares warm paper, an 8px spacing rhythm, clear controls and restrained motion. Burrow has its own IBM Plex Sans and IBM Plex Mono typography, clay palette and terminal-led story. [The design kit](design-kit/README.md) contains tokens, approved assets, licences and provenance. Open `/brand-kit/index.html` for the visual guide and downloads. All three products link to https://bramblelabs.co.
+
+## Selected identity: 07L / Arc
+
+The website uses the selected burrowing-owl mark with a curved outward passage and the approved, outlined Burrow wordmark. `src/lib/brand-artwork.json` preserves the exact selected paths and lockup spacing. The header, footer, 404 page, Apple icon and social cards share these paths through `BurrowLogo` and `BurrowMark`.
+
+Downloadable original SVGs are in `public/brand/`. Collection 04 assets are in `public/brand-kit/`, including native icons and approved outlined social artwork. `src/app/icon.svg` and `favicon.ico` use the supplied optical exports. The complete selected pack is saved in the sibling marketing studio at `marketing/burrow/identity/`. The website build has no dependency on that folder.
 
 ## Development
 
