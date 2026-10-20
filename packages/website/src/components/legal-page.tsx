@@ -23,7 +23,7 @@ export function LegalPage({ document }: { document: LegalDocument }) {
           <p className="eyebrow">BURROW / BRAMBLE LABS INC.</p>
           <h1>{document.title}</h1>
           <p>{document.summary}</p>
-          <span>Effective October 19, 2026</span>
+          <span>Effective October 20, 2026</span>
         </header>
         <div className="legal-layout">
           <nav className="legal-contents" aria-label="On this page">

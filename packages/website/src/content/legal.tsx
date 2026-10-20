@@ -173,6 +173,33 @@ export const privacy: LegalDocument = {
       content: (
         <>
           <p>
+            PostHog measures public-page visits, install-command copies, product
+            referrals and performance with a random browser identifier in local
+            storage. We do not attach names, email addresses or tunnel
+            credentials to that identifier. We use small website experiments and
+            optional rating surveys. Analytics URLs omit queries and fragments;
+            unknown paths are generalized.
+          </p>
+          <p>
+            PostHog samples masked website recordings at 10%, retained for 30
+            days. Text and inputs are masked, media and private regions are
+            blocked, and console logs, network headers and bodies are excluded.
+            Link attributes are redacted separately. Sentry receives sanitized
+            website error stacks, sampled performance traces and bounded
+            clipboard outcome metrics and logs. It does not record website
+            sessions.
+          </p>
+          <p>
+            Disable browser PostHog and Sentry collection with the website
+            telemetry control below. Global Privacy Control and Do Not Track
+            also disable browser collection. Opt-out clears the stored analytics
+            identity and stops further collection; previously received data is
+            not automatically erased. These providers process data in the United
+            States. Contact us with information or deletion requests. Server
+            diagnostics are separate from this browser preference and exclude
+            request content.
+          </p>
+          <p>
             Vercel Web Analytics measures aggregate page visits, referrals, and
             broad device/region information without tracking cookies. We do not
             send tunnel traffic or request-history content as website analytics.
