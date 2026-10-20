@@ -1,4 +1,5 @@
 import { ArrowRight, Check, Globe2, Terminal } from "lucide-react";
+import { BurrowMark } from "@/components/burrow-mark";
 
 export function TunnelDemo() {
   return (
@@ -11,41 +12,9 @@ export function TunnelDemo() {
           <span>SMALL TUNNEL. BIG POSSIBILITIES.</span>
           <span aria-hidden="true">↗</span>
         </div>
-        <svg
-          className="tunnel-portal"
-          viewBox="0 -20 500 280"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M75 260V180a175 175 0 0 1 350 0v80"
-            stroke="#dcb399"
-            strokeWidth="34"
-          />
-          <path
-            d="M121 260V180a129 129 0 0 1 258 0v80"
-            stroke="#bf8060"
-            strokeWidth="28"
-          />
-          <path
-            d="M163 260V180a87 87 0 0 1 174 0v80"
-            stroke="#9d4930"
-            strokeWidth="23"
-          />
-          <path
-            d="M205 260V180a45 45 0 0 1 90 0v80"
-            stroke="#253e31"
-            strokeWidth="19"
-          />
-          <path
-            className="tunnel-packet"
-            d="M121 260V180a129 129 0 0 1 258 0v80"
-            stroke="#fff8e9"
-            strokeWidth="5"
-            strokeLinecap="round"
-            pathLength="100"
-          />
-        </svg>
+        <div className="tunnel-identity">
+          <BurrowMark size={144} />
+        </div>
         <div className="tunnel-endpoint endpoint-local">
           <Terminal size={17} aria-hidden="true" />
           <span>

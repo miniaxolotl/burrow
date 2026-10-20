@@ -16,7 +16,7 @@ const products = [
   {
     id: "grove",
     name: "Grove",
-    detail: "Memory for agents",
+    detail: "Notes + connected context",
     url: "https://usegrove.cloud",
   },
 ];

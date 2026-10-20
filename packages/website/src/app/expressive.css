@@ -59,6 +59,7 @@
   translate: 0 18px;
 }
 .tunnel-landscape {
+  container: tunnel / inline-size;
   position: relative;
   min-width: 0;
   width: 100%;
@@ -89,15 +90,18 @@
 .tunnel-scene-label > span:last-child {
   font: 28px/1 monospace;
 }
-.tunnel-portal {
+.tunnel-identity {
   position: absolute;
-  width: 100%;
-  height: 228px;
-  bottom: 0;
-}
-.tunnel-packet {
-  stroke-dasharray: 5 95;
-  animation: packet-travel 1.5s linear 3;
+  display: grid;
+  place-items: center;
+  left: 50%;
+  top: 34px;
+  width: 200px;
+  height: 200px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #f7f6f0;
+  color: #9d4930;
 }
 .tunnel-endpoint {
   position: absolute;
@@ -349,11 +353,6 @@
   border-radius: 16px;
   box-shadow: 0 24px 60px -32px #0d1b16;
 }
-@keyframes packet-travel {
-  to {
-    stroke-dashoffset: -100;
-  }
-}
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
   .marketing-site .button-primary:hover {
     transform: translateY(-2px);
@@ -381,9 +380,6 @@
   .tunnel-landscape {
     padding: 16px;
   }
-  .tunnel-scene {
-    height: 235px;
-  }
   .tunnel-endpoint {
     padding: 9px;
     gap: 6px;
@@ -391,6 +387,37 @@
   .tunnel-terminal-body {
     padding: 16px;
     font-size: 10px;
+  }
+}
+@container tunnel (max-width: 400px) {
+  .tunnel-identity {
+    width: 152px;
+    height: 152px;
+  }
+  .tunnel-identity svg {
+    width: 108px;
+    height: 108px;
+  }
+  .tunnel-endpoint {
+    top: auto;
+    bottom: 12px;
+    width: calc(50% - 6px);
+    padding: 9px 7px;
+    gap: 5px;
+    transform: none;
+  }
+  .tunnel-endpoint svg {
+    flex-shrink: 0;
+    width: 14px;
+  }
+  .tunnel-endpoint span {
+    font-size: 8px;
+  }
+  .tunnel-endpoint strong {
+    font-size: 10px;
+  }
+  .tunnel-seal {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

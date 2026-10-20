@@ -52,7 +52,7 @@ export function WorkflowStories() {
           </h2>
         </div>
         <p>
-          From “does this look right?” to “did that callback arrive?”—a little
+          From “does this look right?” to “did that callback arrive?”, a little
           tunnel goes a long way.
         </p>
       </div>

@@ -1,0 +1,89 @@
+@import "../../design-kit/tokens.css";
+
+/* Collection 04. Precise Plex type, clay accents and the approved 07L / Arc. */
+:root,
+.marketing-site {
+  --color-paper: var(--brand-paper);
+  --color-ink: var(--brand-ink);
+  --color-accent: var(--brand-accent);
+  --color-highlight: var(--brand-support);
+  --color-muted: var(--brand-muted);
+  --color-line: var(--brand-line);
+}
+em {
+  font-style: normal;
+  font-weight: 500;
+}
+.marketing-site .hero-heading {
+  font-size: clamp(48px, 6.4vw, 88px);
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+}
+.marketing-site .hero-heading em,
+.marketing-site .section-heading em {
+  font-size: 1em;
+}
+.marketing-site .section-heading {
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.marketing-site .hero-description {
+  font-size: 18px;
+  line-height: 1.75;
+}
+.marketing-site .button-primary {
+  border-radius: 12px;
+  box-shadow: none;
+  background: var(--brand-accent);
+  border-color: transparent;
+  font-size: 15px;
+}
+.marketing-site .button-primary:hover {
+  background: var(--brand-ink);
+}
+.marketing-site .nav-link,
+.marketing-site .text-link {
+  font-size: 14px;
+}
+.marketing-site .feature-strip {
+  padding-block: 32px;
+}
+.marketing-site .tunnel-landscape {
+  background: #f0e3d5;
+  border-radius: 24px;
+  box-shadow: 0 30px 64px -44px #62382e70;
+}
+.marketing-site .tunnel-scene-label,
+.marketing-site .tunnel-seal,
+.marketing-site .tunnel-terminal,
+.marketing-site .tunnel-scene-label > span:last-child {
+  font-family: var(--font-plex-mono), monospace;
+}
+.marketing-site .bramble-family {
+  border-radius: 20px;
+}
+@media (max-width: 767px) {
+  .marketing-site .hero-heading {
+    font-size: clamp(48px, 12vw, 72px);
+  }
+  .marketing-site .hero-description {
+    font-size: 17px;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero-section > div:first-child {
+    animation: family-arrive 0.7s cubic-bezier(0.2, 0.65, 0.3, 1) both;
+  }
+  .tunnel-landscape {
+    animation: family-arrive 0.9s cubic-bezier(0.2, 0.65, 0.3, 1) both;
+  }
+}
+@keyframes family-arrive {
+  from {
+    translate: 0 16px;
+  }
+  to {
+    translate: 0 0;
+  }
+}
