@@ -1,15 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  readdirSync,
-  rmSync,
-} from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { setTimeout } from "node:timers/promises";
+import { verifyPackedArtifacts } from "./artifacts.mjs";
+import { packArtifact } from "./pack.mjs";
 
 export async function publicationPlan(artifacts, lookup) {
   const pending = [];
@@ -74,23 +70,14 @@ export async function publishPackages(directories, dryRun) {
         readFileSync(join(directory, "package.json"), "utf8"),
       );
       const destination = join(temporary, String(i));
-      mkdirSync(destination);
-      execFileSync("pnpm", ["pack", "--pack-destination", destination], {
-        cwd: directory,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-      const files = readdirSync(destination).filter((name) =>
-        name.endsWith(".tgz"),
-      );
-      if (files.length !== 1)
-        throw new Error(`Expected one archive for ${pkg.name}`);
-      const archive = join(destination, files[0]);
+      const archive = packArtifact(directory, destination);
       return {
         name: `${pkg.name}@${pkg.version}`,
         archive,
         integrity: `sha512-${createHash("sha512").update(readFileSync(archive)).digest("base64")}`,
       };
     });
+    verifyPackedArtifacts(artifacts);
     const plan = await publicationPlan(artifacts, registryIntegrity);
     await publishPlan(plan, async (pkg) => {
       if (dryRun) console.log(`Would publish ${pkg.name}`);
