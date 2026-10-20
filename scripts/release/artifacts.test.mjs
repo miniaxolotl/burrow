@@ -15,6 +15,7 @@ import { verifyPackedArtifacts } from "./artifacts.mjs";
 import { packArtifact } from "./pack.mjs";
 
 test("packed native packages retain executable bits and the shipped wrapper launches the matching version", () => {
+  const originalUmask = process.umask(0o022);
   const base = process.env.CI ? tmpdir() : "/tmp/opencode";
   const temporary = mkdtempSync(join(base, "burrow-packed-test-"));
   const version = "9.8.7";
@@ -53,6 +54,7 @@ test("packed native packages retain executable bits and the shipped wrapper laun
       }
       const archive = packArtifact(directory, join(temporary, "packed", name));
       if (name === "burrowctl") {
+        process.umask(0o077);
         pkg.optionalDependencies = Object.fromEntries(
           Object.entries(pkg.optionalDependencies).reverse(),
         );
@@ -91,6 +93,7 @@ test("packed native packages retain executable bits and the shipped wrapper laun
       /executable/,
     );
   } finally {
+    process.umask(originalUmask);
     rmSync(temporary, { recursive: true, force: true });
   }
 });
