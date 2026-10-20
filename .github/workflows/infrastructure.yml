@@ -7,7 +7,7 @@ permissions:
 
 jobs:
   reconcile:
-    if: github.ref == 'refs/heads/production'
+    if: github.repository == 'miniaxolotl/burrow' && github.ref == 'refs/heads/production' && github.ref_protected == true
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
@@ -22,7 +22,7 @@ jobs:
       UPSTASH_EMAIL: ${{ secrets.UPSTASH_EMAIL }}
       UPSTASH_API_KEY: ${{ secrets.UPSTASH_API_KEY }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.sha }}
           persist-credentials: false
