@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.5](https://github.com/miniaxolotl/burrow/compare/v0.3.4...v0.3.5) (2026-10-20)
+
+
+### Features
+
+* **website:** refresh Burrow Arc identity and Plex design kit ([#31](https://github.com/miniaxolotl/burrow/issues/31)) ([9fa9c00](https://github.com/miniaxolotl/burrow/commit/9fa9c001faab7731ac9b6474ddad60b7456f74f3))
+
 ## [0.3.4](https://github.com/miniaxolotl/burrow/compare/v0.3.3...v0.3.4) (2026-10-20)
 
 
