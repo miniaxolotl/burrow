@@ -2,6 +2,7 @@ import { Brand } from "@/components/brand";
 import { BrambleFamily } from "@/components/bramble-family";
 import { ShareSite } from "@/components/share-site";
 import { site } from "@/lib/site";
+import { TelemetryChoice } from "@/components/website-telemetry";
 
 export function SiteFooter() {
   return (
@@ -18,7 +19,12 @@ export function SiteFooter() {
           aria-label="Footer navigation"
           className="flex flex-wrap gap-x-6 gap-y-2"
         >
-          <a href={site.clientDocs} className="text-link">
+          <a
+            href={site.clientDocs}
+            className="text-link"
+            data-analytics-event="docs_link_clicked"
+            data-analytics-placement="footer"
+          >
             Documentation
           </a>
           <a href={site.github} className="text-link">
@@ -39,6 +45,7 @@ export function SiteFooter() {
           >
             MIT License
           </a>
+          <TelemetryChoice />
         </nav>
       </div>
       <BrambleFamily current="burrow" />

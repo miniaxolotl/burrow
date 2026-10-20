@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"burrow/protocol"
+	"burrow/protocol/telemetry"
 
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/yamux"
@@ -58,9 +59,14 @@ type Server struct {
 	closeOnce      sync.Once
 	logs           map[string][]*protocol.TunnelLog
 	totalSize      map[string]int64
+	observer       telemetry.Observer
 }
 
-func NewServer(registry *TunnelRegistry, domain string, secure bool) *Server {
+func NewServer(registry *TunnelRegistry, domain string, secure bool, observers ...telemetry.Observer) *Server {
+	var observer telemetry.Observer = (*telemetry.Reporter)(nil)
+	if len(observers) > 0 && observers[0] != nil {
+		observer = observers[0]
+	}
 	s := &Server{
 		registry:       registry,
 		domain:         domain,
@@ -70,6 +76,7 @@ func NewServer(registry *TunnelRegistry, domain string, secure bool) *Server {
 		gracePeriod:    tunnelGracePeriod,
 		logs:           make(map[string][]*protocol.TunnelLog),
 		totalSize:      make(map[string]int64),
+		observer:       observer,
 	}
 
 	// CheckOrigin is intentionally permissive: clients connect from arbitrary
@@ -95,6 +102,13 @@ func NewServer(registry *TunnelRegistry, domain string, secure bool) *Server {
 // any path-based routing. This prevents management endpoints from intercepting
 // requests destined for a client's local service.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	started := time.Now()
+	defer func() {
+		if failure := recover(); failure != nil {
+			s.observer.Operation(telemetry.Serve, started, telemetry.Failure)
+			panic(failure)
+		}
+	}()
 	if ParseTunnelID(r.Host, s.domain) != "" {
 		s.handleTCP(w, r)
 		return
@@ -344,6 +358,9 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID string, port uint16, ownerHash string) *tunnelSession {
+	started := time.Now()
+	outcome := telemetry.Unavailable
+	defer func() { s.observer.Operation(telemetry.Connect, started, outcome) }()
 	s.lifecycleMu.Lock()
 	defer s.lifecycleMu.Unlock()
 	if s.closing {
@@ -359,6 +376,7 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		case errors.Is(err, ErrTunnelRevoked):
 			jsonError(w, "Tunnel has been closed", http.StatusGone)
 		default:
+			outcome = telemetry.Failure
 			jsonError(w, "Failed to register tunnel", http.StatusServiceUnavailable)
 		}
 		return nil
@@ -378,6 +396,7 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 	// Commit the new generation only after the handshake succeeds. A failed
 	// upgrade cannot invalidate the previous connection or its concurrent refresh.
 	if _, err := s.registry.Register(r.Context(), tunnelID, port, ownerHash, session.id); err != nil {
+		outcome = telemetry.Failure
 		session.conn.Close()
 		return nil
 	}
@@ -392,6 +411,7 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 	if previous != nil {
 		previous.conn.Close()
 	}
+	outcome = telemetry.Success
 	return session
 }
 
@@ -431,6 +451,9 @@ func (s *Server) expireTunnel(tunnelID, sessionID string, pending *pendingRemova
 // local service. Both WebSocket and plain HTTP are handled by writing the full
 // HTTP request into the tunnel stream and then relaying raw bytes bidirectionally.
 func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
+	started := time.Now()
+	outcome := telemetry.Unavailable
+	defer func() { s.observer.Operation(telemetry.Forward, started, outcome) }()
 	tunnelID := ParseTunnelID(r.Host, s.domain)
 	if tunnelID == "" {
 		http.Error(w, "Not Found", http.StatusNotFound)
@@ -457,6 +480,9 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	size, ok := s.proxyStream(w, r, stream)
 	if !ok {
 		return
+	}
+	if size > 0 {
+		outcome = telemetry.Success
 	}
 	method := r.Method
 	if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {

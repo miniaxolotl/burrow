@@ -14,18 +14,20 @@ import (
 	"time"
 
 	"burrow/protocol"
+	"burrow/protocol/telemetry"
 
 	"github.com/gorilla/websocket"
 	"github.com/hashicorp/yamux"
 )
 
 type Client struct {
-	server  string
-	token   string
-	domain  string
-	secure  bool
-	tunnels map[uint16]*TunnelConn
-	mu      sync.RWMutex
+	server   string
+	token    string
+	domain   string
+	secure   bool
+	tunnels  map[uint16]*TunnelConn
+	mu       sync.RWMutex
+	observer telemetry.Observer
 }
 
 var httpClient = NewManagementHTTPClient()
@@ -48,19 +50,28 @@ type TunnelConn struct {
 	latency    time.Duration
 	reconnects int
 	totalSize  int64
+	forwarded  sync.Once
 }
 
-func NewClient(server, token, domain string, secure bool) *Client {
+func NewClient(server, token, domain string, secure bool, observers ...telemetry.Observer) *Client {
+	var observer telemetry.Observer = (*telemetry.Reporter)(nil)
+	if len(observers) > 0 && observers[0] != nil {
+		observer = observers[0]
+	}
 	return &Client{
-		server:  server,
-		token:   token,
-		domain:  domain,
-		secure:  secure,
-		tunnels: make(map[uint16]*TunnelConn),
+		server:   server,
+		token:    token,
+		domain:   domain,
+		secure:   secure,
+		tunnels:  make(map[uint16]*TunnelConn),
+		observer: observer,
 	}
 }
 
 func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) {
+	started := time.Now()
+	outcome := telemetry.Unavailable
+	defer func() { c.observer.Operation(telemetry.Connect, started, outcome) }()
 	tunnelID := protocol.RandomTunnelID()
 	tc, err := c.createTunnelSession(ctx, tunnelID, port)
 	if err != nil {
@@ -79,6 +90,8 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 	go c.trackLatency(tc)
 	go c.handleTunnel(tc, port)
 
+	outcome = telemetry.Success
+	c.observer.Track(telemetry.TunnelOpened)
 	return tunnelURL, nil
 }
 
@@ -194,8 +207,10 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 
 			// Persistent ownership makes the original ID safe to retry. Switching
 			// IDs after failures would bypass a closure received while offline.
+			started := time.Now()
 			newTC, err := c.createTunnelSession(tc.ctx, tc.ID, port)
 			if err != nil {
+				c.observer.Operation(telemetry.Reconnect, started, telemetry.Unavailable)
 				var rejected *connectionRejected
 				if errors.As(err, &rejected) && (rejected.status == http.StatusUnauthorized || rejected.status == http.StatusForbidden || rejected.status == http.StatusConflict || rejected.status == http.StatusGone) {
 					return
@@ -219,6 +234,8 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			tc.reconnects++
 			tc.URL = newTC.URL
 			c.mu.Unlock()
+			c.observer.Track(telemetry.TunnelReconnected)
+			c.observer.Operation(telemetry.Reconnect, started, telemetry.Success)
 			reconnectDelay = time.Second
 			continue
 		}
@@ -226,6 +243,9 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 		reconnectDelay = time.Second
 		go func(s *yamux.Stream) {
 			defer s.Close()
+			started := time.Now()
+			outcome := telemetry.Unavailable
+			defer func() { c.observer.Operation(telemetry.Forward, started, outcome) }()
 
 			conn, err := net.DialTimeout("tcp", localAddr, 5*time.Second)
 			if err != nil {
@@ -234,6 +254,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			defer conn.Close()
 
 			done := make(chan struct{}, 2)
+			var responseBytes int64
 			go func() {
 				n, _ := io.Copy(conn, s)
 				atomic.AddInt64(&tc.totalSize, n)
@@ -242,12 +263,17 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			}()
 			go func() {
 				n, _ := io.Copy(s, conn)
+				responseBytes = n
 				atomic.AddInt64(&tc.totalSize, n)
 				s.Close()
 				done <- struct{}{}
 			}()
 			<-done
 			<-done
+			if responseBytes > 0 {
+				outcome = telemetry.Success
+				tc.forwarded.Do(func() { c.observer.Track(telemetry.TunnelForwarded) })
+			}
 		}(stream)
 	}
 }
