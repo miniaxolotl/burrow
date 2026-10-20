@@ -4,11 +4,11 @@
   "label": "enhancement",
   "branches": ["development", "production"],
   "ciJobs": [
-    "infrastructure",
-    "website",
-    "lint",
-    "build",
-    "test",
+    "Infrastructure Quality",
+    "Website",
+    "Go Quality",
+    "Go Build",
+    "Go Tests",
     "Promotion Admission",
     "CI Gate"
   ]

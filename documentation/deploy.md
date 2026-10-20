@@ -1,5 +1,8 @@
 # Deploy & release
 
+Shared workflow names, action pins, runtime and evidence conventions follow the
+[cross-repository CI/CD baseline](pipeline-conventions.md).
+
 ## Branch and release policy
 
 Feature PRs integrate into `development`. Release Please prepares a single product
