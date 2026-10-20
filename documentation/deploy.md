@@ -85,6 +85,8 @@ binary's mode and version pin is checked, and the packed wrapper must launch the
 host binary with the exact release version. This gate also runs on dry-run.
 Final packing canonicalizes resolved manifest keys so asynchronous workspace-range
 conversion cannot change tarball integrity across retries.
+Extraction preserves archive permissions, making retries independent of the
+operator's umask as well as the runner's.
 Conflicting base changes require integration into development and a new release;
 a rejected/closed candidate is not reopened automatically. Rollbacks use a reviewed
 new release/revert, preserving immutable history. Ordinary development pushes do
