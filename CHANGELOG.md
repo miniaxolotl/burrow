@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.7](https://github.com/miniaxolotl/burrow/compare/v0.3.6...v0.3.7) (2026-10-20)
+
+
+### Bug Fixes
+
+* **telemetry:** invalidate cleared browser identities across tabs ([#37](https://github.com/miniaxolotl/burrow/issues/37)) ([c151f4a](https://github.com/miniaxolotl/burrow/commit/c151f4a0bfea9b133dce05e19b8ef6b2de7e6265))
+
 ## [0.3.6](https://github.com/miniaxolotl/burrow/compare/v0.3.5...v0.3.6) (2026-10-20)
 
 
