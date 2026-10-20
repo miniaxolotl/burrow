@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.3](https://github.com/miniaxolotl/burrow/compare/v0.3.2...v0.3.3) (2026-10-20)
+
+
+### Bug Fixes
+
+* **release:** preserve executable and reproducible npm artifacts ([#25](https://github.com/miniaxolotl/burrow/issues/25)) ([53e9c74](https://github.com/miniaxolotl/burrow/commit/53e9c7403c15801930620d4bb9ba60006cc861d4))
+
 ## [0.3.2](https://github.com/miniaxolotl/burrow/compare/v0.3.1...v0.3.2) (2026-10-20)
 
 
