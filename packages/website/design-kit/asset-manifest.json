@@ -1,5 +1,5 @@
 {
-  "collection": "04",
+  "collection": "05",
   "assets": [
     {
       "file": "public/brand-kit/fonts/ibm-plex-sans-400.woff2",
@@ -133,8 +133,8 @@
     },
     {
       "file": "public/brand-kit/images/social.png",
-      "source": "burrow/social/01-localhost-shared-landscape-1200x628.png",
-      "sha256": "68e1c2f7b400d2b76665931df66dc125e7631119acc641613c4ad6a0e6867b27"
+      "source": "_source/export-websites-05.mjs",
+      "sha256": "1b33db58d08b75ef84cd0204e5892446f2dd1dd1c7eb0c5ba948781426b4375f"
     },
     {
       "file": "public/brand-kit/images/banner.png",

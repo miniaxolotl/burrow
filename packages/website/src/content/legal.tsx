@@ -19,7 +19,7 @@ export const privacy: LegalDocument = {
           </p>
           <p>
             If you self-host Burrow, you control that installation and its data
-            practices. If you visit someone else’s tunnel, the owner of the
+            practices. If you visit someone else&apos;s tunnel, the owner of the
             exposed application is responsible for what that application
             collects; their privacy information also applies.
           </p>
@@ -45,10 +45,10 @@ export const privacy: LegalDocument = {
             private.
           </p>
           <p>
-            Anyone who can reach a tunnel’s public URL can interact with the
-            exposed service, subject to that application’s own authentication
-            and controls. Burrow owner credentials protect tunnel management,
-            not access to your application.
+            Anyone who can reach a tunnel&apos;s public URL can interact with
+            the exposed service, subject to that application&apos;s own
+            authentication and controls. Burrow owner credentials protect tunnel
+            management, not access to your application.
           </p>
         </>
       ),
@@ -123,8 +123,8 @@ export const privacy: LegalDocument = {
           <p>
             The current server keeps at most 200 request-history entries per
             tunnel. Active connection records have a refreshed 24-hour expiry; a
-            disconnected connection’s metadata and history are retained for a
-            20-second reconnection grace period. Closing a tunnel clears its
+            disconnected connection&apos;s metadata and history are retained for
+            a 20-second reconnection grace period. Closing a tunnel clears its
             history and permanently revokes its identifier.
           </p>
           <p>
@@ -159,8 +159,8 @@ export const privacy: LegalDocument = {
             processed outside your country.
           </p>
           <p>
-            Traffic is also delivered to the tunnel owner’s application and any
-            recipients that application selects. We may disclose information
+            Traffic is also delivered to the tunnel owner&apos;s application and
+            any recipients that application selects. We may disclose information
             where necessary for a lawful request, rights or safety, professional
             advice, or a business transfer subject to applicable protections.
           </p>
@@ -263,8 +263,9 @@ export const privacy: LegalDocument = {
             correction, deletion, portability, objection, restriction,
             withdrawal of consent, or complaint to a privacy authority. Contact
             us to exercise these rights; we may verify control and explain
-            lawful exceptions. If you believe a child’s personal information has
-            been submitted without required authorization, tell us.
+            lawful exceptions. If you believe a child&apos;s personal
+            information has been submitted without required authorization, tell
+            us.
           </p>
         </>
       ),
@@ -301,9 +302,9 @@ export const terms: LegalDocument = {
         <>
           <p>
             These terms are between you and Bramble Labs Inc. and govern
-            Burrow’s website and our hosted tunnel service. By using them, you
-            agree to these terms. You must be legally able to accept, obtain any
-            required parental or guardian permission, and have authority if
+            Burrow&apos;s website and our hosted tunnel service. By using them,
+            you agree to these terms. You must be legally able to accept, obtain
+            any required parental or guardian permission, and have authority if
             acting for an organization.
           </p>
           <p>
@@ -323,8 +324,9 @@ export const terms: LegalDocument = {
             Burrow gives a local HTTP service a public HTTPS URL and provides
             terminal tools for connection management and request inspection.
             Public URLs are accessible to anyone who can reach them. You are
-            responsible for choosing what you expose and for your application’s
-            authentication, authorization, content, and notices.
+            responsible for choosing what you expose and for your
+            application&apos;s authentication, authorization, content, and
+            notices.
           </p>
           <p>
             A tunnel-management credential does not authenticate visitors to the
@@ -341,7 +343,7 @@ export const terms: LegalDocument = {
       content: (
         <>
           <p>
-            Keep the CLI’s owner credentials secure, use a trusted server
+            Keep the CLI&apos;s owner credentials secure, use a trusted server
             origin, and close tunnels you no longer need. You are responsible
             for use you authorize and for having permission to expose a service,
             system, or dataset. Tell us about suspected credential compromise
@@ -366,7 +368,7 @@ export const terms: LegalDocument = {
             pages, send spam, infringe rights, distribute illegal content,
             expose systems without authorization, bypass access controls, steal
             credentials, or disrupt infrastructure. Do not attempt to claim
-            another owner’s tunnel or evade usage and abuse controls.
+            another owner&apos;s tunnel or evade usage and abuse controls.
           </p>
           <p>
             You are responsible for complying with laws and third-party terms
@@ -406,7 +408,7 @@ export const terms: LegalDocument = {
       content: (
         <>
           <p>
-            Burrow’s open-source components are governed by their published
+            Burrow&apos;s open-source components are governed by their published
             licences, including the MIT licence where stated. These terms do not
             take away those licence permissions. They govern the website and
             hosted infrastructure we operate.

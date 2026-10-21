@@ -1,0 +1,47 @@
+{
+  "collection": "05",
+  "brand": "burrow",
+  "date": "2026-10-21",
+  "outputs": [
+    {
+      "file": "tunnel.svg",
+      "sha256": "ba18d11eaaecb38913869b0eac50b721ae37b57530c325b5448df6f311a95d37",
+      "source": "Collection 05 / _source/artwork.mjs and _source/grove-notebook-art.mjs, plain-language website adaptation"
+    },
+    {
+      "file": "tunnel.webp",
+      "sha256": "47602f4839184a5694daaf32bcf071ac0b41a45d908599bd0d637906889fc65d",
+      "source": "tunnel.svg"
+    },
+    {
+      "file": "webhooks.svg",
+      "sha256": "6e9916c6b1d7d20560f889abce6ce865b928c97630f0ed6ace5221803b4d472e",
+      "source": "Collection 05 / _source/artwork.mjs and _source/grove-notebook-art.mjs, plain-language website adaptation"
+    },
+    {
+      "file": "webhooks.webp",
+      "sha256": "5410c73f5c90e62477f62b67a54a4ddb171a0697670875c22640358d8fe71961",
+      "source": "webhooks.svg"
+    },
+    {
+      "file": "self-host.svg",
+      "sha256": "9bb119d85360232eef394d0d11cf8dfa076fc64e5feede0d9a1befdfea7f6be4",
+      "source": "Collection 05 / _source/artwork.mjs and _source/grove-notebook-art.mjs, plain-language website adaptation"
+    },
+    {
+      "file": "self-host.webp",
+      "sha256": "abf51fee6568ca0ad03cbf2f2172de31df76986daf6eca2a74813eaea8208288",
+      "source": "self-host.svg"
+    },
+    {
+      "file": "social.png",
+      "sha256": "1b33db58d08b75ef84cd0204e5892446f2dd1dd1c7eb0c5ba948781426b4375f",
+      "source": "Collection 05 outlined identity, licensed brand type and website copy"
+    },
+    {
+      "file": "about.txt",
+      "sha256": "d5362bf5abfdbbd445a8b6d6e8c5ce7820217eabd12ef1d991284e0a03ff0185",
+      "source": "Collection 05 DESIGN-GUIDELINES.md and current-campaigns.mjs, plain-language adaptation"
+    }
+  ]
+}

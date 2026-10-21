@@ -50,7 +50,7 @@ export function SiteFooter() {
       </div>
       <BrambleFamily current="burrow" />
       <div className="footer-bottom">
-        <span>© {new Date().getFullYear()} Bramble Labs Inc.</span>
+        <span>Copyright {new Date().getFullYear()} Bramble Labs Inc.</span>
         <ShareSite url={site.url} />
       </div>
     </footer>
