@@ -5,7 +5,7 @@
 The website integrates PostHog US project **677269** and Sentry project
 **burrow-website** in the existing `bramble-labs-inc` team. CLI/server integration
 shares that PostHog project, with separate Sentry `burrow-cli`/`burrow-server`
-projects. Protected delivery and production runtime acceptance are still pending.
+projects. Release **0.3.7** is published and live; delivery evidence is below.
 
 - [Acquisition and activation](https://us.posthog.com/project/677269/dashboard/2236993)
 - [Experience and reliability](https://us.posthog.com/project/677269/dashboard/2236994)
@@ -145,3 +145,35 @@ storage failure fails closed. Preference/help/version commands emit no events.
 Go tests exercise actual PostHog/Sentry wire payloads, independent SDK scopes,
 concurrent first-launch identity/reset, opt-out of queued data, bounded provider
 failure, and real local WebSocket/yamux forwarding with one first-value milestone.
+
+## Released acceptance — 21 October 2026 UTC
+
+Feature/fix PRs #34/#37, coordinated release #38 and frozen production #39 are
+merged. Immutable **v0.3.7** identifies source
+`cedd38fbfd038e38be149a4822dd9e5dcf21e705`; production is
+`2e05cbc29b12e74410fad9ba0e0eaa4dd5adc0ad`. Protected deployment
+[39517280388](https://github.com/miniaxolotl/burrow/actions/runs/39517280388)
+passes on attempt 2 after npm propagation. All five published package hashes
+verify. Historical v0.3.6 and its superseded frozen candidate remain retained.
+
+The published Linux CLI opened a real HTTPS tunnel and forwarded two synthetic
+requests. Durable opt-out preserves credentials, removes the analytics identity
+and rotates it on re-enable. PostHog indexes 11 exact-release CLI events, exactly
+one tunnel-open and first-forward milestone, and production server outcomes;
+private fixture markers are absent. Sentry accepts CLI/server logs and metrics.
+Its current **spans** dataset indexes two CLI spans and one server span for the
+exact 0.3.7 source. Legacy `transaction_indexed` outcomes marked `discarded` reflect
+the project's indexing feature, rather than failed span delivery.
+
+The released website passes cross-tab opt-out/generation checks, live event
+readback and decoded replay masking at the unchanged 10% sample. Recording
+`01a15bf5-b96b-7ac7-a198-7f2b3795f01f` is available in the provider. Browser Sentry
+event `1674e57c13404db4957b7d3b29c38d53` resolves through uploaded source maps to
+`packages/website/src/lib/diagnostics.ts`.
+
+All 12 dashboard queries execute successfully. Activation counts use anonymous
+event identities by surface; the person-cohort is reference-only because PostHog
+documents limitations for personless events. Provider readback finds zero person
+profiles. Daily alerts and Monday reports remain enabled; CTA experiments and
+milestone surveys remain drafts. Release gates passed Go/race/build checks,
+11 browser cases, release contracts, workflow lint and infrastructure validation.
