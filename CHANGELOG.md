@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.9](https://github.com/miniaxolotl/burrow/compare/v0.3.8...v0.3.9) (2026-10-21)
+
+
+### Bug Fixes
+
+* **website:** simplify public copy and remove brand downloads ([#44](https://github.com/miniaxolotl/burrow/issues/44)) ([0c60140](https://github.com/miniaxolotl/burrow/commit/0c60140271934e8f9a28a4302f3ccf407d19704f))
+
 ## [0.3.8](https://github.com/miniaxolotl/burrow/compare/v0.3.7...v0.3.8) (2026-10-21)
 
 
