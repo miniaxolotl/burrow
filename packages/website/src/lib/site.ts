@@ -19,7 +19,7 @@ export const site = {
   title: "Burrow | Share localhost over HTTPS",
   creator: "Bramble Labs Inc.",
   description:
-    "Turn your localhost into a public HTTPS link. Share a work in progress, test webhooks, and manage your tunnels from the terminal. Open source. No account required.",
+    "Give your local app a public HTTPS link. Share previews, test webhooks and inspect requests. Open source, with no account required. Install Burrow.",
   url: url.origin,
   indexable:
     process.env.SITE_NOINDEX !== "true" &&

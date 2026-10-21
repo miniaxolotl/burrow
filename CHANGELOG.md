@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.8](https://github.com/miniaxolotl/burrow/compare/v0.3.7...v0.3.8) (2026-10-21)
+
+
+### Features
+
+* **website:** focus tunnel marketing and refresh media kit ([#41](https://github.com/miniaxolotl/burrow/issues/41)) ([9713f42](https://github.com/miniaxolotl/burrow/commit/9713f4276ac7c0104449cd831f1ad29e1ab8fc6b))
+
 ## [0.3.7](https://github.com/miniaxolotl/burrow/compare/v0.3.6...v0.3.7) (2026-10-20)
 
 

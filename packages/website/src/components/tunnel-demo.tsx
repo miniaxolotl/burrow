@@ -1,4 +1,4 @@
-import { ArrowRight, Check, Globe2, Terminal } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, Globe2, Terminal } from "lucide-react";
 import { BurrowMark } from "@/components/burrow-mark";
 
 export function TunnelDemo() {
@@ -9,8 +9,8 @@ export function TunnelDemo() {
     >
       <div className="tunnel-scene">
         <div className="tunnel-scene-label">
-          <span>SMALL TUNNEL. BIG POSSIBILITIES.</span>
-          <span aria-hidden="true">↗</span>
+          <span>YOUR APP. ONE PUBLIC LINK.</span>
+          <ArrowUpRight size={16} aria-hidden="true" />
         </div>
         <div className="tunnel-identity">
           <BurrowMark size={144} />
@@ -61,14 +61,14 @@ export function TunnelDemo() {
           <div className="tunnel-request">
             <span>GET /</span>
             <span>200 OK</span>
-            <span>→ localhost:3000</span>
+            <span>to localhost:3000</span>
           </div>
         </div>
       </div>
       <figcaption>
         Keep coding locally. Send the link. See what comes through.
         <br />
-        <span>Illustrated preview · example URL and request</span>
+        <span>Illustrated preview with example URL and request</span>
       </figcaption>
     </figure>
   );
