@@ -7,7 +7,7 @@ export const faqs = [
   {
     question: "Can other users see my tunnel sessions?",
     answer:
-      "Your tunnel list, connection count, and request logs are accessible only with your private owner credential. Every user has the same owner-only access. Sharing a public URL does not let someone manage your tunnel or claim its ID.",
+      "Your tunnel list, connection count and request logs require your private owner credential. Sharing a public URL does not let someone manage your tunnel or claim its ID.",
   },
   {
     question: "Is the app I share private?",
@@ -17,7 +17,7 @@ export const faqs = [
   {
     question: "Does my URL stay the same?",
     answer:
-      "Each new tunnel gets a generated URL. Reconnects keep the same URL while the CLI is running, and another owner cannot claim your reserved ID. Closing a tunnel retires its URL, so create a new tunnel when you want a fresh link.",
+      "Reconnects keep the same URL while the CLI is running. Another owner cannot claim your reserved ID. Closing the tunnel retires its URL; a new tunnel gets a new one.",
   },
   {
     question: "Can I use my own server and domain?",
