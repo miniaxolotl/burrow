@@ -1,38 +1,31 @@
-import { ArrowUpRight, Code2, Link2, Webhook } from "lucide-react";
+import Image from "next/image";
+import { ArrowUpRight } from "lucide-react";
+import { site } from "@/lib/site";
 
 const stories = [
   {
-    icon: Link2,
-    number: "01",
-    label: "THE QUICK LOOK",
-    title: "“Can you take a look at this?”",
-    text: "Give a teammate a working preview while the idea is still taking shape. Keep editing on your machine.",
-    command: "burrowctl tunnel 3000",
-    method: "GET",
-    path: "/your-next-idea",
-    result: "200 OK",
+    image: "tunnel",
+    title: "Get feedback sooner.",
+    text: "Send a teammate a link to your local app. Keep editing while they try it.",
+    alt: "Example workflow connecting localhost port 3000 to a public HTTPS link.",
+    href: "#install",
+    action: "Share a local app",
   },
   {
-    icon: Webhook,
-    number: "02",
-    label: "THE REAL CALLBACK",
-    title: "Let the webhook come to you.",
-    text: "Point a provider’s test webhook at your HTTPS URL. Watch the request arrive in your local app.",
-    command: "burrowctl tunnel 8080",
-    method: "POST",
-    path: "/webhooks/payment",
-    result: "202 Accepted",
+    image: "webhooks",
+    title: "Test the real webhook.",
+    text: "Point a test webhook at your tunnel. See the request reach your local server.",
+    alt: "Example POST request to a webhook forwarded to localhost with a 200 response.",
+    href: "#install",
+    action: "Test a webhook",
   },
   {
-    icon: Code2,
-    number: "03",
-    label: "THE WHOLE PICTURE",
-    title: "Frontend. API. One place.",
-    text: "Keep multiple tunnels together in the terminal manager. Switch between them and inspect each request log.",
-    command: "burrowctl",
-    method: "GET",
-    path: "/api/projects",
-    result: "200 OK",
+    image: "self-host",
+    title: "Run it on your terms.",
+    text: "Host the open-source server on your own infrastructure and domain.",
+    alt: "A local app connects through burrowd to a public HTTPS endpoint.",
+    href: site.serverDocs,
+    action: "Read the server guide",
   },
 ];
 
@@ -44,60 +37,40 @@ export function WorkflowStories() {
     >
       <div className="section-intro" data-reveal>
         <div>
-          <p className="eyebrow">MAKE ROOM FOR THE REAL WORLD</p>
+          <p className="eyebrow">FROM LOCALHOST TO A WORKING LINK</p>
           <h2 id="workflows-heading" className="section-heading mt-4">
-            Good work deserves
+            Share it.
             <br />
-            <em>a way out.</em>
+            <em>Test it. Keep building.</em>
           </h2>
         </div>
-        <p>
-          From “does this look right?” to “did that callback arrive?”, a little
-          tunnel goes a long way.
-        </p>
+        <p>Your app stays on your machine. Burrow handles the public link.</p>
       </div>
       <div className="workflow-grid">
-        {stories.map(
-          ({
-            icon: Icon,
-            number,
-            label,
-            title,
-            text,
-            command,
-            method,
-            path,
-            result,
-          }) => (
-            <article className="workflow-story" key={number} data-reveal>
-              <div className="workflow-heading">
-                <Icon size={23} strokeWidth={1.4} aria-hidden="true" />
-                <span>
-                  {number} / {label}
-                </span>
-              </div>
-              <h3>{title}</h3>
-              <p>{text}</p>
-              <div className="workflow-mini">
-                <code>
-                  <span>$</span> {command}
-                </code>
-                <div>
-                  <b>{method}</b>
-                  <span>{path}</span>
-                </div>
-                <small>
-                  <span /> {result}{" "}
-                  <span className="workflow-example">EXAMPLE</span>
-                </small>
-              </div>
-              <a className="text-link" href="#install">
-                Try it with Burrow <ArrowUpRight size={14} aria-hidden="true" />
-              </a>
-            </article>
-          ),
-        )}
+        {stories.map(({ image, title, text, alt, href, action }, index) => (
+          <article className="workflow-story" key={image} data-reveal>
+            <div className="workflow-heading">
+              <span>0{index + 1}</span>
+            </div>
+            <h3>{title}</h3>
+            <p>{text}</p>
+            <Image
+              className="campaign-illustration"
+              src={`/materials/${image}.svg`}
+              alt={alt}
+              width={900}
+              height={520}
+              sizes="(max-width: 767px) 100vw, 33vw"
+            />
+            <a className="text-link" href={href}>
+              {action} <ArrowUpRight size={14} aria-hidden="true" />
+            </a>
+          </article>
+        ))}
       </div>
+      <p className="mt-5 text-xs text-muted">
+        Illustrated workflows with example requests.
+      </p>
     </section>
   );
 }

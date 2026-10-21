@@ -328,7 +328,7 @@ export function ManagerPreview() {
                   </tbody>
                 </table>
                 <p className="mt-4 font-mono text-[10px] text-terminal-muted">
-                  4 requests · example traffic
+                  4 requests, example traffic
                 </p>
               </div>
             )}
@@ -361,7 +361,7 @@ export function ManagerPreview() {
       <figcaption className="mt-4 flex flex-wrap justify-between gap-2 text-[11px] text-white/60">
         <span>Built for the terminal. Recreated for the web.</span>
         <span className="font-mono text-[10px]">
-          Interactive preview · example data
+          Interactive preview with example data
         </span>
       </figcaption>
     </figure>
