@@ -65,12 +65,11 @@ export default async function HomePage() {
               <em>shared.</em>
             </h1>
             <p className="hero-description">
-              Your next demo is already running. Give it a public HTTPS link.
-              Share local apps, catch real webhooks, and inspect requests, all
-              without leaving your terminal.
+              Give your local app a public HTTPS link. Share previews, test
+              webhooks and inspect requests in your terminal.
             </p>
             <p className="mt-3 text-xs leading-6 text-muted">
-              It works locally. Now let someone try it.
+              No deployment. No account. Two commands to start.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
               <a
@@ -195,7 +194,7 @@ export default async function HomePage() {
                 <em>One public link.</em>
               </h2>
               <p className="mt-4 max-w-sm text-sm leading-7 text-muted">
-                Install the CLI, point it at your app’s port, and share the URL.
+                Install the CLI, point it at your local port and share the URL.
                 Works on macOS and Linux, on x64 and ARM64.
               </p>
               <a href={site.serverDocs} className="text-link mt-6">
@@ -214,7 +213,7 @@ export default async function HomePage() {
           <div>
             <p className="eyebrow">GOOD TO KNOW</p>
             <h2 id="faq-heading" className="section-heading mt-3">
-              A few details.
+              Common questions.
             </h2>
             <a href={site.clientDocs} className="text-link mt-4">
               Read the docs <ArrowUpRight size={14} aria-hidden="true" />
@@ -246,16 +245,37 @@ export default async function HomePage() {
                 BUILT FOR DEVELOPERS. BY BRAMBLE LABS INC.
               </p>
               <h2 id="closing-heading" className="section-heading mt-5">
-                Keep it local.
+                Your app is running.
                 <br />
-                <em>Let people in.</em>
+                <em>Give it a link.</em>
               </h2>
               <p className="mt-5 max-w-md text-sm leading-7 text-muted">
-                Your next demo is already running. Give it a link.
+                Install Burrow and share your first tunnel.
               </p>
             </div>
             <a href="#install" className="button-primary">
               Install Burrow <ArrowRight size={16} aria-hidden="true" />
+            </a>
+          </div>
+        </section>
+        <section
+          className="page-container media-kit"
+          aria-labelledby="materials-heading"
+        >
+          <div>
+            <p className="eyebrow">BRAND MATERIALS</p>
+            <h2 id="materials-heading">Share Burrow</h2>
+            <p>Logos, workflow graphics and a short description.</p>
+          </div>
+          <div className="media-kit-links">
+            <a href="/materials/burrow-media-kit.zip" download>
+              Download media kit
+            </a>
+            <a href="/materials/about.txt" download>
+              About Burrow
+            </a>
+            <a href="/brand-kit/identity/primary/logos/horizontal.svg" download>
+              Download logo
             </a>
           </div>
         </section>

@@ -27,7 +27,7 @@ export default function NotFound() {
           <em>the beaten path.</em>
         </h1>
         <p className="mt-6 text-sm text-muted">
-          Let’s get you back to where the building happens.
+          Return to the homepage to get started.
         </p>
         <Link href="/" className="button-primary mt-8">
           <ArrowLeft size={16} aria-hidden="true" /> Back to Burrow

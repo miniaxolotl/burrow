@@ -4,7 +4,7 @@ import { LegalPage } from "@/components/legal-page";
 import { terms } from "@/content/legal";
 
 export const metadata: Metadata = {
-  title: "Terms & conditions · Burrow",
+  title: "Terms and conditions | Burrow",
   description: terms.summary,
   alternates: { canonical: "/terms" },
 };

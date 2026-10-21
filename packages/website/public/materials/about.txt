@@ -1,0 +1,14 @@
+Burrow
+======
+
+Burrow gives a local app a public HTTPS link. Share a preview, receive webhooks and inspect requests in your terminal. Available for macOS and Linux. Open source and self-hostable. Install with npm i -g @miniaxolotl/burrowctl.
+
+Website: https://useburrow.app/
+
+Brand assets
+Use the supplied logo at its original proportions. Keep clear space around it.
+Font licenses are included in the brand-kit folder.
+
+Collection 05, 21 October 2026.
+
+Workflow graphics are illustrations with example data.
