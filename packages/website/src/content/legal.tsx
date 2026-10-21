@@ -2,8 +2,7 @@ import type { LegalDocument } from "@/components/legal-page";
 
 export const privacy: LegalDocument = {
   title: "Privacy policy.",
-  summary:
-    "A public link should come with a clear explanation of the information behind it.",
+  summary: "How Burrow handles tunnel traffic and personal information.",
   sections: [
     {
       id: "scope",
@@ -182,7 +181,7 @@ export const privacy: LegalDocument = {
           </p>
           <p>
             Run <code>burrowctl telemetry disable</code> to opt out and clear
-            the local analytics identity, or set <code>DO_NOT_TRACK=1</code> or
+            the local analytics identity, or set <code>DO_NOT_TRACK=1</code> or{" "}
             <code>BURROW_TELEMETRY=0</code>. Running commands honor opt-out
             before uploads. Re-enable with{" "}
             <code>burrowctl telemetry enable</code>; a new identity is created
@@ -293,7 +292,7 @@ export const privacy: LegalDocument = {
 
 export const terms: LegalDocument = {
   title: "Terms & conditions.",
-  summary: "The ground rules for sharing localhost through Burrow.",
+  summary: "Terms for using the Burrow website and tunnel service.",
   sections: [
     {
       id: "agreement",

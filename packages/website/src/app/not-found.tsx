@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { Brand, BurrowMark } from "@/components/brand";
 
 export const metadata: Metadata = {
-  title: "A little off the beaten path",
+  title: "Page not found",
   robots: { index: false, follow: false },
   alternates: { canonical: null },
 };
@@ -20,14 +20,12 @@ export default function NotFound() {
         <span className="recovery-mark">
           <BurrowMark className="size-14 text-accent" />
         </span>
-        <p className="eyebrow">404 / THIS TUNNEL ENDS HERE</p>
+        <p className="eyebrow">404</p>
         <h1 className="section-heading mt-5">
-          A little off
-          <br />
-          <em>the beaten path.</em>
+          Page <em>not found.</em>
         </h1>
         <p className="mt-6 text-sm text-muted">
-          Return to the homepage to get started.
+          We could not find that page. Return to the homepage.
         </p>
         <Link href="/" className="button-primary mt-8">
           <ArrowLeft size={16} aria-hidden="true" /> Back to Burrow

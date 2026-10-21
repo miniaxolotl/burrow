@@ -4,6 +4,18 @@ The website leads with giving a local app a public HTTPS link. The main action i
 installation. Short examples explain preview sharing, webhook testing and running
 the open-source server on your own infrastructure.
 
+## Copy follow-up
+
+The 21 October follow-up shortens workflow headings, FAQs and footer referrals,
+uses a plain missing-page message and fixes repeated legal-page titles. Public
+pages no longer promote brand materials or downloads. The install action,
+example labels and approved 07L Arc artwork remain.
+
+Website formatting/lint/types/build, 11 browser cases, three Go module test
+suites, 11 release contracts and workflow lint pass. Public-page reviews cover
+320/390/768/1440px, legal and missing pages, image loading, accessibility and
+absence of brand-download links.
+
 ## Assets
 
 - Workflow illustrations come from Collection 05 in the local marketing dataset.
