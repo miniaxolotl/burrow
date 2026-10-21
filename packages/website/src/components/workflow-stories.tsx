@@ -13,7 +13,7 @@ const stories = [
   },
   {
     image: "webhooks",
-    title: "Test the real webhook.",
+    title: "Test a webhook locally.",
     text: "Point a test webhook at your tunnel. See the request reach your local server.",
     alt: "Example POST request to a webhook forwarded to localhost with a 200 response.",
     href: "#install",
@@ -21,7 +21,7 @@ const stories = [
   },
   {
     image: "self-host",
-    title: "Run it on your terms.",
+    title: "Use your own server.",
     text: "Host the open-source server on your own infrastructure and domain.",
     alt: "A local app connects through burrowd to a public HTTPS endpoint.",
     href: site.serverDocs,
@@ -37,11 +37,11 @@ export function WorkflowStories() {
     >
       <div className="section-intro" data-reveal>
         <div>
-          <p className="eyebrow">FROM LOCALHOST TO A WORKING LINK</p>
+          <p className="eyebrow">WAYS TO USE BURROW</p>
           <h2 id="workflows-heading" className="section-heading mt-4">
-            Share it.
+            Share previews.
             <br />
-            <em>Test it. Keep building.</em>
+            <em>Test webhooks.</em>
           </h2>
         </div>
         <p>Your app stays on your machine. Burrow handles the public link.</p>

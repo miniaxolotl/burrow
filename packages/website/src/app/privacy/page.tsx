@@ -4,7 +4,7 @@ import { LegalPage } from "@/components/legal-page";
 import { privacy } from "@/content/legal";
 
 export const metadata: Metadata = {
-  title: "Privacy policy | Burrow",
+  title: "Privacy policy",
   description: privacy.summary,
   alternates: { canonical: "/privacy" },
 };
