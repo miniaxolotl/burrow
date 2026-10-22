@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.10](https://github.com/miniaxolotl/burrow/compare/v0.3.9...v0.3.10) (2026-10-22)
+
+
+### Features
+
+* **website:** add compact consent choices and gated marketing tags ([#48](https://github.com/miniaxolotl/burrow/issues/48)) ([9cdbe26](https://github.com/miniaxolotl/burrow/commit/9cdbe2648d8ad7280853b66310c7d3ceb362563d))
+
 ## [0.3.9](https://github.com/miniaxolotl/burrow/compare/v0.3.8...v0.3.9) (2026-10-21)
 
 
