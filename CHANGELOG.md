@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.11](https://github.com/miniaxolotl/burrow/compare/v0.3.10...v0.3.11) (2026-10-22)
+
+
+### Bug Fixes
+
+* **website:** shorten analytics consent description ([#52](https://github.com/miniaxolotl/burrow/issues/52)) ([7000295](https://github.com/miniaxolotl/burrow/commit/7000295f5d91c2489e9256b3a6679b1be73382c4))
+
 ## [0.3.10](https://github.com/miniaxolotl/burrow/compare/v0.3.9...v0.3.10) (2026-10-22)
 
 
