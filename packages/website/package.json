@@ -27,7 +27,8 @@
     "posthog-js": "1.438.13",
     "react": "~19.3.1",
     "react-dom": "~19.3.1",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "vanilla-cookieconsent": "3.1.0"
   },
   "devDependencies": {
     "@lib/typescript-config": "workspace:*",
