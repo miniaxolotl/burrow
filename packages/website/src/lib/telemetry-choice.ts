@@ -1,3 +1,5 @@
+import { consentAllowed, consentEvent } from "./cookie-consent";
+
 const preferenceKey = "burrow.telemetry.optout";
 const generationKey = "burrow.telemetry.generation";
 const preferenceEvent = "burrow:telemetry-preference";
@@ -16,6 +18,7 @@ export function telemetryOptedOut(): boolean {
   if (typeof window === "undefined") return false;
   try {
     return (
+      !consentAllowed("analytics") ||
       storageFailed ||
       browserOptOut() ||
       localStorage.getItem(preferenceKey) === "true"
@@ -40,9 +43,11 @@ export function telemetryAllowed(): boolean {
   }
 }
 export function subscribePreference(callback: () => void) {
+  window.addEventListener(consentEvent, callback);
   window.addEventListener(preferenceEvent, callback);
   window.addEventListener("storage", callback);
   return () => {
+    window.removeEventListener(consentEvent, callback);
     window.removeEventListener(preferenceEvent, callback);
     window.removeEventListener("storage", callback);
   };
