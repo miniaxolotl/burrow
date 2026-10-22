@@ -46,7 +46,7 @@ export function WorkflowStories() {
         </div>
         <p>Your app stays on your machine. Burrow handles the public link.</p>
       </div>
-      <div className="workflow-grid">
+      <div className="workflow-grid" data-stagger>
         {stories.map(({ image, title, text, alt, href, action }, index) => (
           <article className="workflow-story" key={image} data-reveal>
             <div className="workflow-heading">

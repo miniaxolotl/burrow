@@ -32,12 +32,9 @@ export function Navigation({ github }: { github: string }) {
 
   return (
     <header className="site-header">
-      <div className="page-container flex h-[76px] items-center justify-between gap-2 sm:gap-4">
+      <div className="page-container header-inner">
         <Brand />
-        <nav
-          aria-label="Main navigation"
-          className="hidden items-center gap-8 lg:flex"
-        >
+        <nav aria-label="Main navigation" className="header-navigation">
           {links.map(([label, href]) => (
             <Link href={href} className="nav-link" key={href}>
               {label}
@@ -47,21 +44,16 @@ export function Navigation({ github }: { github: string }) {
             <GithubIcon size={16} /> GitHub
           </a>
         </nav>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="header-actions">
           <Link
             href="/#install"
-            className="button-primary min-h-11! shrink-0 gap-3! whitespace-nowrap px-3! py-2.5! text-xs! sm:px-4!"
+            className="button-primary shrink-0 whitespace-nowrap"
           >
-            Install Burrow{" "}
-            <ArrowUpRight
-              size={15}
-              className="hidden sm:block"
-              aria-hidden="true"
-            />
+            Install Burrow <ArrowUpRight size={15} aria-hidden="true" />
           </Link>
           <details
             ref={menu}
-            className="group lg:hidden"
+            className="header-menu group"
             onBlur={(event) => {
               if (!event.currentTarget.contains(event.relatedTarget))
                 event.currentTarget.open = false;
@@ -73,7 +65,7 @@ export function Navigation({ github }: { github: string }) {
               }
             }}
           >
-            <summary className="grid size-11 cursor-pointer list-none place-items-center rounded-md border border-line [&::-webkit-details-marker]:hidden">
+            <summary className="header-menu-toggle">
               <Menu
                 size={18}
                 className="group-open:hidden"

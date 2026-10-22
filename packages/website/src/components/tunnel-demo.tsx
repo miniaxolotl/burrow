@@ -1,13 +1,24 @@
-import { ArrowRight, ArrowUpRight, Check, Globe2, Terminal } from "lucide-react";
+"use client";
+
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  Globe2,
+  RotateCcw,
+  Terminal,
+} from "lucide-react";
+import { useState } from "react";
 import { BurrowMark } from "@/components/burrow-mark";
 
 export function TunnelDemo() {
+  const [replay, setReplay] = useState(0);
   return (
     <figure
       className="tunnel-landscape"
       aria-label="A local development server connects through Burrow to a public HTTPS URL"
     >
-      <div className="tunnel-scene">
+      <div className="tunnel-scene" key={`scene-${replay}`}>
         <div className="tunnel-scene-label">
           <span>YOUR APP. ONE PUBLIC LINK.</span>
           <ArrowUpRight size={16} aria-hidden="true" />
@@ -15,6 +26,12 @@ export function TunnelDemo() {
         <div className="tunnel-identity">
           <BurrowMark size={144} />
         </div>
+        <svg className="tunnel-route" viewBox="0 0 440 260" aria-hidden="true">
+          <path
+            pathLength="1"
+            d="M60 210C120 210 150 130 220 130S320 80 380 80"
+          />
+        </svg>
         <div className="tunnel-endpoint endpoint-local">
           <Terminal size={17} aria-hidden="true" />
           <span>
@@ -45,8 +62,8 @@ export function TunnelDemo() {
           <span>burrowctl</span>
           <span>EXAMPLE</span>
         </div>
-        <div className="tunnel-terminal-body">
-          <p>
+        <div className="tunnel-terminal-body" key={`terminal-${replay}`}>
+          <p className="tunnel-command">
             <span className="terminal-prompt">$</span> burrowctl tunnel 3000
           </p>
           <p className="tunnel-connected">
@@ -69,6 +86,13 @@ export function TunnelDemo() {
         Keep coding locally. Send the link. See what comes through.
         <br />
         <span>Illustrated preview with example URL and request</span>
+        <button
+          className="tunnel-replay"
+          type="button"
+          onClick={() => setReplay((value) => value + 1)}
+        >
+          <RotateCcw size={12} aria-hidden="true" /> Replay example
+        </button>
       </figcaption>
     </figure>
   );
