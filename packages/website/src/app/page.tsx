@@ -27,27 +27,6 @@ export default async function HomePage() {
 
   return (
     <MarketingMotion>
-      <div className="lab-bar">
-        <div className="page-container">
-          <span>
-            <a
-              href="https://bramblelabs.co"
-              className="underline-offset-4 hover:underline"
-            >
-              Bramble Labs Inc.
-            </a>{" "}
-            <span className="hidden text-paper/65 sm:inline">
-              / Developer tools
-            </span>
-          </span>
-          <a
-            href="https://usegrove.cloud"
-            className="inline-flex items-center gap-1.5 text-highlight hover:underline"
-          >
-            Meet Grove <ArrowUpRight size={12} aria-hidden="true" />
-          </a>
-        </div>
-      </div>
       <Navigation github={site.github} />
       <main id="main">
         <section
@@ -67,9 +46,6 @@ export default async function HomePage() {
             <p className="hero-description">
               Give your local app a public HTTPS link. Share previews, test
               webhooks and inspect requests in your terminal.
-            </p>
-            <p className="mt-3 text-xs leading-6 text-muted">
-              Share your app without deploying it.
             </p>
             <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
               <a
@@ -115,7 +91,7 @@ export default async function HomePage() {
           className="page-container"
           aria-label="What you can do with Burrow"
         >
-          <div className="feature-strip">
+          <div className="feature-strip" data-stagger>
             {[
               {
                 icon: Link2,
@@ -162,7 +138,7 @@ export default async function HomePage() {
           aria-labelledby="manager-heading"
         >
           <div className="page-container">
-            <div className="section-intro">
+            <div className="section-intro" data-reveal>
               <div>
                 <p className="eyebrow text-highlight">THE TUNNEL MANAGER</p>
                 <h2 id="manager-heading" className="section-heading mt-3">

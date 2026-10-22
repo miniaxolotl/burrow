@@ -1,6 +1,6 @@
 @import "../../design-kit/tokens.css";
 
-/* Collection 04. Precise Plex type, clay accents and the approved 07L / Arc. */
+/* Precise Plex type, compact controls and the approved 07L / Arc. */
 :root,
 .marketing-site {
   --color-paper: var(--brand-paper);
@@ -9,6 +9,7 @@
   --color-highlight: var(--brand-support);
   --color-muted: var(--brand-muted);
   --color-line: var(--brand-line);
+  --action-hover: #813c28;
 }
 em {
   font-style: normal;
@@ -32,16 +33,6 @@ em {
   font-size: 18px;
   line-height: 1.75;
 }
-.marketing-site .button-primary {
-  border-radius: 12px;
-  box-shadow: none;
-  background: var(--brand-accent);
-  border-color: transparent;
-  font-size: 15px;
-}
-.marketing-site .button-primary:hover {
-  background: var(--brand-ink);
-}
 .marketing-site .nav-link,
 .marketing-site .text-link {
   font-size: 14px;
@@ -50,9 +41,86 @@ em {
   padding-block: 32px;
 }
 .marketing-site .tunnel-landscape {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.marketing-site .tunnel-terminal {
+  border-radius: 8px;
+  box-shadow: none;
+}
+.marketing-site .tunnel-endpoint {
+  border-radius: 5px;
+  box-shadow: none;
+  transform: none;
+}
+.marketing-site .tunnel-identity {
   background: #f0e3d5;
-  border-radius: 24px;
-  box-shadow: 0 30px 64px -44px #62382e70;
+}
+.marketing-site .workflow-grid {
+  gap: 32px;
+}
+.marketing-site .workflow-story:nth-child(n) {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--brand-line);
+  border-radius: 0;
+  padding: 24px 0 0;
+}
+.marketing-site .workflow-heading > span {
+  font-size: 10px;
+}
+.marketing-site .workflow-story h3 {
+  margin-top: 20px;
+}
+.marketing-site .dark-section::before {
+  content: none;
+}
+.marketing-site .manager-window {
+  border-radius: 8px;
+  box-shadow: none;
+}
+.marketing-site .manager-tabs button:hover {
+  background: #ffffff14;
+}
+.marketing-site .manager-tabs button[aria-pressed="true"]:hover {
+  background: var(--brand-support);
+  color: var(--brand-ink);
+}
+.marketing-site .tunnel-replay {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 8px auto 0;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--brand-line);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--brand-ink);
+  font-size: 11px;
+  cursor: pointer;
+}
+.marketing-site .tunnel-replay:hover {
+  background: #f0e3d5;
+}
+.marketing-site .tunnel-replay:active {
+  transform: translateY(1px);
+}
+.marketing-site .tunnel-route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: var(--brand-accent);
+  stroke-width: 1.5;
+  stroke-dasharray: 1;
+  opacity: 0.5;
+  pointer-events: none;
 }
 .marketing-site .tunnel-scene-label,
 .marketing-site .tunnel-seal,
@@ -61,7 +129,7 @@ em {
   font-family: var(--font-plex-mono), monospace;
 }
 .marketing-site .bramble-family {
-  border-radius: 20px;
+  border-radius: 0;
 }
 @media (max-width: 767px) {
   .marketing-site .hero-heading {
@@ -72,11 +140,61 @@ em {
   }
 }
 @media (prefers-reduced-motion: no-preference) {
+  .marketing-site .tunnel-command {
+    animation: command-reveal 800ms steps(22, end) both;
+  }
+  .marketing-site .tunnel-route path {
+    animation: tunnel-connect 1000ms ease both;
+  }
+  .marketing-site .tunnel-connected {
+    animation: terminal-arrive 400ms 600ms both;
+  }
+  .marketing-site .tunnel-public-url {
+    animation: terminal-arrive 400ms 800ms both;
+  }
+  .marketing-site .tunnel-request {
+    animation: terminal-arrive 400ms 1000ms both;
+  }
+  .marketing-site .manager-requests tr:nth-child(2) {
+    animation-delay: 60ms;
+  }
+  .marketing-site .manager-requests tr:nth-child(3) {
+    animation-delay: 120ms;
+  }
+  .marketing-site .manager-requests tr:nth-child(4) {
+    animation-delay: 180ms;
+  }
   .hero-section > div:first-child {
     animation: family-arrive 0.7s cubic-bezier(0.2, 0.65, 0.3, 1) both;
   }
   .tunnel-landscape {
     animation: family-arrive 0.9s cubic-bezier(0.2, 0.65, 0.3, 1) both;
+  }
+}
+@keyframes command-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+@keyframes tunnel-connect {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes terminal-arrive {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
   }
 }
 @keyframes family-arrive {

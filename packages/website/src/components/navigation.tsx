@@ -50,7 +50,7 @@ export function Navigation({ github }: { github: string }) {
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/#install"
-            className="button-primary min-h-11! shrink-0 gap-3! whitespace-nowrap px-3! py-2.5! text-xs! sm:px-4!"
+            className="button-primary shrink-0 whitespace-nowrap"
           >
             Install Burrow{" "}
             <ArrowUpRight
