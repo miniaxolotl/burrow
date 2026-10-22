@@ -82,6 +82,10 @@ em {
   border-radius: 8px;
   box-shadow: none;
 }
+.marketing-site .manager-tabs button {
+  min-height: 32px;
+  padding-block: 4px;
+}
 .marketing-site .manager-tabs button:hover {
   background: #ffffff14;
 }
@@ -95,8 +99,8 @@ em {
   justify-content: center;
   gap: 6px;
   margin: 8px auto 0;
-  min-height: 36px;
-  padding: 6px 10px;
+  min-height: 32px;
+  padding: 4px 10px;
   border: 1px solid var(--brand-line);
   border-radius: 5px;
   background: transparent;

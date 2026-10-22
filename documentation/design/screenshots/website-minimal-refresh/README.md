@@ -21,6 +21,10 @@ regression test reproduced 1:1 hover contrast on the previous build and checks
 normal, hover, press and keyboard focus. Additional tests cover replay under
 reduced motion and selected-tunnel request navigation.
 
+Screenshot follow-up: primary actions are 34px high on desktop; header, manager
+tabs, replay and consent controls are 32px. Cookie settings actions have no
+underline in any state.
+
 Verification includes website lint/types/build, 23 browser cases and all three
 Go modules. Responsive review covers WCAG A/AA axe, overflow and console errors
 at 320/390/768/1440px. Existing original diagrams and sample requests retain
