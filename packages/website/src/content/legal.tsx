@@ -151,10 +151,9 @@ export const privacy: LegalDocument = {
       content: (
         <>
           <p>
-            The hosted service uses DigitalOcean for application infrastructure,
-            Upstash for Redis, and Cloudflare for domain/DNS services. The
-            marketing website uses Vercel hosting and Web Analytics. Information
-            is processed by these providers to carry out their roles and may be
+            We use infrastructure, storage, domain and analytics providers to
+            operate the hosted service and marketing website. Information is
+            processed by these providers to carry out their roles and may be
             processed outside your country.
           </p>
           <p>
@@ -173,11 +172,11 @@ export const privacy: LegalDocument = {
         <>
           <p>
             Official CLI releases use a separate random installation identifier
-            for anonymous command and tunnel outcomes. PostHog receives these
-            outcomes; Sentry receives sanitized error stacks, sampled traces and
-            operation metrics and logs. We exclude arguments, ports, hostnames,
-            tunnel IDs, credentials, request histories, headers and payloads.
-            Browser and CLI identities are not joined.
+            for anonymous command and tunnel outcomes. Analytics receives these
+            outcomes; diagnostics receives sanitized error stacks, sampled
+            traces and operation metrics and logs. We exclude arguments, ports,
+            hostnames, tunnel IDs, credentials, request histories, headers and
+            payloads. Browser and CLI identities are not joined.
           </p>
           <p>
             Run <code>burrowctl telemetry disable</code> to opt out and clear
@@ -201,40 +200,55 @@ export const privacy: LegalDocument = {
       content: (
         <>
           <p>
-            PostHog measures public-page visits, install-command copies, product
-            referrals and performance with a random browser identifier in local
-            storage. We do not attach names, email addresses or tunnel
-            credentials to that identifier. We use small website experiments and
-            optional rating surveys. Analytics URLs omit queries and fragments;
-            unknown paths are generalized.
+            With your permission, advertising partners use cookies and device
+            information, including IP addresses and public-page visits, to
+            measure advertising and build audiences for ads on other sites.
+            Advertising runs only on public website pages after you accept
+            advertising cookies. Cookie settings in the footer lets you choose
+            analytics and advertising separately, or turn both off. An essential
+            first-party cookie stores your choice for 180 days. Optional
+            analytics, diagnostics and advertising stay off until you agree.
+            Global Privacy Control and Do Not Track prevent them from loading.
+            Disabling tracking refreshes the page to unload active tags. Tags
+            are excluded from tunnel subdomains; tunnel traffic, credentials and
+            form values are not configured as advertising data.
           </p>
           <p>
-            PostHog samples masked website recordings at 10%, retained for 30
-            days. Text and inputs are masked, media and private regions are
-            blocked, and console logs, network headers and bodies are excluded.
-            Link attributes are redacted separately. Sentry receives sanitized
-            website error stacks, sampled performance traces and bounded
-            clipboard outcome metrics and logs. It does not record website
-            sessions.
+            With your permission, analytics measures public-page visits,
+            install-command copies, product referrals and performance with a
+            random browser identifier in local storage. We do not attach names,
+            email addresses or tunnel credentials to that identifier. We use
+            small website experiments and optional rating surveys. Analytics
+            URLs omit queries and fragments; unknown paths are generalized.
           </p>
           <p>
-            Disable browser PostHog and Sentry collection with the website
-            telemetry control below. Global Privacy Control and Do Not Track
-            also disable browser collection. Opt-out clears the stored analytics
-            identity and stops further collection; previously received data is
-            not automatically erased. These providers process data in the United
+            With your permission, analytics samples masked website recordings at
+            10%, retained for 30 days. Text and inputs are masked, media and
+            private regions are blocked, and console logs, network headers and
+            bodies are excluded. Link attributes are redacted separately.
+            Diagnostics receives sanitized website error stacks, sampled
+            performance traces and bounded clipboard outcome metrics and logs.
+            It does not record website sessions.
+          </p>
+          <p>
+            Disable browser analytics and diagnostics with the website telemetry
+            control below. Global Privacy Control and Do Not Track also disable
+            browser collection. Opt-out clears the stored analytics identity and
+            stops further collection; previously received data is not
+            automatically erased. These providers process data in the United
             States. Contact us with information or deletion requests. Server
             diagnostics are separate from this browser preference and exclude
             request content.
           </p>
           <p>
-            Vercel Web Analytics measures aggregate page visits, referrals, and
-            broad device/region information without tracking cookies. We do not
-            send tunnel traffic or request-history content as website analytics.
-            Vercel Speed Insights measures public-page loading, responsiveness,
-            and visual stability without tracking cookies. Its reported URLs
-            exclude query strings and fragments. Hosting can separately process
-            IP addresses, URLs, browser details, and request times.
+            With your permission, analytics also measures aggregate page visits,
+            referrals, and broad device/region information without tracking
+            cookies. We do not send tunnel traffic or request-history content as
+            website analytics. Performance measurements cover public-page
+            loading, responsiveness, and visual stability without tracking
+            cookies. Its reported URLs exclude query strings and fragments.
+            Hosting can separately process IP addresses, URLs, browser details,
+            and request times.
           </p>
           <p>
             The terminal previews contain example data, not live tunnels or
