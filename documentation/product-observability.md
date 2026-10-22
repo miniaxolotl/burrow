@@ -64,13 +64,16 @@ browser preferences; browser telemetry never initializes on a privacy opt-out.
 
 ### Choices and failure isolation
 
-The footer control disables both browser providers. Global Privacy Control, Do
-Not Track and unavailable local storage also prevent initialization. Opt-out stops
+The compact cookie notice and footer **Cookie settings** offer separate Analytics
+and Advertising choices. Browser analytics, diagnostics and Vercel measurements
+require Analytics consent. Global Privacy Control, Do Not Track and unavailable
+local storage also prevent initialization. Opt-out stops
 recording, clears the stored PostHog identity and suppresses all Sentry envelope
 types at the transport boundary, including streamed spans. Another tab observes
 the stored choice. Re-enabling analytics generates a new identity. Provider
-failures do not change navigation or clipboard results. Vercel's existing
-cookie-free measurements remain separately documented in the public policy.
+failures do not change navigation or clipboard results. See
+[website consent delivery](website-consent.md) for the released behavior,
+tag mapping and production acceptance.
 
 ### Deployment and source maps
 
