@@ -1,11 +1,17 @@
-import { Analytics } from "@vercel/analytics/next";
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { site } from "@/lib/site";
-import { WebsiteSpeedInsights } from "@/components/website-speed-insights";
+import {
+  WebsiteSpeedInsights,
+  WebsiteVercelAnalytics,
+} from "@/components/website-speed-insights";
 import { WebsiteTelemetry } from "@/components/website-telemetry";
+import { WebsiteTagManager } from "@/components/website-tag-manager";
+import { WebsiteCookieConsent } from "@/components/cookie-consent";
+import "vanilla-cookieconsent/dist/cookieconsent.css";
 import "./globals.css";
 import "./brand-family.css";
+import "./cookie-consent.css";
 
 const sans = localFont({
   src: [
@@ -89,7 +95,9 @@ export default function RootLayout({
         </a>
         {children}
         <WebsiteTelemetry />
-        <Analytics />
+        <WebsiteCookieConsent />
+        <WebsiteTagManager />
+        <WebsiteVercelAnalytics />
         {process.env.VERCEL_ENV === "production" && <WebsiteSpeedInsights />}
       </body>
     </html>
