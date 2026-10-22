@@ -2,10 +2,10 @@
 
 Verified on **22 October 2026 UTC** at <https://useburrow.app>.
 
-- Source: [v0.3.10](https://github.com/miniaxolotl/burrow/releases/tag/v0.3.10), `662b3837a1025b34d7e77a2781ceecd8b2a85558`.
-- Frozen production [#50](https://github.com/miniaxolotl/burrow/pull/50): `ee1bb60936f96b9fd85dcaed4b4222eae7fa2398`; source and production trees match.
-- Production [CI 39710513609](https://github.com/miniaxolotl/burrow/actions/runs/39710513609) passed.
-- Vercel deployment `dpl_3KQBjNyHLJqbnPtgDempU5VHCrXm` is READY on that production SHA.
+- Source: [v0.3.11](https://github.com/miniaxolotl/burrow/releases/tag/v0.3.11), `2741fdf60ca8ac0dc9fa8de69de563b7c6df0e62`.
+- Frozen production [#54](https://github.com/miniaxolotl/burrow/pull/54): `c860fddc35090fdb7d93074bfc75368bff0345c0`; source and production trees match.
+- Production [CI 39723057650](https://github.com/miniaxolotl/burrow/actions/runs/39723057650) and [Deploy 39723057655](https://github.com/miniaxolotl/burrow/actions/runs/39723057655) passed.
+- Vercel deployment `dpl_69vaY5HFfBwwV7oht1vJr38haEt6` is READY and the public alias serves that production SHA.
 
 ## Behavior
 
@@ -13,6 +13,7 @@ Pinned Vanilla CookieConsent **3.1.0** stores separate Analytics and Advertising
 choices for 180 days. A compact branded notice offers **Accept all**, **No thanks**
 and **Settings**; the footer provides **Cookie settings**. The approved Burrow
 07L / Arc design is retained. See the [approved screenshots](design/screenshots/cookie-consent/README.md).
+The live Analytics description reads **“Understand site usage and performance.”**
 
 Optional browser analytics, diagnostics and Vercel measurements require Analytics
 consent. Advertising consent independently enables the production public-route
@@ -38,7 +39,12 @@ browser-error checks passed. AdRoll subsequently reported **Pixel Active**.
 
 The implementation passed formatting, lint, types, production build, 20 browser
 scenarios and applicable release/workflow gates before protected promotion.
-The website is verified live. Coordinated package/server release
-[39710513610](https://github.com/miniaxolotl/burrow/actions/runs/39710513610) separately
-encountered the npm registry incident at credential preflight and awaits recovery.
+The coordinated v0.3.11 release also passes the real HTTPS tunnel-forwarding check.
+All five downloaded npm artifacts match their registry integrity, version and
+repository, advertise provenance, and the Linux x64 CLI starts at 0.3.11. The
+published server image is
+`ghcr.io/miniaxolotl/burrowd@sha256:07753ebc32e2a23d253e6bbefbecae0e6b1391b279834e8ee0a502cfc69d72d1`.
+The earlier v0.3.10 registry interruption recovered on deployment attempt4 before
+this patch was promoted. The patch promotion's OpenTofu download timeout recovered
+on a same-candidate check retry through normal branch protection.
 No paid campaign was configured.
