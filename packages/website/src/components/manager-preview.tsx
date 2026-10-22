@@ -141,7 +141,7 @@ export function ManagerPreview() {
     <figure className="min-w-0">
       <div className="flex flex-wrap items-center justify-between gap-4 px-1 pb-5">
         <div
-          className="inline-flex gap-1 rounded-lg border border-white/15 p-1"
+          className="manager-tabs inline-flex gap-1 rounded-md border border-white/15 p-1"
           aria-label="Terminal preview views"
         >
           {views.map(({ name, icon: Icon }, index) => (
@@ -151,7 +151,7 @@ export function ManagerPreview() {
               aria-pressed={index === view}
               aria-controls="manager-preview-content"
               onClick={() => setView(index)}
-              className="inline-flex min-h-10 items-center gap-2 rounded-md px-3 text-[11px] text-white/70 transition-colors hover:text-white aria-pressed:bg-lime aria-pressed:text-forest sm:px-5 sm:text-xs"
+              className="inline-flex min-h-9 items-center gap-2 rounded-sm px-3 text-[11px] text-white/70 transition-colors hover:text-white aria-pressed:bg-lime aria-pressed:text-forest sm:text-xs"
             >
               <Icon size={14} aria-hidden="true" /> {name}
             </button>
@@ -186,7 +186,7 @@ export function ManagerPreview() {
           </div>
           <div id="manager-preview-content" className="mt-6 min-h-[260px]">
             {view === 0 ? (
-              <div>
+              <div key="tunnels" className="demo-transition">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px]">
                   <span className="text-terminal-muted">
                     3 of your tunnels. One place.
@@ -252,7 +252,10 @@ export function ManagerPreview() {
                     </li>
                   ))}
                 </ul>
-                <div className="mt-5 border-t border-white/10 pt-4">
+                <div
+                  key={tunnel.id}
+                  className="demo-transition mt-5 border-t border-white/10 pt-4"
+                >
                   <div className="mb-2 flex items-center gap-2 font-mono text-[10px] text-terminal-muted">
                     <Link2 size={12} aria-hidden="true" /> {tunnel.name}{" "}
                     <ArrowRight size={12} aria-hidden="true" /> localhost:
@@ -264,7 +267,7 @@ export function ManagerPreview() {
                 </div>
               </div>
             ) : (
-              <div>
+              <div key="requests" className="demo-transition">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3 font-mono text-[10px]">
                   <span className="text-terminal-muted">
                     {tunnel.name} / localhost:{tunnel.port}
@@ -301,7 +304,10 @@ export function ManagerPreview() {
                   </thead>
                   <tbody>
                     {tunnel.requests.map((request) => (
-                      <tr key={`${request.time}-${request.path}`}>
+                      <tr
+                        key={`${request.time}-${request.path}`}
+                        className="demo-transition"
+                      >
                         <td className="hidden text-terminal-muted md:table-cell">
                           {request.time}
                         </td>
@@ -350,7 +356,7 @@ export function ManagerPreview() {
             <button
               type="button"
               onClick={() => setView(view === 0 ? 1 : 0)}
-              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-md border border-white/15 px-3 text-[11px] text-lime transition-colors hover:border-lime/50 hover:bg-white/5"
+              className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-sm border border-white/15 px-3 text-[11px] text-lime transition-colors hover:border-lime/50 hover:bg-white/5"
             >
               {view === 0 ? "View requests" : "Back to tunnels"}
               <ArrowRight size={13} aria-hidden="true" />
