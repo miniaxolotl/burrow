@@ -1,3 +1,5 @@
+import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
 import { Brand } from "@/components/brand";
 import { BrambleFamily } from "@/components/bramble-family";
 import { ShareSite } from "@/components/share-site";
@@ -6,52 +8,47 @@ import { TelemetryChoice } from "@/components/website-telemetry";
 
 export function SiteFooter() {
   return (
-    <footer className="page-container site-footer">
-      <div className="footer-top">
-        <div>
-          <Brand />
-          <p className="mt-3 text-xs leading-6 text-muted">
-            HTTPS tunnels for local development.
-            <br />A developer tool by Bramble Labs Inc.
-          </p>
+    <footer className="site-footer">
+      <div className="page-container">
+        <div className="footer-main">
+          <div className="footer-brand">
+            <Brand />
+            <p>HTTPS tunnels for local development.</p>
+          </div>
+          <nav className="footer-links" aria-label="Footer navigation">
+            <p className="eyebrow">EXPLORE</p>
+            <a
+              href={site.clientDocs}
+              data-analytics-event="docs_link_clicked"
+              data-analytics-placement="footer"
+            >
+              Documentation
+            </a>
+            <Link href="/#how-it-works">How it works</Link>
+            <Link href="/#install">Install Burrow</Link>
+          </nav>
+          <div className="footer-links">
+            <p className="eyebrow">STAY IN TOUCH</p>
+            <a href="mailto:burrow@mawa.dev">
+              Say hello <ArrowUpRight size={12} aria-hidden="true" />
+            </a>
+            <a href={site.github}>
+              GitHub <ArrowUpRight size={12} aria-hidden="true" />
+            </a>
+            <ShareSite url={site.url} />
+          </div>
         </div>
-        <nav
-          aria-label="Footer navigation"
-          className="flex flex-wrap gap-x-6 gap-y-2"
-        >
-          <a
-            href={site.clientDocs}
-            className="text-link"
-            data-analytics-event="docs_link_clicked"
-            data-analytics-placement="footer"
-          >
-            Documentation
-          </a>
-          <a href={site.github} className="text-link">
-            GitHub
-          </a>
-          <a href="/privacy" className="text-link">
-            Privacy policy
-          </a>
-          <a href="/terms" className="text-link">
-            Terms & conditions
-          </a>
-          <a href="mailto:burrow@mawa.dev" className="text-link">
-            Contact
-          </a>
-          <a
-            href={`${site.github}/blob/production/LICENSE`}
-            className="text-link"
-          >
-            MIT License
-          </a>
-          <TelemetryChoice />
-        </nav>
-      </div>
-      <BrambleFamily current="burrow" />
-      <div className="footer-bottom">
-        <span>Copyright {new Date().getFullYear()} Bramble Labs Inc.</span>
-        <ShareSite url={site.url} />
+        <BrambleFamily current="burrow" />
+        <div className="footer-bottom">
+          <span>Copyright {new Date().getFullYear()} Bramble Labs Inc.</span>
+          <nav className="footer-utilities" aria-label="Legal and contact">
+            <a href="/privacy">Privacy policy</a>
+            <a href="/terms">Terms &amp; conditions</a>
+            <TelemetryChoice />
+            <a href="mailto:burrow@mawa.dev">Contact</a>
+            <a href={`${site.github}/blob/production/LICENSE`}>MIT license</a>
+          </nav>
+        </div>
       </div>
     </footer>
   );

@@ -1,6 +1,6 @@
 {
   "name": "@miniaxolotl/burrowctl",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "description": "CLI client for the burrow tunnel server",
   "license": "MIT",
   "repository": {
