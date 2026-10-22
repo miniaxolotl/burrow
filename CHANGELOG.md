@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.12](https://github.com/miniaxolotl/burrow/compare/v0.3.11...v0.3.12) (2026-10-22)
+
+
+### Features
+
+* **website:** refine compact controls and tunnel demo motion ([#55](https://github.com/miniaxolotl/burrow/issues/55)) ([9eea418](https://github.com/miniaxolotl/burrow/commit/9eea418f5b463e6ef6dfaa4a104e6e8d5b14db66))
+
 ## [0.3.11](https://github.com/miniaxolotl/burrow/compare/v0.3.10...v0.3.11) (2026-10-22)
 
 
