@@ -3,6 +3,11 @@
 Shared workflow names, action pins, runtime and evidence conventions follow the
 [cross-repository CI/CD baseline](pipeline-conventions.md).
 
+The [Burrow hardening review](cicd-hardening-review.md) separates implemented
+admission/publication/rollout from planned selection, drain continuity and automatic
+last-good recovery. Continue using this operator path until replacements are
+reviewed and separately activated.
+
 ## Branch and release policy
 
 Feature PRs integrate into `development`. Release Please prepares a single product
@@ -140,6 +145,11 @@ App Platform runs **one instance per environment** because active WebSocket and
 yamux sessions live in Go memory. During a deployment, clients reconnect using
 their existing reconnect behavior. Horizontal scaling requires connection-aware
 routing and is not enabled by changing the replica count alone.
+
+Current server shutdown closes existing tunnel connections before shutting down
+HTTP. Reconnect support is not an in-flight continuity or zero-downtime guarantee;
+the hardening review requires explicit drain/reconnect failure tests and hosted
+acceptance before making such a claim.
 
 ## Local Docker
 
