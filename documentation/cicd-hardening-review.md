@@ -22,6 +22,12 @@ Runner placement is retained by owner instruction, superseding the proposed vend
 move. Draining and automatic recovery remain subsequent work;
 the dated baseline below is historical where superseded by this update.
 
+Infrastructure applies now recheck the protected production tip immediately
+before each of the two OpenTofu mutations and before reporting readiness. Release
+and maintenance workflows supply a read-only GitHub token and pinned Node runtime.
+An isolated command-fixture regression proves a branch superseded between applies
+stops before the second write. This is not a provider-side atomic lock or rollback.
+
 Reviewed **22 October 2026**, development `facc1de6b3322953f61632f609483638c3a23037`.
 This review refreshes the recovered plan against current source and read-only
 GitHub policy. It changes no workflow, runtime, infrastructure or provider setting.
