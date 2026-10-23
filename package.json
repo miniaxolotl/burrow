@@ -29,6 +29,7 @@
   },
   "devDependencies": {
     "@types/node": "~25.5.0",
-    "prettier": "~3.8.1"
+    "prettier": "~3.8.1",
+    "release-please": "17.6.0"
   }
 }
