@@ -22,6 +22,27 @@ permissions:
   pull-requests: read
 
 jobs:
+  changes:
+    name: Change Classification
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      selection: ${{ steps.classify.outputs.selection }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24.21.0"
+      - id: classify
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PROMOTION_PR: ${{ inputs.promotion_pr }}
+        run: node scripts/ci/selection.mjs classify
+
   promotion:
     name: Promotion Admission
     runs-on: ubuntu-latest
@@ -36,7 +57,7 @@ jobs:
           node-version: "24.21.0"
       - name: Lint GitHub Actions workflows
         run: bash scripts/ci/run-actionlint.sh
-      - run: node --test scripts/release/promotion.test.mjs
+      - run: node --test scripts/ci/*.test.mjs scripts/release/promotion.test.mjs
       - run: node scripts/release/promotion.mjs admit
         env:
           GH_TOKEN: ${{ github.token }}
@@ -44,16 +65,24 @@ jobs:
   ci-gate:
     name: CI Gate
     if: always()
-    needs: [promotion, infrastructure, website, lint, build, test]
+    needs: [changes, promotion, infrastructure, website, lint, build, test]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24.21.0"
       - env:
-          RESULTS: ${{ toJSON(needs) }}
-        run: jq -e 'all(.[]; .result == "success")' <<< "$RESULTS"
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: node scripts/ci/selection.mjs gate
 
   infrastructure:
     name: Infrastructure Quality
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).infrastructure }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -76,6 +105,8 @@ jobs:
 
   website:
     name: Website
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).website }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -94,6 +125,17 @@ jobs:
           node-version: "24.21.0"
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - id: browser-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: browser-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('pnpm-lock.yaml') }}
+      - id: build-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: packages/website/.next/cache
+          key: next-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: next-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('pnpm-lock.yaml') }}-
       - run: node --test scripts/release/*.test.mjs
       - run: pnpm lint:website
       - run: pnpm typecheck:website
@@ -101,9 +143,21 @@ jobs:
       - run: pnpm build:website
       - run: pnpm --filter website exec playwright install --with-deps chromium
       - run: pnpm --filter website test
+      - if: ${{ github.event_name != 'pull_request' && github.ref_protected && steps.browser-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ steps.browser-cache.outputs.cache-primary-key }}
+      - if: ${{ github.event_name != 'pull_request' && github.ref_protected && steps.build-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: packages/website/.next/cache
+          key: ${{ steps.build-cache.outputs.cache-primary-key }}
 
   lint:
     name: Go Quality
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).lint }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -119,6 +173,8 @@ jobs:
 
   build:
     name: Go Build
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).build }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -137,7 +193,8 @@ jobs:
     name: Go Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [lint, build]
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).test }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

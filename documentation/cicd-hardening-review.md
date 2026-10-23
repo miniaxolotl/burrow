@@ -1,5 +1,27 @@
 # CI/CD hardening — Burrow review
 
+## Implementation update
+
+The owner expanded the review to executable fixes. Burrow now shares GET-only
+bounded GitHub JSON reads, checksum-preserving bootstrap retries, common-action
+pin contracts and protected browser/Next cache writers with all four repositories.
+Writes are not retried by the read helper. Three attempts share a 30-second budget;
+auth/not-found and persistent invalid evidence fail without exposing provider bodies.
+
+Development PR CI now selects website, Go and infrastructure jobs by dependencies;
+shared protocol selects all Go jobs plus image/infra validation. Docs-only changes
+skip heavy jobs, while unknown/empty/unreadable diffs and package manifests select
+all. Renames cover both paths. CI Gate validates exact inventory and selected
+success/unselected skip, never blanket skipped-job acceptance. Go tests run
+independently of vet/build; the final gate still requires every selected result.
+Full push/manual source CI remains mandatory release evidence. Frozen promotion
+PRs/dispatches reuse it only after authenticated admission; fake development-PR
+promotion inputs fail. Actual deployment operations remain unchanged in this slice.
+
+Runner placement is retained by owner instruction, superseding the proposed vendor
+move. Draining and automatic recovery remain subsequent work;
+the dated baseline below is historical where superseded by this update.
+
 Reviewed **22 October 2026**, development `facc1de6b3322953f61632f609483638c3a23037`.
 This review refreshes the recovered plan against current source and read-only
 GitHub policy. It changes no workflow, runtime, infrastructure or provider setting.

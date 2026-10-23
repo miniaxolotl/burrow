@@ -41,7 +41,11 @@ the complete website tree before the production merge.
 
 1. **CI** runs website lint/types/build, Go vet/build/tests, OpenTofu formatting
    and validation, workflow lint, and a Docker build.
-2. **CI Gate** aggregates every job. A downstream PR must come from the owner's
+2. **CI Gate** verifies classification, admission and exact selected-job results;
+   unknown/empty/unreadable diffs select all. Development PRs select dependency
+   families, while source push/manual validation stays complete. Frozen promotion
+   PRs reuse independent source validation through authenticated admission.
+   A downstream PR must come from the owner's
    frozen `promote/production/vX.Y.Z` ref, have Release Please provenance and match
    the tag's tree. Independent source CI is required; PR/self evidence is rejected.
 3. **Deploy** waits for complete production CI, resolves the tag source separately
