@@ -51,6 +51,15 @@ pnpm typecheck:website
 
 ## Key constraints
 
+- Follow `documentation/release-conventions.md`: branches `type/scope-short-description`,
+  commits/concise PR titles `type(scope): imperative summary`. Release Please owns
+  one patch-first product version; routine features/fixes bump patch, while
+  minor/major and breaking changes need an explicit higher `Release-As: X.Y.Z`
+  in merged history. Reuse upstream/common helpers; retain current runners.
+- Use the parent workspace's `worktrees/<project>` and `plans/<project>` with
+  plan.md, notes.md and status.md outside Git. Assign one-label PRs to miniaxolotl;
+  relevant captures live in documentation with at most four PR previews per row.
+  Remove only clean stale task worktrees after confirmed merge; never commit secrets.
 - This is a **Go workspace** (`go.work`) with 3 modules. Always `go work sync` before building if module deps changed.
 - The `protocol` module is linked via `replace` directive in both `burrowd/go.mod` and `burrowctl/go.mod` — never `go install` it independently.
 - Version strings live in `burrowd/version.go` and `burrowctl/version.go`; release-please bumps them, goreleaser overrides at link time with `-X main.Version`.

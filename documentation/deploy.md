@@ -1,5 +1,10 @@
 # Deploy & release
 
+Follow [shared release/naming conventions](release-conventions.md). Release Please
+uses the upstream Node strategy for the root/npm/Go version mappings, patch-first
+automatic bumps and explicit `Release-As` minor/major/breaking decisions. Existing
+versions and tags are retained; generated release PRs own version/changelog edits.
+
 Shared workflow names, action pins, runtime and evidence conventions follow the
 [cross-repository CI/CD baseline](pipeline-conventions.md).
 
