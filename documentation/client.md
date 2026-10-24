@@ -68,7 +68,7 @@ Running commands honor persisted opt-out before uploading. Re-enabling never
 revives an older process's cleared identity. CI and local source builds do not
 initialize telemetry. Help, version and telemetry preference commands do not emit
 events. Opt-out does not erase already received provider data; contact
-burrow@mawa.dev for requests. Random IDs are not linked across website/CLI or
+support@useburrow.app for requests. Random IDs are not linked across website/CLI or
 products, and do not provide access to tunnels.
 
 First-value activation means the first forwarding stream in a tunnel session
