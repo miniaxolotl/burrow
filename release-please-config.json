@@ -1,10 +1,18 @@
 {
   "packages": {
     ".": {
-      "release-type": "simple",
+      "release-type": "node",
+      "component": "burrow",
+      "initial-version": "0.1.0",
+      "include-component-in-tag": false,
+      "include-v-in-tag": true,
+      "include-v-in-release-name": true,
+      "force-tag-creation": false,
+      "prerelease": true,
+      "pull-request-title-pattern": "chore(release): release ${version}",
+      "pull-request-footer": "Source release only. Deployment, artifact acceptance and store submission are separate operations.",
       "changelog-path": "CHANGELOG.md",
       "extra-files": [
-        "package.json",
         "packages/burrowctl/package.json",
         "packages/burrowctl-linux-x64/package.json",
         "packages/burrowctl-linux-arm64/package.json",
@@ -13,17 +21,28 @@
         "burrowd/version.go",
         "burrowctl/version.go"
       ],
-      "versioning": "default",
+      "versioning": "always-bump-patch",
       "changelog-sections": [
-        { "type": "feat", "section": "Features" },
-        { "type": "feature", "section": "Features" },
-        { "type": "fix", "section": "Bug Fixes" },
-        { "type": "perf", "section": "Performance Improvements" },
-        { "type": "revert", "section": "Reverts" }
+        { "type": "feature", "section": "Features", "hidden": false },
+        { "type": "feat", "section": "Features", "hidden": false },
+        { "type": "fix", "section": "Bug Fixes", "hidden": false },
+        {
+          "type": "perf",
+          "section": "Performance Improvements",
+          "hidden": false
+        },
+        { "type": "revert", "section": "Reverts", "hidden": false },
+        { "type": "docs", "section": "Documentation", "hidden": true },
+        { "type": "test", "section": "Tests", "hidden": true },
+        { "type": "chore", "section": "Miscellaneous Chores", "hidden": true },
+        { "type": "ci", "section": "Continuous Integration", "hidden": true },
+        { "type": "build", "section": "Build System", "hidden": true },
+        { "type": "refactor", "section": "Code Refactoring", "hidden": true },
+        { "type": "style", "section": "Styles", "hidden": true }
       ],
       "bump-minor-pre-major": true,
       "bump-patch-for-minor-pre-major": true
     }
   },
-  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json"
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/v17.6.0/schemas/config.json"
 }

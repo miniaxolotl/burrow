@@ -1,0 +1,19 @@
+{
+  "jobs": ["infrastructure", "website", "lint", "build", "test"],
+  "rules": [
+    { "prefix": "packages/website/", "jobs": ["website"] },
+    {
+      "prefix": "burrowd/",
+      "jobs": ["infrastructure", "lint", "build", "test"]
+    },
+    {
+      "prefix": "burrowctl/",
+      "jobs": ["infrastructure", "lint", "build", "test"]
+    },
+    {
+      "prefix": "protocol/",
+      "jobs": ["infrastructure", "lint", "build", "test"]
+    },
+    { "prefix": "infra/", "jobs": ["infrastructure"] }
+  ]
+}
