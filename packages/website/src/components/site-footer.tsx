@@ -29,9 +29,9 @@ export function SiteFooter() {
           </nav>
           <div className="footer-links">
             <p className="eyebrow">STAY IN TOUCH</p>
-            <a href="mailto:burrow@mawa.dev">
+            <Link href="/contact">
               Say hello <ArrowUpRight size={12} aria-hidden="true" />
-            </a>
+            </Link>
             <a href={site.github}>
               GitHub <ArrowUpRight size={12} aria-hidden="true" />
             </a>
@@ -45,7 +45,8 @@ export function SiteFooter() {
             <a href="/privacy">Privacy policy</a>
             <a href="/terms">Terms &amp; conditions</a>
             <TelemetryChoice />
-            <a href="mailto:burrow@mawa.dev">Contact</a>
+            <Link href="/support">Support</Link>
+            <Link href="/contact">Contact</Link>
             <a href={`${site.github}/blob/production/LICENSE`}>MIT license</a>
           </nav>
         </div>

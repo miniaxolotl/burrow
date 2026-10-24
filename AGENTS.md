@@ -51,13 +51,22 @@ pnpm typecheck:website
 
 ## Key constraints
 
+- Follow `documentation/release-conventions.md`: branches `type/scope-short-description`,
+  commits/concise PR titles `type(scope): imperative summary`. Release Please owns
+  one patch-first product version; routine features/fixes bump patch, while
+  minor/major and breaking changes need an explicit higher `Release-As: X.Y.Z`
+  in merged history. Reuse upstream/common helpers; retain current runners.
+- Use the parent workspace's `worktrees/<project>` and `plans/<project>` with
+  plan.md, notes.md and status.md outside Git. Assign one-label PRs to miniaxolotl;
+  relevant captures live in documentation with at most four PR previews per row.
+  Remove only clean stale task worktrees after confirmed merge; never commit secrets.
 - This is a **Go workspace** (`go.work`) with 3 modules. Always `go work sync` before building if module deps changed.
 - The `protocol` module is linked via `replace` directive in both `burrowd/go.mod` and `burrowctl/go.mod` — never `go install` it independently.
 - Version strings live in `burrowd/version.go` and `burrowctl/version.go`; release-please bumps them, goreleaser overrides at link time with `-X main.Version`.
 - Server requires **Redis** (see `docker-compose.yml`). Default port 25701.
 - `.env` is gitignored; copy `.env.example` and set `BURROW_DOMAIN` to run locally. Client owner credentials are generated automatically; there is no shared admin secret.
 - Branches: feature PR → `development` → explicitly selected `promote/production/vX.Y.Z` PR → `production`. Use merge commits for promotions. Release Please owns all versions/changelogs on development. Never push directly to a protected branch or move a released tag/frozen candidate.
-- `CI Gate` is the stable required GitHub Actions check. It requires every CI job, including promotion admission. Auto-merge may wait for this gate; it grants no bypass.
+- `CI Gate` is the stable required GitHub Actions check. It requires classification, promotion admission and every selected CI job; unselected jobs must be skipped. Push/manual source CI stays full. Auto-merge grants no bypass.
 - Production alone publishes npm, binary archives and container images, deploys the tunnel service and builds the Vercel production site. Resolve the tag's source SHA independently of the production merge SHA; their trees must match. All artifact preflights precede publication and server rollout follows publication.
 - CI runs `go test` on all three modules. Deployments also run the real HTTPS tunnel test in `burrowctl/internal/live_test.go`.
 - OpenTofu 1.12.6 is pinned in `.opentofu-version`; run `bash scripts/infra/check.sh`. Hosted apps deploy immutable GHCR digests. Development performs validation only. Infrastructure maintenance is dispatched on production. Existing staging resources are retained pending an explicit retirement decision.

@@ -4,6 +4,10 @@ The website leads with giving a local app a public HTTPS link. The main action i
 installation. Short examples explain preview sharing, webhook testing and running
 the open-source server on your own infrastructure.
 
+Current help/contact routes and designated public email are documented in
+[Website support and contact](website-support-contact.md). Earlier verification
+counts below remain historical, not the current regression-suite totals.
+
 ## Copy follow-up
 
 The 21 October follow-up shortens workflow headings, FAQs and footer referrals,

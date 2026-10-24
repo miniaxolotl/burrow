@@ -1,4 +1,5 @@
 import type { LegalDocument } from "@/components/legal-page";
+import { contact } from "@/lib/contact";
 
 export const privacy: LegalDocument = {
   title: "Privacy policy.",
@@ -12,9 +13,8 @@ export const privacy: LegalDocument = {
           <p>
             Burrow is operated by Bramble Labs Inc. This policy covers
             useburrow.app, the Burrow tunnel service we operate, and related
-            support. Contact{" "}
-            <a href="mailto:burrow@mawa.dev">burrow@mawa.dev</a> for privacy
-            questions and requests.
+            support. Contact <a href={contact.href}>{contact.email}</a> for
+            privacy questions and requests.
           </p>
           <p>
             If you self-host Burrow, you control that installation and its data
@@ -292,7 +292,7 @@ export const privacy: LegalDocument = {
             We use authenticated management access, owner-scoped records,
             protected credentials, and encrypted supported connections. No
             service can guarantee complete security. Report suspected exposure
-            privately to <a href="mailto:burrow@mawa.dev">burrow@mawa.dev</a>.
+            privately to <a href={contact.href}>{contact.email}</a>.
           </p>
           <p>
             We update this policy as the service changes, show the effective
@@ -386,10 +386,9 @@ export const terms: LegalDocument = {
           <p>
             You are responsible for complying with laws and third-party terms
             applicable to your exposed service and visitor data. Report abuse or
-            security concerns to{" "}
-            <a href="mailto:burrow@mawa.dev">burrow@mawa.dev</a>, including the
-            relevant URL and a concise description without unnecessary sensitive
-            data.
+            security concerns to <a href={contact.href}>{contact.email}</a>,
+            including the relevant URL and a concise description without
+            unnecessary sensitive data.
           </p>
         </>
       ),
@@ -492,8 +491,8 @@ export const terms: LegalDocument = {
             ends.
           </p>
           <p>
-            Contact <a href="mailto:burrow@mawa.dev">burrow@mawa.dev</a> for
-            service, legal, privacy, or rights-holder questions.
+            Contact <a href={contact.href}>{contact.email}</a> for service,
+            legal, privacy, or rights-holder questions.
           </p>
         </>
       ),

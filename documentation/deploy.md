@@ -1,7 +1,17 @@
 # Deploy & release
 
+Follow [shared release/naming conventions](release-conventions.md). Release Please
+uses the upstream Node strategy for the root/npm/Go version mappings, patch-first
+automatic bumps and explicit `Release-As` minor/major/breaking decisions. Existing
+versions and tags are retained; generated release PRs own version/changelog edits.
+
 Shared workflow names, action pins, runtime and evidence conventions follow the
 [cross-repository CI/CD baseline](pipeline-conventions.md).
+
+The [Burrow hardening review](cicd-hardening-review.md) separates implemented
+admission/publication/rollout from planned selection, drain continuity and automatic
+last-good recovery. Continue using this operator path until replacements are
+reviewed and separately activated.
 
 ## Branch and release policy
 
@@ -36,7 +46,11 @@ the complete website tree before the production merge.
 
 1. **CI** runs website lint/types/build, Go vet/build/tests, OpenTofu formatting
    and validation, workflow lint, and a Docker build.
-2. **CI Gate** aggregates every job. A downstream PR must come from the owner's
+2. **CI Gate** verifies classification, admission and exact selected-job results;
+   unknown/empty/unreadable diffs select all. Development PRs select dependency
+   families, while source push/manual validation stays complete. Frozen promotion
+   PRs reuse independent source validation through authenticated admission.
+   A downstream PR must come from the owner's
    frozen `promote/production/vX.Y.Z` ref, have Release Please provenance and match
    the tag's tree. Independent source CI is required; PR/self evidence is rejected.
 3. **Deploy** waits for complete production CI, resolves the tag source separately
@@ -140,6 +154,11 @@ App Platform runs **one instance per environment** because active WebSocket and
 yamux sessions live in Go memory. During a deployment, clients reconnect using
 their existing reconnect behavior. Horizontal scaling requires connection-aware
 routing and is not enabled by changing the replica count alone.
+
+Current server shutdown closes existing tunnel connections before shutting down
+HTTP. Reconnect support is not an in-flight continuity or zero-downtime guarantee;
+the hardening review requires explicit drain/reconnect failure tests and hosted
+acceptance before making such a claim.
 
 ## Local Docker
 
