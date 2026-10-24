@@ -32,10 +32,9 @@ export default function NotFound() {
         </Link>
         <nav className="recovery-links" aria-label="Helpful links">
           <Link href="/#install">Installation</Link>
-          <a href={contact.href}>Get help</a>
+          <Link href="/support">Get help</Link>
         </nav>
       </main>
     </div>
   );
 }
-import { contact } from "@/lib/contact";
