@@ -11,7 +11,8 @@ canonical/social metadata; the sitemap retains the existing preview/local noinde
 
 Current website source uses **support@useburrow.app** for general, support,
 privacy, and private security inquiries. The public-only contact module at
-`packages/website/src/lib/contact.ts` is shared by policies, footer, and recovery.
+`packages/website/src/lib/contact.ts` is shared by policies and help/contact pages;
+footer and recovery links lead to the appropriate public page.
 Keep unrelated author attribution and dated release evidence unchanged.
 
 `packages/website/tests/support-contact.spec.ts` guards the public mailbox and
