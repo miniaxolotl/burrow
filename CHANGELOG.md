@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.13](https://github.com/miniaxolotl/burrow/compare/v0.3.12...v0.3.13) (2026-10-24)
+
+
+### Features
+
+* **website:** add support and contact pages ([#61](https://github.com/miniaxolotl/burrow/issues/61)) ([5771f31](https://github.com/miniaxolotl/burrow/commit/5771f31b4b1ef4e2e50dfa1bd6fd6a0559643b28))
+
+
+### Bug Fixes
+
+* **ci:** harden gates and use patch-first releases ([#59](https://github.com/miniaxolotl/burrow/issues/59)) ([af8fed2](https://github.com/miniaxolotl/burrow/commit/af8fed2398ce08f4ba9f7b793eb56411022c9406))
+
 ## [0.3.12](https://github.com/miniaxolotl/burrow/compare/v0.3.11...v0.3.12) (2026-10-22)
 
 
