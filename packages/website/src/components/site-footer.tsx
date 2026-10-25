@@ -17,13 +17,13 @@ export function SiteFooter() {
           </div>
           <nav className="footer-links" aria-label="Footer navigation">
             <p className="eyebrow">EXPLORE</p>
-            <a
-              href={site.clientDocs}
+            <Link
+              href="/docs"
               data-analytics-event="docs_link_clicked"
               data-analytics-placement="footer"
             >
               Documentation
-            </a>
+            </Link>
             <Link href="/#how-it-works">How it works</Link>
             <Link href="/#install">Install Burrow</Link>
           </nav>
