@@ -9,6 +9,7 @@ import { GithubIcon } from "@/components/github-icon";
 const links = [
   ["Features", "/#features"],
   ["How it works", "/#how-it-works"],
+  ["Docs", "/docs"],
 ] as const;
 
 export function Navigation({ github }: { github: string }) {

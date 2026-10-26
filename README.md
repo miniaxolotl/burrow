@@ -7,6 +7,11 @@ your terminal. Open source and self-hostable.
 
 [Website](https://useburrow.app) · [Client reference](documentation/client.md) · [Self-hosting](documentation/server.md)
 
+[Worked webhook and multi-port examples](documentation/workflows.md) share the
+same source as the website's public reference pages. The
+[discovery maintenance guide](documentation/website-discovery.md) explains builds
+and publication boundaries; source changes are not a production rollout.
+
 ## Quick start
 
 ```bash

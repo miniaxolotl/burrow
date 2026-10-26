@@ -1,13 +1,13 @@
-import type { Metadata } from "next";
 import { connection } from "next/server";
 import { LegalPage } from "@/components/legal-page";
 import { privacy } from "@/content/legal";
+import { pageMetadata } from "@/lib/page-metadata";
 
-export const metadata: Metadata = {
-  title: "Privacy policy",
-  description: privacy.summary,
-  alternates: { canonical: "/privacy" },
-};
+export const metadata = pageMetadata(
+  "Privacy policy",
+  privacy.summary,
+  "/privacy",
+);
 export default async function PrivacyPage() {
   await connection();
   return <LegalPage document={privacy} />;
