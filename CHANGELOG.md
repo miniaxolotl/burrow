@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.14](https://github.com/miniaxolotl/burrow/compare/v0.3.13...v0.3.14) (2026-10-26)
+
+
+### Features
+
+* **discovery:** publish maintained Burrow references ([14b17fd](https://github.com/miniaxolotl/burrow/commit/14b17fdcee1db2cb894582018bae8d27d8ec2dc5))
+* **discovery:** publish maintained Burrow references ([f43ff90](https://github.com/miniaxolotl/burrow/commit/f43ff90865a71cda87396d7e36c95a1cd299cead))
+
 ## [0.3.13](https://github.com/miniaxolotl/burrow/compare/v0.3.12...v0.3.13) (2026-10-24)
 
 
