@@ -65,6 +65,11 @@ The package extends `@lib/typescript-config`. It uses Next.js’s recommended ac
 
 ## Content and sharing
 
+`/docs` builds public client/server references and worked examples from the
+committed `documentation/` directory. The manifest drives navigation and sitemap
+coverage; retain monorepo files outside the website root during the build. See
+[reference maintenance and discovery](../../documentation/website-discovery.md).
+
 - `src/app/page.tsx`: server-rendered landing page and feature copy.
 - `src/components/`: small interactive previews, clipboard controls, navigation, and native sharing with a manual-copy fallback.
 - `src/content/faq.ts`: FAQ copy shared by the page and structured data.
