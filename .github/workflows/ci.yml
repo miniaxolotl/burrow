@@ -24,7 +24,7 @@ permissions:
 jobs:
   changes:
     name: Change Classification
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     outputs:
       selection: ${{ steps.classify.outputs.selection }}
@@ -45,7 +45,7 @@ jobs:
 
   promotion:
     name: Promotion Admission
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -65,8 +65,18 @@ jobs:
   ci-gate:
     name: CI Gate
     if: always()
-    needs: [changes, promotion, infrastructure, website, lint, build, test]
-    runs-on: ubuntu-latest
+    needs:
+      [
+        changes,
+        promotion,
+        infrastructure,
+        website,
+        website-quality,
+        lint,
+        build,
+        test,
+      ]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -83,7 +93,7 @@ jobs:
     name: Infrastructure Quality
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).infrastructure }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -107,7 +117,7 @@ jobs:
     name: Website
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).website }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 15
     env:
       VERCEL_ENV: production
@@ -119,11 +129,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0; pnpm 10
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+      - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
         with:
-          node-version: "24.21.0"
-          cache: pnpm
+          cache: true
+          require-lockfile: true
+          runtime: node@24.21.0
       - run: pnpm install --frozen-lockfile
       - id: browser-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -136,10 +146,6 @@ jobs:
           path: packages/website/.next/cache
           key: next-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: next-${{ runner.os }}-${{ runner.arch }}-node24-${{ hashFiles('pnpm-lock.yaml') }}-
-      - run: node --test scripts/release/*.test.mjs
-      - run: pnpm lint:website
-      - run: pnpm typecheck:website
-      - run: pnpm --filter website exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 ../../scripts/release/src/index.ts
       - run: pnpm build:website
       - run: pnpm --filter website exec playwright install --with-deps chromium
       - run: pnpm --filter website test
@@ -154,11 +160,32 @@ jobs:
           path: packages/website/.next/cache
           key: ${{ steps.build-cache.outputs.cache-primary-key }}
 
+  website-quality:
+    name: Website Quality
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection)['website-quality'] }}
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/setup@a0881977cd8ea73b1ed212236c99ca10dcc80cf4 # v3.1.1
+        with:
+          cache: true
+          require-lockfile: true
+          runtime: node@24.21.0
+      - run: pnpm install --frozen-lockfile
+      - run: node --test scripts/release/*.test.mjs
+      - run: pnpm lint:website
+      - run: pnpm typecheck:website
+      - run: pnpm --filter website exec tsc --noEmit --module NodeNext --moduleResolution NodeNext --target ES2022 ../../scripts/release/src/index.ts
+
   lint:
     name: Go Quality
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).lint }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -175,7 +202,7 @@ jobs:
     name: Go Build
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).build }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -191,7 +218,7 @@ jobs:
 
   test:
     name: Go Tests
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     timeout-minutes: 15
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).test }}

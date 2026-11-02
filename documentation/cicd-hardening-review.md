@@ -43,13 +43,13 @@ and read-retry results are not fresh evidence. Recover/compare externally suppli
 patches or explicitly reconstruct them. Merged promotion #58 is not proof these
 unpublished local patches shipped.
 
-| Area                  | Implemented source                                                                                                     | Planned hardening                                                                     |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| CI                    | `ci.yml`: unconditional website, infrastructure, Go quality/build/test and admission; all-success CI Gate              | Dependency-aware validation/deployment selection with explicit job inventory          |
-| Runners/cache         | `ubuntu-latest`, Go/pnpm and BuildKit caches                                                                           | Blacksmith Linux subject to access/lint; build/browser caching and measured sizing    |
-| Admission/publication | Frozen candidate, independent source CI, exact release tree, immutable publication preflight/reuse                     | Authenticated validation reuse; bounded GitHub/bootstrap read retries                 |
-| Rollout               | `deploy.yml` rejects stale production and applies immutable image digest through OpenTofu; real HTTPS/WSS tunnel smoke | Last-good fenced recovery, desired-state reconciliation, verified rollback and alerts |
-| Shutdown              | `Server.Shutdown` marks closing and closes existing tunnel connections before HTTP shutdown                            | Explicit in-flight drain/reconnect continuity qualification; not zero-downtime proof  |
+| Area                  | Implemented source                                                                                                                                                          | Planned hardening                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| CI                    | `ci.yml` + `scripts/ci/selection.mjs`: path classification, parallel Website Quality/Website lanes, Go quality/build/test and admission; strict selected/unselected CI Gate | Keep classification contracts in step with new job lanes                              |
+| Runners/cache         | Blacksmith 2/4-vCPU Linux (2026-11-02 owner directive), Go/pnpm caches, BuildKit gha cache, browser/Next caches seeded on protected pushes                                  | Confirm miniaxolotl Blacksmith access; measure whether 4-vCPU sizing pays elsewhere   |
+| Admission/publication | Frozen candidate, independent source CI, exact release tree, immutable publication preflight/reuse                                                                          | Authenticated validation reuse; bounded GitHub/bootstrap read retries                 |
+| Rollout               | `deploy.yml` rejects stale production and applies immutable image digest through OpenTofu; real HTTPS/WSS tunnel smoke                                                      | Last-good fenced recovery, desired-state reconciliation, verified rollback and alerts |
+| Shutdown              | `Server.Shutdown` marks closing and closes existing tunnel connections before HTTP shutdown                                                                                 | Explicit in-flight drain/reconnect continuity qualification; not zero-downtime proof  |
 
 Source references: `.github/workflows/ci.yml`, `deploy.yml`,
 `scripts/release/promotion.mjs`, `policy.json`, `scripts/infra/apply.sh`,
