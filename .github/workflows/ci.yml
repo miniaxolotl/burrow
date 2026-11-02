@@ -205,3 +205,5 @@ jobs:
           cache: true
           cache-dependency-path: "**/go.sum"
       - run: go test ./burrowd/... ./burrowctl/... ./protocol/...
+
+# workflow-change dispatch probe
