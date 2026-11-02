@@ -24,7 +24,7 @@ permissions:
 jobs:
   changes:
     name: Change Classification
-    runs-on: depot-ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       selection: ${{ steps.classify.outputs.selection }}
@@ -45,7 +45,7 @@ jobs:
 
   promotion:
     name: Promotion Admission
-    runs-on: depot-ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -76,7 +76,7 @@ jobs:
         build,
         test,
       ]
-    runs-on: depot-ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -93,7 +93,7 @@ jobs:
     name: Infrastructure Quality
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).infrastructure }}
-    runs-on: depot-ubuntu-24.04-4
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -117,7 +117,7 @@ jobs:
     name: Website
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).website }}
-    runs-on: depot-ubuntu-24.04-4
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
       VERCEL_ENV: production
@@ -164,7 +164,7 @@ jobs:
     name: Website Quality
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection)['website-quality'] }}
-    runs-on: depot-ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -185,7 +185,7 @@ jobs:
     name: Go Quality
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).lint }}
-    runs-on: depot-ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -202,7 +202,7 @@ jobs:
     name: Go Build
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).build }}
-    runs-on: depot-ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -218,7 +218,7 @@ jobs:
 
   test:
     name: Go Tests
-    runs-on: depot-ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: changes
     if: ${{ !cancelled() && needs.changes.result == 'success' && fromJSON(needs.changes.outputs.selection).test }}
