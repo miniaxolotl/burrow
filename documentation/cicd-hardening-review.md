@@ -109,3 +109,5 @@ These are future acceptance requirements, not passing tests delivered by this
 documentation PR. Execution plans remain local; assign minimally labelled PRs to
 the owner, require exact-head checks, and remove only clean stale worktrees after
 confirmed merge. No merge or production deployment is authorized by this review.
+
+<!-- dispatch probe -->
