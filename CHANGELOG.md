@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.15](https://github.com/miniaxolotl/burrow/compare/v0.3.14...v0.3.15) (2026-11-02)
+
+
+### Bug Fixes
+
+* **ci:** keep pnpm 10 compatible setup action ([1e52062](https://github.com/miniaxolotl/burrow/commit/1e52062a570d078dd00d72c515598dcca6c2d564))
+* **ci:** key concurrency group to the ref to escape stale queued runs ([e7614dd](https://github.com/miniaxolotl/burrow/commit/e7614dd535a7ed037e1b5cf75abf88578c1823bb))
+
 ## [0.3.14](https://github.com/miniaxolotl/burrow/compare/v0.3.13...v0.3.14) (2026-10-26)
 
 
