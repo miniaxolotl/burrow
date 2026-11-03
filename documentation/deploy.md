@@ -135,7 +135,10 @@ Repository secrets `DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`, and `NPM_TOKEN`
 support publishing. GHCR uses the workflow's scoped `GITHUB_TOKEN`.
 Release Please and candidate selection use `GITHUB_TOKEN` with contents/PR write
 and Actions dispatch permissions. They explicitly dispatch CI on generated refs,
-because token-created PRs do not trigger ordinary PR workflows. No PAT is needed.
+for independent exact-head evidence. Native bot-PR runs can require maintainer
+approval; review/approve those runs and verify the actual PR checks before merging.
+No PAT is needed. The retained `staging` environment only admits the `staging`
+branch; production delivery uses the production-only environment.
 Backend connection strings and encryption keys must be backed up together;
 neither belongs in source control or a normal build artifact.
 
