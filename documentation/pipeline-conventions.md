@@ -53,6 +53,22 @@ Cloud (eligible TestFlight), and `store-release.yml` (prepare the accepted build
 
 The workflow files contain authoritative SHA pins and job details.
 
+## Dependency security resolution
+
+Scoped pnpm overrides select `minimatch` 11.0.4 for affected 7–11.0.0 consumers,
+`glob` 14.0.3 for affected 9–14.0.1 consumers, and `brace-expansion` 5.0.12 for
+affected 4.x/5.x consumers. Safe legacy major versions stay on their existing
+APIs. Release Please/Sentry parent ranges currently prevent Dependabot from
+resolving these fixes without explicit overrides. The release/deploy helpers use
+tsx 4.23.15 and its esbuild 0.28.x dependency rather than vulnerable esbuild 0.27.x.
+
+The existing contract lane runs `scripts/ci/dependency-security.test.mjs` against
+every locked copy. Continue using `pnpm audit`; this regression covers named
+advisory families, not all future findings. Retire overrides only after upstream
+parent ranges resolve safe versions and frozen installation, release helpers,
+lint/types/build and browser checks pass. Roll back matching manifests/lockfile
+together and record any reintroduced exposure. Runner placement is unchanged.
+
 ## Hardening status
 
 The [Burrow review](cicd-hardening-review.md) records current source and policy;
