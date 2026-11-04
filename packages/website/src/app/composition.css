@@ -1,0 +1,296 @@
+/* Keep the live developer-tool rhythm: a split opening and practical examples. */
+.terminal-home .hero-field {
+  background: var(--brand-paper);
+}
+.terminal-home .product-hero {
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 72px;
+  padding-block: 64px;
+  min-height: 0;
+}
+.terminal-home .hero-title {
+  font-size: clamp(44px, 4.6vw, 66px);
+  letter-spacing: -0.035em;
+  line-height: 1.08;
+}
+.terminal-home .product-hero-copy {
+  align-self: start;
+  padding-top: 40px;
+}
+.terminal-home .hero-summary {
+  font-size: 18px;
+}
+.terminal-home .terminal-stage {
+  padding: 0;
+  background: transparent;
+}
+.terminal-home .tunnel-landscape {
+  display: block;
+  margin: 0;
+}
+.terminal-home .tunnel-scenarios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 20px;
+}
+.terminal-home .tunnel-scenarios button {
+  min-height: 44px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+.terminal-home .tunnel-scenarios button[aria-pressed="true"] {
+  background: var(--brand-ink);
+  color: var(--brand-paper);
+}
+.terminal-home .tunnel-terminal {
+  background: #20332b;
+  color: #f7f6f0;
+  border: 0;
+  border-radius: 8px;
+}
+.terminal-home .terminal-titlebar {
+  background: #2b4135;
+  color: #f7f6f0;
+  font-family: inherit;
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+  border: 0;
+}
+.terminal-home
+  :is(
+    .tunnel-terminal-pages,
+    .tunnel-scenario-story,
+    #manager-preview-content
+  ) {
+  display: grid;
+}
+.terminal-home :is(.tunnel-terminal-body, .tunnel-story-detail, .manager-view) {
+  grid-area: 1 / 1;
+  min-width: 0;
+}
+.terminal-home
+  :is(
+    .tunnel-terminal-body,
+    .tunnel-story-detail,
+    .manager-view
+  )[data-inactive="true"] {
+  visibility: hidden;
+  pointer-events: none;
+}
+.terminal-home .tunnel-terminal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 28px;
+}
+.terminal-home .tunnel-command {
+  font-size: 18px;
+  margin: 0;
+  white-space: pre-wrap;
+}
+.terminal-home .tunnel-connected {
+  color: #d2e3b9;
+  font-size: 14px;
+  margin: 0;
+}
+.terminal-home .tunnel-public-url {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+.terminal-home .tunnel-public-url > span {
+  font: inherit;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #dce6d5;
+}
+.terminal-home .tunnel-public-url p {
+  font-size: 14px;
+  margin-top: 12px;
+  color: #f7f6f0;
+  overflow-wrap: anywhere;
+}
+.terminal-home .tunnel-public-url strong {
+  color: inherit;
+}
+.terminal-home .tunnel-request {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 13px;
+  color: #dce6d5;
+}
+.terminal-home .request-route {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  gap: 8px;
+  padding: 16px;
+  margin: 0;
+  list-style: none;
+  background: #2b4135;
+}
+.terminal-home .request-route li {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  align-content: center;
+}
+.terminal-home .request-route strong {
+  font: inherit;
+  font-size: 13px;
+}
+.terminal-home .request-route :is(code, span) {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.terminal-home .tunnel-story-detail {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding-top: 24px;
+}
+.terminal-home .tunnel-story-detail p {
+  font-family: inherit;
+  color: var(--brand-ink);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+.terminal-home .tunnel-landscape figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 12px;
+}
+.terminal-home .tunnel-landscape figcaption > span {
+  color: var(--brand-muted);
+}
+.terminal-home .install-layout {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  align-items: center;
+  gap: 72px;
+}
+.terminal-home .install-layout > div > p {
+  margin-block: 24px;
+}
+.terminal-home .workflow-photo {
+  position: relative;
+  height: 280px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+.terminal-home .workflow-pair > article {
+  min-width: 0;
+}
+.terminal-home .workflow-example pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.terminal-home .workflow-photo img {
+  object-fit: cover;
+}
+.terminal-home .feature-index {
+  background: transparent;
+}
+.terminal-home :is(.story-section, .feature-index, .product-facts) {
+  padding-block: 64px;
+}
+.terminal-home .install-guide {
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+.terminal-home .manager-tabs > button {
+  color: var(--brand-ink);
+}
+.terminal-home .manager-tabs > button[aria-pressed="true"] {
+  background: #edf2e9;
+  color: var(--brand-ink);
+}
+.terminal-home .workflow-example {
+  background: transparent;
+  padding: 0;
+  min-height: 0;
+}
+.terminal-home .workflow-example pre {
+  padding: 24px;
+  background: #20332b;
+  color: #f7f6f0;
+  border-radius: 4px;
+}
+.terminal-home #manager-preview-content {
+  min-height: 0;
+  margin-top: 0;
+}
+.terminal-home .manager-window > div:nth-child(2) {
+  padding: 32px;
+}
+.terminal-home .manager-tunnel,
+.terminal-home .manager-requests :is(th, td) {
+  padding-block: 20px;
+  font-size: 14px;
+}
+.terminal-home .manager-toolbar > span,
+.terminal-home .manager-window > div:nth-child(2) > div:first-child {
+  display: none;
+}
+.terminal-home .manager-actions {
+  margin-top: 28px;
+}
+@media (max-width: 1000px) {
+  .terminal-home .product-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .terminal-home .product-hero-copy {
+    padding-top: 0;
+  }
+  .terminal-home .product-hero,
+  .terminal-home .install-layout {
+    gap: 40px;
+  }
+  .terminal-home .hero-title {
+    font-size: 48px;
+  }
+}
+@media (max-width: 767px) {
+  .terminal-home .product-hero-copy {
+    padding-top: 0;
+  }
+  .terminal-home .product-hero,
+  .terminal-home .install-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+  .terminal-home .product-hero {
+    padding-block: 48px 56px;
+  }
+  .terminal-home .hero-title {
+    font-size: clamp(38px, 10.3vw, 60px);
+  }
+  .terminal-home .request-route {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .terminal-home .route-arrow {
+    width: 24px;
+    transform: rotate(90deg);
+  }
+  .terminal-home .tunnel-terminal-body,
+  .terminal-home .manager-window > div:nth-child(2) {
+    padding: 24px 16px;
+  }
+  .terminal-home .manager-tunnel,
+  .terminal-home .manager-requests :is(th, td) {
+    font-size: 13px;
+    padding-block: 16px;
+  }
+}

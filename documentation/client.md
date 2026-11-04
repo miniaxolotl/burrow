@@ -2,12 +2,48 @@
 
 Share local services over HTTPS. No account, login, or manual credential setup.
 
+## Before you start
+
+- Use macOS or Linux on x64 or ARM64. The npm package does not ship a Windows binary.
+- The package-manager installation needs Node.js and npm or pnpm in your terminal.
+  [Native binaries](https://github.com/miniaxolotl/burrow/releases) do not need Node.js.
+- Have a local HTTP service running, and use test data. Burrow does not start your
+  application or add authentication to it.
+
+## Your first tunnel
+
+In a terminal, install the client and check that the executable is available:
+
 ```bash
 npm install -g @miniaxolotl/burrowctl
+burrowctl --version
+```
+
+If you use pnpm, install with `pnpm add -g @miniaxolotl/burrowctl` instead. For a
+global-directory permission error, use a writable package-manager prefix or the
+native binary; do not change system permissions just to install Burrow.
+
+Start your application using its normal development command. Verify its port
+locally before opening a tunnel, for example:
+
+```bash
+curl -i http://127.0.0.1:3000/
+```
+
+Check for the response your application normally returns. If this request fails,
+fix the local service first. In another terminal, using that same port, run:
+
+```bash
 burrowctl tunnel 3000
 ```
 
-Native Linux/macOS binaries are also available from [GitHub Releases](https://github.com/miniaxolotl/burrow/releases).
+Keep this terminal open. The interactive manager displays the assigned HTTPS
+address. Copy the actual address into a browser: it should show the same app as
+your local URL. The example address in a screenshot is not your tunnel.
+
+For a full disposable endpoint with an exact expected response, continue with
+the [webhook walkthrough](workflows.md#receive-a-test-webhook). It also covers
+multiple local services and explicit cleanup.
 
 ## Commands
 
@@ -101,3 +137,18 @@ Transient connection failures retry the same URL with exponential backoff while 
 Upgrade the client and server together for the owner-only API. Older tokenless clients must upgrade and create new tunnels; legacy anonymous IDs are retired. Existing explicit tokens can still identify their owner, but never grant privileged access. Use the four commands above in place of the old nested `tunnel` subcommands. The old `auth` commands and `--secret` flag are removed.
 
 See the [server API](server.md) and [deployment guide](deploy.md).
+
+## Troubleshooting setup
+
+| Symptom                         | Check                                                                                                                                                                     |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `burrowctl` is not found        | Confirm the installation completed and the package manager's global executable directory is on PATH. Reopen the terminal after changing PATH.                             |
+| The URL cannot reach the app    | Repeat the local curl request, check the selected port and keep the tunnel process running. A frontend may also need its own allowed-host or public-origin configuration. |
+| A webhook returns 404           | Confirm the method and path against the application. Opening a URL in a browser sends GET; it does not send a test POST.                                                  |
+| Management cannot find a tunnel | Use the same server and owner configuration as the process that created it. Do not delete the owner files or borrow someone else's credential.                            |
+| A connection keeps failing      | Check outbound connectivity to the selected server. Do not disable TLS verification to make a remote server connect.                                                      |
+
+For unresolved issues, include the operating system, `burrowctl --version`, a
+redacted command and whether the local request succeeds when
+[contacting support](https://useburrow.app/support). Exclude credentials,
+authorization headers and private request bodies.

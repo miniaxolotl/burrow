@@ -1,5 +1,11 @@
 import { expect, test } from "./fixtures";
 
+const canonical = new URL(process.env.SITE_URL || "http://localhost:3000");
+const indexable =
+  !["localhost", "127.0.0.1", "[::1]"].includes(canonical.hostname) &&
+  process.env.SITE_NOINDEX !== "true" &&
+  !["preview", "development"].includes(process.env.VERCEL_ENV || "");
+
 test.describe("public reference documents", () => {
   test.use({ javaScriptEnabled: false });
   for (const [route, title] of [
@@ -45,21 +51,20 @@ test.describe("public reference documents", () => {
       await expect(page.locator("article")).toContainText(content);
       await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
         "href",
-        `http://localhost:3000/docs/${slug}`,
+        `${canonical.origin}/docs/${slug}`,
       );
       await expect(page.locator('meta[property="og:url"]')).toHaveAttribute(
         "content",
-        `http://localhost:3000/docs/${slug}`,
+        `${canonical.origin}/docs/${slug}`,
       );
-      // Local builds intentionally publish no sitemap entries. Verify production
-      // coverage separately with SITE_URL set before the production smoke build.
       await expect(page.locator('meta[name="robots"]')).toHaveAttribute(
         "content",
-        "noindex, nofollow",
+        indexable ? "index, follow" : "noindex, nofollow",
       );
-      expect(
-        await (await page.request.get("/sitemap.xml")).text(),
-      ).not.toContain("<loc>");
+      const sitemap = await (await page.request.get("/sitemap.xml")).text();
+      if (indexable)
+        expect(sitemap).toContain(`${canonical.origin}/docs/${slug}</loc>`);
+      else expect(sitemap).not.toContain("<loc>");
     });
   }
 

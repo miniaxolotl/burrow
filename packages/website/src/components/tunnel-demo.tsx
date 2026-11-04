@@ -1,56 +1,77 @@
 "use client";
 
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Check,
-  Globe2,
-  RotateCcw,
-  Terminal,
-} from "lucide-react";
+import { ArrowRight, Check, RotateCcw } from "lucide-react";
 import { useState } from "react";
-import { BurrowMark } from "@/components/burrow-mark";
+
+const scenarios = [
+  {
+    label: "Share a preview",
+    port: 3000,
+    request: "GET /",
+    status: "200 OK",
+    slug: "softly-brave-little-fox",
+    sender: "Teammate’s browser",
+    destination: "Your frontend",
+    description:
+      "Your teammate opens the link. Their browser reaches the app running on your laptop.",
+    detail:
+      "Make a change locally. Refresh the same public URL to review it together.",
+  },
+  {
+    label: "Test a webhook",
+    port: 8080,
+    request: "POST /webhooks/order",
+    status: "202 Accepted",
+    slug: "brightly-bold-blue-hare",
+    sender: "Webhook provider",
+    destination: "Your local handler",
+    description:
+      "Point a test webhook at your public URL. The incoming order event reaches your local handler.",
+    detail:
+      "Keep your debugger attached. Verify the response before switching the integration to production.",
+  },
+  {
+    label: "Preview an API",
+    port: 4000,
+    request: "GET /api/projects",
+    status: "200 OK",
+    slug: "quietly-calm-green-owl",
+    sender: "Teammate’s API client",
+    destination: "Your local API",
+    description:
+      "Let a teammate try your API against the branch you are working on, without deploying it.",
+    detail:
+      "Keep authentication on sensitive endpoints. A public tunnel does not make a private API.",
+  },
+] as const;
 
 export function TunnelDemo() {
   const [replay, setReplay] = useState(0);
+  const [selected, setSelected] = useState(0);
   return (
     <figure
       className="tunnel-landscape"
+      data-ui
       aria-label="A local development server connects through Burrow to a public HTTPS URL"
     >
-      <div className="tunnel-scene" key={`scene-${replay}`}>
-        <div className="tunnel-scene-label">
-          <span>YOUR APP. ONE PUBLIC LINK.</span>
-          <ArrowUpRight size={16} aria-hidden="true" />
-        </div>
-        <div className="tunnel-identity">
-          <BurrowMark size={144} />
-        </div>
-        <svg className="tunnel-route" viewBox="0 0 440 260" aria-hidden="true">
-          <path
-            pathLength="1"
-            d="M60 210C120 210 150 130 220 130S320 80 380 80"
-          />
-        </svg>
-        <div className="tunnel-endpoint endpoint-local">
-          <Terminal size={17} aria-hidden="true" />
-          <span>
-            Your machine<strong>localhost:3000</strong>
-          </span>
-        </div>
-        <div className="tunnel-endpoint endpoint-world">
-          <Globe2 size={17} aria-hidden="true" />
-          <span>
-            The internet<strong>Hello, world.</strong>
-          </span>
-        </div>
-        <span className="tunnel-seal">
-          LOCAL
-          <br />
-          <ArrowRight size={18} aria-hidden="true" />
-          <br />
-          LIVE
-        </span>
+      <div
+        className="tunnel-scenarios"
+        role="group"
+        aria-label="Choose a tunnel example"
+      >
+        {scenarios.map((item, index) => (
+          <button
+            key={item.label}
+            type="button"
+            aria-pressed={selected === index}
+            aria-controls="tunnel-example-output"
+            onClick={() => {
+              setSelected(index);
+            }}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
       <div className="tunnel-terminal">
         <div className="terminal-titlebar">
@@ -60,31 +81,84 @@ export function TunnelDemo() {
             <i />
           </span>
           <span>burrowctl</span>
-          <span>EXAMPLE</span>
+          <span>Interactive example</span>
         </div>
-        <div className="tunnel-terminal-body" key={`terminal-${replay}`}>
-          <p className="tunnel-command">
-            <span className="terminal-prompt">$</span> burrowctl tunnel 3000
-          </p>
-          <p className="tunnel-connected">
-            <Check size={14} aria-hidden="true" /> Tunnel connected
-          </p>
-          <div className="tunnel-public-url">
-            <span>PUBLIC HTTPS URL</span>
-            <p>
-              https://softly-brave-little-fox<strong>.brmbl.dev</strong>
-            </p>
-          </div>
-          <div className="tunnel-request">
-            <span>GET /</span>
-            <span>200 OK</span>
-            <span>to localhost:3000</span>
-          </div>
+        <div
+          className="tunnel-terminal-pages"
+          key={replay}
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          {scenarios.map((scenario, index) => (
+            <div
+              className="tunnel-terminal-body"
+              id={selected === index ? "tunnel-example-output" : undefined}
+              key={scenario.port}
+              data-inactive={selected !== index}
+              aria-hidden={selected !== index}
+              inert={selected !== index}
+            >
+              <pre className="tunnel-command">
+                <code>
+                  <span className="terminal-prompt">$</span> burrowctl tunnel{" "}
+                  {scenario.port}
+                </code>
+              </pre>
+              <p className="tunnel-connected">
+                <Check size={14} aria-hidden="true" /> Tunnel connected
+              </p>
+              <div className="tunnel-public-url">
+                <span>Public HTTPS URL</span>
+                <p>
+                  <code>
+                    https://{scenario.slug}
+                    <strong>.brmbl.dev</strong>
+                  </code>
+                </p>
+              </div>
+              <div className="tunnel-request">
+                <span>Local response</span>
+                <span>{scenario.status}</span>
+              </div>
+              <ol className="request-route" aria-label="Incoming request path">
+                <li>
+                  <strong>{scenario.sender}</strong>
+                  <code>{scenario.request}</code>
+                </li>
+                <li className="route-arrow" aria-hidden="true">
+                  <ArrowRight size={24} />
+                </li>
+                <li>
+                  <strong>Burrow</strong>
+                  <span>Public HTTPS endpoint</span>
+                </li>
+                <li className="route-arrow" aria-hidden="true">
+                  <ArrowRight size={24} />
+                </li>
+                <li>
+                  <strong>{scenario.destination}</strong>
+                  <code>localhost:{scenario.port}</code>
+                </li>
+              </ol>
+            </div>
+          ))}
         </div>
       </div>
+      <div className="tunnel-scenario-story">
+        {scenarios.map((scenario, index) => (
+          <div
+            key={scenario.port}
+            className="tunnel-story-detail"
+            data-inactive={selected !== index}
+            aria-hidden={selected !== index}
+            inert={selected !== index}
+          >
+            <p>{scenario.description}</p>
+            <p>{scenario.detail}</p>
+          </div>
+        ))}
+      </div>
       <figcaption>
-        Keep coding locally. Send the link. See what comes through.
-        <br />
         <span>Illustrated preview with example URL and request</span>
         <button
           className="tunnel-replay"

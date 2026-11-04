@@ -1,0 +1,208 @@
+{
+  "capturedAt": "2026-11-04T17:51:02.026702+00:00",
+  "sourceBranch": "feature/website-product-refresh",
+  "sourceBase": "7a55a4c985ff0969cfe38b7964abd13b4c6e7ba6",
+  "source": "Working-tree source included in the feature PR; source tree fingerprint excludes documentation/captures",
+  "sourceSha256": "7bb42ea28e8bb0f99e96b85a948022a179c6d13a0271544af90c798d8fca0cb7",
+  "project": "burrow",
+  "buildId": "EPoe1fiiqX4pl0U_lO_At",
+  "browser": "156.0.8078.4",
+  "viewports": [
+    [1440, 900],
+    [768, 900],
+    [390, 900],
+    [320, 900]
+  ],
+  "reducedMotion": true,
+  "consent": "Optional cookies declined using the visible No thanks control",
+  "content": "Labelled local samples and licensed marketing-kit derivatives, no private account data",
+  "croppedRegions": "Footer and graph images are pixel crops of the matching full-page screenshots",
+  "routeChecks": [
+    {
+      "path": "/docs/client",
+      "width": 1440,
+      "scrollWidth": 1440,
+      "heading": "burrowctl",
+      "brokenFragments": []
+    },
+    {
+      "path": "/docs/client",
+      "width": 390,
+      "scrollWidth": 390,
+      "heading": "burrowctl",
+      "brokenFragments": []
+    },
+    {
+      "width": 1440,
+      "publicLinks": [
+        "/",
+        "/#features",
+        "/#how-it-works",
+        "/#install",
+        "/contact",
+        "/docs",
+        "/docs/client",
+        "/docs/workflows",
+        "/privacy",
+        "/support",
+        "/terms"
+      ]
+    },
+    {
+      "width": 768,
+      "publicLinks": [
+        "/",
+        "/#features",
+        "/#how-it-works",
+        "/#install",
+        "/contact",
+        "/docs",
+        "/docs/client",
+        "/docs/workflows",
+        "/privacy",
+        "/support",
+        "/terms"
+      ]
+    },
+    {
+      "width": 390,
+      "publicLinks": [
+        "/",
+        "/#features",
+        "/#how-it-works",
+        "/#install",
+        "/contact",
+        "/docs",
+        "/docs/client",
+        "/docs/workflows",
+        "/privacy",
+        "/support",
+        "/terms"
+      ]
+    },
+    {
+      "width": 320,
+      "publicLinks": [
+        "/",
+        "/#features",
+        "/#how-it-works",
+        "/#install",
+        "/contact",
+        "/docs",
+        "/docs/client",
+        "/docs/workflows",
+        "/privacy",
+        "/support",
+        "/terms"
+      ]
+    }
+  ],
+  "selectedRegions": [
+    {
+      "file": "walkthrough-1440.png",
+      "region": ".install-guide"
+    },
+    {
+      "file": "webhook-1440.png",
+      "region": ".tunnel-landscape"
+    },
+    {
+      "file": "walkthrough-390.png",
+      "region": ".install-guide"
+    },
+    {
+      "file": "webhook-390.png",
+      "region": ".tunnel-landscape"
+    }
+  ],
+  "files": [
+    {
+      "file": "docs-client-1440.png",
+      "sha256": "3fdddcf93dd8a0aa282ec8a7f6d18544c68cfa72996ce82f923a1e427b2548db"
+    },
+    {
+      "file": "docs-client-390.png",
+      "sha256": "080e5c676d8b73dc0b8d83121051d646034c31b1df3604c6994a72be2dc40057"
+    },
+    {
+      "file": "docs-client-page-1440.png",
+      "sha256": "cfeb90b582568b3ddb5b7ce362b59a1c9cfc73e0bd3c73bf7dcc46a4eea99f67"
+    },
+    {
+      "file": "docs-client-page-390.png",
+      "sha256": "33656a12d4d748b061f9e41418e2148ce503e9e6e3bbc7ecd2327285ae6bd4f5"
+    },
+    {
+      "file": "home-1440.png",
+      "sha256": "91fc8c614ce03cfb291e8aba19976456c2cacd9473a75f27992bbcf009286524"
+    },
+    {
+      "file": "home-320.png",
+      "sha256": "3775b47d61bf03e3c22b9e1431bb851683c6ee2045dc14ba7e38c1cdbba8b164"
+    },
+    {
+      "file": "home-390.png",
+      "sha256": "dfc13396f9212f819d21089aa10b20f7ff4d979264544559a0f3afe0c331db95"
+    },
+    {
+      "file": "home-768.png",
+      "sha256": "670b5259505438db716d5319491c3b211f3e36547014e3015773fe0c8f353c17"
+    },
+    {
+      "file": "home-focus-1440.png",
+      "sha256": "88cdfe10c26847cbaa9c3e60171db739bd85e11cf55ff1a33b19266907db606a"
+    },
+    {
+      "file": "home-footer-1440.png",
+      "sha256": "c959f4d820fad0fda76aa4b1ce1cd480b441206607d2357b3333360ae2633d98"
+    },
+    {
+      "file": "home-footer-320.png",
+      "sha256": "f2d854071dfd2f3eb8c89239052d99126776b96c2a52894bdd2272caaebcf5a3"
+    },
+    {
+      "file": "home-footer-390.png",
+      "sha256": "6b8f65f3b854ad10a6fc32cfa0b023020f8d775125c49b232d272855515bd6e7"
+    },
+    {
+      "file": "home-footer-768.png",
+      "sha256": "9fd14d34dfbc52666c80c92943d503ac435f51ef7b966826f49718297dcad8f3"
+    },
+    {
+      "file": "home-page-1440.png",
+      "sha256": "c29abda751e00af3739eb56ffbd230be800e455b58211ed6784bb573c0977bec"
+    },
+    {
+      "file": "home-page-320.png",
+      "sha256": "35f0bc1dd5b8cbb79f6495a891008f07d7a53cbccfa65caea62a0aa57b1327e6"
+    },
+    {
+      "file": "home-page-390.png",
+      "sha256": "3dedc3d1c688d72cfb7ac932ac6f25f60b2a09198b451c6d5fafd210df4fdb0c"
+    },
+    {
+      "file": "home-page-768.png",
+      "sha256": "94faffbd8b0b63d20c0e75a5922abe5f5049eeaeeb804e7c7a91be7bf29a9782"
+    },
+    {
+      "file": "home-zoom-200.png",
+      "sha256": "f9fab27e774930b8387fd992a4a3491912b737578da616be14cb7ad6c29f21f4"
+    },
+    {
+      "file": "walkthrough-1440.png",
+      "sha256": "b21710e3f9686cbeb878caedf3c129c6416ed393fd11fc00258107fc047504da"
+    },
+    {
+      "file": "walkthrough-390.png",
+      "sha256": "8594f9068f0890fbde0432a2068c5c525479ca9ccbe22cdd191cf06bd92504f0"
+    },
+    {
+      "file": "webhook-1440.png",
+      "sha256": "f0303e2a1c82acf9c22cd3a97cd61f565a3f80df4e99fe5f632a739c2ed01bc0"
+    },
+    {
+      "file": "webhook-390.png",
+      "sha256": "1fdcc1ba55b43cfa0ce714efc3ea1d318b4b7a2df6e58313ca3c6cfcee169c79"
+    }
+  ]
+}
