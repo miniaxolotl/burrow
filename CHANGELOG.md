@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.16](https://github.com/miniaxolotl/burrow/compare/v0.3.15...v0.3.16) (2026-11-04)
+
+
+### Features
+
+* **website:** refine tunnel demos and setup ([#72](https://github.com/miniaxolotl/burrow/issues/72)) ([cddf80a](https://github.com/miniaxolotl/burrow/commit/cddf80a556dbb773dd012491be93600194178323))
+
 ## [0.3.15](https://github.com/miniaxolotl/burrow/compare/v0.3.14...v0.3.15) (2026-11-02)
 
 
