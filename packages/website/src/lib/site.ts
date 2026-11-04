@@ -24,6 +24,7 @@ export const site = {
   indexable:
     process.env.SITE_NOINDEX !== "true" &&
     process.env.VERCEL_ENV !== "preview" &&
+    process.env.VERCEL_ENV !== "development" &&
     !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname),
   github: "https://github.com/miniaxolotl/burrow",
   npm: "https://www.npmjs.com/package/@miniaxolotl/burrowctl",

@@ -1,76 +1,54 @@
-import Image from "next/image";
-import { ArrowUpRight } from "lucide-react";
 import { site } from "@/lib/site";
-
-const stories = [
-  {
-    image: "tunnel",
-    title: "Get feedback sooner.",
-    text: "Send a teammate a link to your local app. Keep editing while they try it.",
-    alt: "Example workflow connecting localhost port 3000 to a public HTTPS link.",
-    href: "#install",
-    action: "Share a local app",
-  },
-  {
-    image: "webhooks",
-    title: "Test a webhook locally.",
-    text: "Point a test webhook at your tunnel. See the request reach your local server.",
-    alt: "Example POST request to a webhook forwarded to localhost with a 200 response.",
-    href: "#install",
-    action: "Test a webhook",
-  },
-  {
-    image: "self-host",
-    title: "Use your own server.",
-    text: "Host the open-source server on your own infrastructure and domain.",
-    alt: "A local app connects through burrowd to a public HTTPS endpoint.",
-    href: site.serverDocs,
-    action: "Read the server guide",
-  },
-];
+import Link from "next/link";
+import Image from "next/image";
 
 export function WorkflowStories() {
   return (
     <section
-      className="page-container section-space"
+      className="page-container story-section"
       aria-labelledby="workflows-heading"
     >
-      <div className="section-intro" data-reveal>
-        <div>
-          <p className="eyebrow">WAYS TO USE BURROW</p>
-          <h2 id="workflows-heading" className="section-heading mt-4">
-            Share previews.
-            <br />
-            <em>Test webhooks.</em>
-          </h2>
-        </div>
-        <p>Your app stays on your machine. Burrow handles the public link.</p>
+      <div className="section-lead" data-reveal>
+        <h2 id="workflows-heading" className="section-title">
+          Multiple services and logs
+        </h2>
       </div>
-      <div className="workflow-grid" data-stagger>
-        {stories.map(({ image, title, text, alt, href, action }, index) => (
-          <article className="workflow-story" key={image} data-reveal>
-            <div className="workflow-heading">
-              <span>0{index + 1}</span>
-            </div>
-            <h3>{title}</h3>
-            <p>{text}</p>
+      <div className="workflow-pair" data-stagger>
+        <article data-reveal>
+          <div className="workflow-photo">
             <Image
-              className="campaign-illustration"
-              src={`/materials/${image}.svg`}
-              alt={alt}
-              width={900}
-              height={520}
-              sizes="(max-width: 767px) 100vw, 33vw"
+              src="/images/kit/burrow-code.webp"
+              alt="Application code on a laptop"
+              fill
+              sizes="(max-width: 767px) calc(100vw - 40px), 50vw"
             />
-            <a className="text-link" href={href}>
-              {action} <ArrowUpRight size={14} aria-hidden="true" />
-            </a>
-          </article>
-        ))}
+          </div>
+          <h3>Share more than one service</h3>
+          <p>
+            Give your frontend and API separate public links from the same
+            client. The manager keeps the ports and URLs together.
+          </p>
+          <a href={site.clientDocs} className="text-link">
+            Multi-port quickstart
+          </a>
+        </article>
+        <article data-reveal>
+          <div className="workflow-example" data-ui>
+            <pre>
+              <code>burrowctl logs &lt;id&gt; --follow</code>
+            </pre>
+          </div>
+          <h3>Inspect requests</h3>
+          <p>
+            Watch incoming requests with follow and refresh controls. You can
+            also inspect logs in a second terminal with the same owner
+            credential.
+          </p>
+          <Link href="/docs/workflows" className="text-link">
+            Webhook walkthrough
+          </Link>
+        </article>
       </div>
-      <p className="mt-5 text-xs text-muted">
-        Illustrated workflows with example requests.
-      </p>
     </section>
   );
 }

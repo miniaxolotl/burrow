@@ -1,27 +1,17 @@
 export const faqs = [
   {
-    question: "Do I need an account?",
+    question: "Where is my owner credential stored?",
     answer:
-      "No. Install the CLI and run burrowctl tunnel 3000. It connects to brmbl.dev and creates a private owner credential automatically, stored on your machine. There is no login or manual key setup.",
+      "Under ~/.config/burrow/owners/, in a separate private file for each server. Keep that directory private and backed up. Deleting it is not a cleanup step and may leave you unable to manage existing tunnels.",
   },
   {
-    question: "Can other users see my tunnel sessions?",
+    question: "What if the package-manager install fails?",
     answer:
-      "Your tunnel list, connection count and request logs require your private owner credential. Sharing a public URL does not let someone manage your tunnel or claim its ID.",
+      "Check that Node.js and npm or pnpm are available in your terminal. For a global-directory permission error, configure a writable package-manager prefix or use the native binary for your operating system and architecture. Avoid changing system permissions just to install the CLI.",
   },
   {
-    question: "Is the app I share private?",
+    question: "What should I include in a support request?",
     answer:
-      "Your tunnel URL is public. Use your app's own authentication if access should be restricted. The tunnel server handles the traffic; owner-only management does not hide HTTP contents from the hosting infrastructure.",
-  },
-  {
-    question: "Does my URL stay the same?",
-    answer:
-      "Reconnects keep the same URL while the CLI is running. Another owner cannot claim your reserved ID. Closing the tunnel retires its URL; a new tunnel gets a new one.",
-  },
-  {
-    question: "Can I use my own server and domain?",
-    answer:
-      "Yes. Run burrowd with Redis, configure your domain with wildcard DNS and TLS, then point the same CLI at your server. Burrow is MIT-licensed.",
+      "Include your operating system, client version, the command shape with private values removed and whether the same request works locally. Do not include your owner credential, authorization headers or private request bodies.",
   },
 ] as const;
