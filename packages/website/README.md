@@ -129,6 +129,13 @@ the runnable webhook example and cleanup. The landing quick start links to those
 guides rather than duplicating the full reference. Public prose is sourced from
 the explicit documentation allowlist, not arbitrary repository files.
 
+On phones, guide navigation is a native “Guides and reference” disclosure so the
+article begins without a long link-list detour. Desktop keeps its persistent
+sidebar. Navigation and article content remain available without JavaScript.
+When native sharing and clipboard access fail, a native dialog provides a selected
+link and Done/Escape dismissal with focus return. Share feedback and manual-copy
+recovery do not resize the footer.
+
 The supporting code photograph is a local derivative of the marketing kit's
 master, not a Burrow screenshot. `public/images/kit/manifest.json` retains source
 and output hashes, dimensions and licensing; the website needs no sibling kit at

@@ -4,6 +4,21 @@ Reviewed local optimized-build captures of the live-layout-led polish pass.
 [Capture provenance](capture.json) records the source fingerprint, build ID,
 browser, viewports and synthetic-data boundary.
 
+## Refinement review
+
+Phone guides use a native disclosure instead of placing the full resource list
+before the article; useful content starts 120px sooner at 390px. Desktop keeps its
+sidebar, and all guide links remain available without JavaScript.
+
+| Guide navigation expanded                                             | Manual-copy recovery                                                  |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| ![Native guide disclosure on a phone](docs-client-navigation-390.png) | ![Native share fallback with a selected link](share-fallback-390.png) |
+
+Recovery uses synthetic denied browser sharing/clipboard access. Done/Escape
+returns focus and the footer/page/scroll do not move (previously 74px at 390px).
+All 41 browser cases pass. Four-width review reports zero inspector failures,
+automated accessibility violations, overflow or demo-height changes.
+
 Captured from the local optimized Next.js build of `feature/website-product-refresh`.
 Rust actions, IBM Plex type and working dark terminal examples distinguish the tool.
 Installation instructions stay on paper with a matching readable foreground; manager

@@ -1,11 +1,11 @@
 {
-  "capturedAt": "2026-11-04T17:51:02.026702+00:00",
+  "capturedAt": "2026-11-04T19:43:06.385888+00:00",
   "sourceBranch": "feature/website-product-refresh",
-  "sourceBase": "7a55a4c985ff0969cfe38b7964abd13b4c6e7ba6",
+  "sourceBase": "f450a62c7a9f3b0565652e79f430d9eae0b1eb4b",
   "source": "Working-tree source included in the feature PR; source tree fingerprint excludes documentation/captures",
-  "sourceSha256": "7bb42ea28e8bb0f99e96b85a948022a179c6d13a0271544af90c798d8fca0cb7",
+  "sourceSha256": "ac81873abb03e10439ab2245a05661ef2d4e71b24fe03632b82ae7bb0ed475dc",
   "project": "burrow",
-  "buildId": "EPoe1fiiqX4pl0U_lO_At",
+  "buildId": "eM8BAyjuCTxHyAcXOMlE4",
   "browser": "156.0.8078.4",
   "viewports": [
     [1440, 900],
@@ -122,15 +122,19 @@
     },
     {
       "file": "docs-client-390.png",
-      "sha256": "080e5c676d8b73dc0b8d83121051d646034c31b1df3604c6994a72be2dc40057"
+      "sha256": "2b07c1405e5699574953832aa86ecba2af00c88f69ac5cbd9f404fe67df415cc"
+    },
+    {
+      "file": "docs-client-navigation-390.png",
+      "sha256": "4d9cfe10feda210aa4cb0794fe5e2cf509ff1bedbade9f237babe6f220d5acb5"
     },
     {
       "file": "docs-client-page-1440.png",
-      "sha256": "cfeb90b582568b3ddb5b7ce362b59a1c9cfc73e0bd3c73bf7dcc46a4eea99f67"
+      "sha256": "34dedf83039014ed593a50b0305b7323705d7dd58a7da48443b0075ca5929597"
     },
     {
       "file": "docs-client-page-390.png",
-      "sha256": "33656a12d4d748b061f9e41418e2148ce503e9e6e3bbc7ecd2327285ae6bd4f5"
+      "sha256": "59d660765139f38329fe001c52cb24109431b630bd0ad02902ba37ed5fc2fef4"
     },
     {
       "file": "home-1440.png",
@@ -154,39 +158,47 @@
     },
     {
       "file": "home-footer-1440.png",
-      "sha256": "c959f4d820fad0fda76aa4b1ce1cd480b441206607d2357b3333360ae2633d98"
+      "sha256": "f06428c5c8e9f281981a59a9c3129da92abca47bb557aaa376bec926f2f7e01e"
     },
     {
       "file": "home-footer-320.png",
-      "sha256": "f2d854071dfd2f3eb8c89239052d99126776b96c2a52894bdd2272caaebcf5a3"
+      "sha256": "035565717e3bcfec186167eb6306f9802484b2d09165233f18c1ffa3808fc610"
     },
     {
       "file": "home-footer-390.png",
-      "sha256": "6b8f65f3b854ad10a6fc32cfa0b023020f8d775125c49b232d272855515bd6e7"
+      "sha256": "ce67cd5b917a49e44d30d2595ee0488f3981ba89d44b7136f8b77cef55394845"
     },
     {
       "file": "home-footer-768.png",
-      "sha256": "9fd14d34dfbc52666c80c92943d503ac435f51ef7b966826f49718297dcad8f3"
+      "sha256": "ac18cd9822a794e0f91c4b1a190319fb7f47f521f2eaee3b2b3b964f136a3a2a"
     },
     {
       "file": "home-page-1440.png",
-      "sha256": "c29abda751e00af3739eb56ffbd230be800e455b58211ed6784bb573c0977bec"
+      "sha256": "2dfcc6729eb42e4d90b6109a7a4c804499a9255ff1fc2d530dba2411149c335c"
     },
     {
       "file": "home-page-320.png",
-      "sha256": "35f0bc1dd5b8cbb79f6495a891008f07d7a53cbccfa65caea62a0aa57b1327e6"
+      "sha256": "111e587672b8a05188ff01b0548bfabf47d72875b7e40bb846d4298bb29b4830"
     },
     {
       "file": "home-page-390.png",
-      "sha256": "3dedc3d1c688d72cfb7ac932ac6f25f60b2a09198b451c6d5fafd210df4fdb0c"
+      "sha256": "7fd8f018c34ee72aa6e4b75500dfb167fe7a7648ba745c4576f2759798fc74a8"
     },
     {
       "file": "home-page-768.png",
-      "sha256": "94faffbd8b0b63d20c0e75a5922abe5f5049eeaeeb804e7c7a91be7bf29a9782"
+      "sha256": "5a6be072584aecd66357c2d944ac705fbfe9ec43ce7d922d1d60a5c9285b300f"
     },
     {
       "file": "home-zoom-200.png",
       "sha256": "f9fab27e774930b8387fd992a4a3491912b737578da616be14cb7ad6c29f21f4"
+    },
+    {
+      "file": "share-fallback-1440.png",
+      "sha256": "8c55e1a5b91dc38f51b9fac102108278e476e1f775ba4a20b08b1e319f918502"
+    },
+    {
+      "file": "share-fallback-390.png",
+      "sha256": "e847ae610cfcc00a2abcb8e67d9f90054d70e6690d9a635d9a4873d2dc96d35f"
     },
     {
       "file": "walkthrough-1440.png",
@@ -204,5 +216,15 @@
       "file": "webhook-390.png",
       "sha256": "1fdcc1ba55b43cfa0ce714efc3ea1d318b4b7a2df6e58313ca3c6cfcee169c79"
     }
-  ]
+  ],
+  "refinement": {
+    "scope": "Guide hierarchy, native manual-share recovery, catalogue order and phone pricing; live layouts retained",
+    "shareRecovery": "Synthetic denied browser share/clipboard; native dialog, selected URL, Done/Escape focus return, zero footer/page/scroll changes",
+    "supplementaryImages": {
+      "share-fallback-1440.png": "share-denied-1440.png",
+      "share-fallback-390.png": "share-denied-390.png",
+      "docs-client-navigation-390.png": "guide-navigation-390.png"
+    },
+    "accessibilityStates": 10
+  }
 }
