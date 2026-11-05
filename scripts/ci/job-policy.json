@@ -1,7 +1,14 @@
 {
-  "jobs": ["infrastructure", "website", "lint", "build", "test"],
+  "jobs": [
+    "infrastructure",
+    "website",
+    "website-quality",
+    "lint",
+    "build",
+    "test"
+  ],
   "rules": [
-    { "prefix": "packages/website/", "jobs": ["website"] },
+    { "prefix": "packages/website/", "jobs": ["website", "website-quality"] },
     {
       "prefix": "burrowd/",
       "jobs": ["infrastructure", "lint", "build", "test"]

@@ -14,7 +14,12 @@ export const metadata = pageMetadata(
 export default function DocsPage() {
   return (
     <DocumentationPage title="Burrow documentation" description={description}>
-      <h2>Choose a reference</h2>
+      <h2>Start with the client</h2>
+      <p>
+        The burrowctl guide takes you from prerequisites to a verified first
+        tunnel. Use the webhook walkthrough for a runnable test endpoint, or the
+        server reference when you want to run your own infrastructure.
+      </p>
       <dl>
         {documentation.map((item) => (
           <div key={item.slug} className="mb-6">

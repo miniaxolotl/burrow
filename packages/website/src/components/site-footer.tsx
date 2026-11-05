@@ -13,10 +13,9 @@ export function SiteFooter() {
         <div className="footer-main">
           <div className="footer-brand">
             <Brand />
-            <p>HTTPS tunnels for local development.</p>
           </div>
           <nav className="footer-links" aria-label="Footer navigation">
-            <p className="eyebrow">EXPLORE</p>
+            <p>Explore</p>
             <Link
               href="/docs"
               data-analytics-event="docs_link_clicked"
@@ -28,7 +27,7 @@ export function SiteFooter() {
             <Link href="/#install">Install Burrow</Link>
           </nav>
           <div className="footer-links">
-            <p className="eyebrow">STAY IN TOUCH</p>
+            <p>Stay in touch</p>
             <Link href="/contact">
               Say hello <ArrowUpRight size={12} aria-hidden="true" />
             </Link>

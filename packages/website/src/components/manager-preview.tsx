@@ -138,8 +138,8 @@ export function ManagerPreview() {
   const command = `burrowctl tunnel ${tunnel.port}`;
 
   return (
-    <figure className="min-w-0">
-      <div className="flex flex-wrap items-center justify-between gap-4 px-1 pb-5">
+    <figure className="min-w-0" data-ui>
+      <div className="manager-toolbar flex flex-wrap items-center justify-between gap-4 px-1 pb-5">
         <div
           className="manager-tabs inline-flex gap-1 rounded-md border border-white/15 p-1"
           aria-label="Terminal preview views"
@@ -185,159 +185,163 @@ export function ManagerPreview() {
             </span>
           </div>
           <div id="manager-preview-content" className="mt-6 min-h-[260px]">
-            {view === 0 ? (
-              <div key="tunnels" className="demo-transition">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px]">
-                  <span className="text-terminal-muted">
-                    3 of your tunnels. One place.
-                  </span>
-                  <span className="flex items-center gap-1.5 text-lime">
-                    <span className="size-1.5 rounded-full bg-lime" /> All
-                    connected
-                  </span>
-                </div>
-                <div
-                  className="manager-columns manager-column-headings"
-                  aria-hidden="true"
-                >
-                  <span>Tunnel ID</span>
-                  <span>Port</span>
-                  <span>Latency</span>
-                  <span className="hidden lg:block">Reconnects</span>
-                  <span>Transferred</span>
-                  <span>Status</span>
-                </div>
-                <ul aria-label="Example tunnels" className="space-y-1">
-                  {tunnels.map((item, index) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        aria-pressed={index === selectedTunnel}
-                        aria-label={`Select ${item.name.toLowerCase()} tunnel on port ${item.port}`}
-                        onClick={() => setSelectedTunnel(index)}
-                        className="manager-columns manager-tunnel"
-                      >
-                        <span className="min-w-0">
-                          <span className="flex items-center gap-2">
-                            <ChevronRight
-                              size={13}
-                              className={
-                                index === selectedTunnel
-                                  ? "shrink-0 text-lime"
-                                  : "shrink-0 opacity-25"
-                              }
-                              aria-hidden="true"
-                            />
-                            <span className="break-all">{item.id}</span>
-                          </span>
-                          <span className="ml-[21px] mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-terminal-muted md:hidden">
-                            <span>:{item.port}</span>
-                            <span>{item.latency}</span>
-                            <span>{item.transferred}</span>
-                          </span>
-                        </span>
-                        <span className="hidden md:block">{item.port}</span>
-                        <span className="hidden md:block">{item.latency}</span>
-                        <span className="hidden text-terminal-muted lg:block">
-                          0
-                        </span>
-                        <span className="hidden md:block">
-                          {item.transferred}
-                        </span>
-                        <span className="flex items-center gap-1.5 text-[10px] text-lime">
-                          <span className="size-1.5 shrink-0 rounded-full bg-lime" />{" "}
-                          active
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                <div
-                  key={tunnel.id}
-                  className="demo-transition mt-5 border-t border-white/10 pt-4"
-                >
-                  <div className="mb-2 flex items-center gap-2 font-mono text-[10px] text-terminal-muted">
-                    <Link2 size={12} aria-hidden="true" /> {tunnel.name}{" "}
-                    <ArrowRight size={12} aria-hidden="true" /> localhost:
-                    {tunnel.port}
-                  </div>
-                  <p className="break-all font-mono text-[11px] leading-6 text-lime">
-                    https://{tunnel.id}.brmbl.dev
-                  </p>
-                </div>
+            <div
+              data-inactive={view !== 0}
+              aria-hidden={view !== 0}
+              inert={view !== 0}
+              className="manager-view"
+            >
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 font-mono text-[10px]">
+                <span className="text-terminal-muted">
+                  3 of your tunnels. One place.
+                </span>
+                <span className="flex items-center gap-1.5 text-lime">
+                  <span className="size-1.5 rounded-full bg-lime" /> All
+                  connected
+                </span>
               </div>
-            ) : (
-              <div key="requests" className="demo-transition">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 font-mono text-[10px]">
-                  <span className="text-terminal-muted">
-                    {tunnel.name} / localhost:{tunnel.port}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setView(0)}
-                    className="inline-flex min-h-8 items-center gap-1.5 text-lime underline-offset-4 hover:underline"
-                  >
-                    <ArrowLeft size={12} aria-hidden="true" /> Your tunnels
-                  </button>
-                </div>
-                <table className="manager-requests">
-                  <caption className="sr-only">
-                    Example requests for the {tunnel.name.toLowerCase()} tunnel
-                    on port {tunnel.port}
-                  </caption>
-                  <thead>
-                    <tr>
-                      <th scope="col" className="hidden w-24 md:table-cell">
-                        Time
-                      </th>
-                      <th scope="col" className="w-14 sm:w-20">
-                        Method
-                      </th>
-                      <th scope="col">Path</th>
-                      <th scope="col" className="hidden w-24 sm:table-cell">
-                        Size
-                      </th>
-                      <th scope="col" className="w-16 text-right">
-                        Duration
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tunnel.requests.map((request) => (
-                      <tr
-                        key={`${request.time}-${request.path}`}
-                        className="demo-transition"
-                      >
-                        <td className="hidden text-terminal-muted md:table-cell">
-                          {request.time}
-                        </td>
-                        <td>
-                          <span
+              <div
+                className="manager-columns manager-column-headings"
+                aria-hidden="true"
+              >
+                <span>Tunnel ID</span>
+                <span>Port</span>
+                <span>Latency</span>
+                <span className="hidden lg:block">Reconnects</span>
+                <span>Transferred</span>
+                <span>Status</span>
+              </div>
+              <ul aria-label="Example tunnels" className="space-y-1">
+                {tunnels.map((item, index) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      aria-pressed={index === selectedTunnel}
+                      onClick={() => setSelectedTunnel(index)}
+                      className="manager-columns manager-tunnel"
+                    >
+                      <span className="sr-only">
+                        Select {item.name.toLowerCase()} tunnel on port{" "}
+                        {item.port}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2">
+                          <ChevronRight
+                            size={13}
                             className={
-                              request.method === "POST"
-                                ? "text-[#e7c792]"
-                                : "text-lime"
+                              index === selectedTunnel
+                                ? "shrink-0 text-lime"
+                                : "shrink-0 opacity-25"
                             }
-                          >
-                            {request.method}
-                          </span>
-                        </td>
-                        <td className="break-all pr-3">{request.path}</td>
-                        <td className="hidden text-terminal-muted sm:table-cell">
-                          {request.size}
-                        </td>
-                        <td className="text-right text-terminal-muted">
-                          {request.duration}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <p className="mt-4 font-mono text-[10px] text-terminal-muted">
-                  4 requests, example traffic
+                            aria-hidden="true"
+                          />
+                          <span className="break-all">{item.id}</span>
+                        </span>
+                        <span className="ml-[21px] mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-terminal-muted md:hidden">
+                          <span>:{item.port}</span>
+                          <span>{item.latency}</span>
+                          <span>{item.transferred}</span>
+                        </span>
+                      </span>
+                      <span className="hidden md:block">{item.port}</span>
+                      <span className="hidden md:block">{item.latency}</span>
+                      <span className="hidden text-terminal-muted lg:block">
+                        0
+                      </span>
+                      <span className="hidden md:block">
+                        {item.transferred}
+                      </span>
+                      <span className="flex items-center gap-1.5 text-[10px] text-lime">
+                        <span className="size-1.5 shrink-0 rounded-full bg-lime" />{" "}
+                        active
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-5 border-t border-white/10 pt-4">
+                <div className="mb-2 flex items-center gap-2 font-mono text-[10px] text-terminal-muted">
+                  <Link2 size={12} aria-hidden="true" /> {tunnel.name}{" "}
+                  <ArrowRight size={12} aria-hidden="true" /> localhost:
+                  {tunnel.port}
+                </div>
+                <p className="break-all font-mono text-[11px] leading-6 text-lime">
+                  https://{tunnel.id}.brmbl.dev
                 </p>
               </div>
-            )}
+            </div>
+            <div
+              data-inactive={view !== 1}
+              aria-hidden={view !== 1}
+              inert={view !== 1}
+              className="manager-view"
+            >
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3 font-mono text-[10px]">
+                <span className="text-terminal-muted">
+                  {tunnel.name} / localhost:{tunnel.port}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setView(0)}
+                  className="inline-flex min-h-8 items-center gap-1.5 text-lime underline-offset-4 hover:underline"
+                >
+                  <ArrowLeft size={12} aria-hidden="true" /> Your tunnels
+                </button>
+              </div>
+              <table className="manager-requests">
+                <caption className="sr-only">
+                  Example requests for the {tunnel.name.toLowerCase()} tunnel on
+                  port {tunnel.port}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" className="hidden w-24 md:table-cell">
+                      Time
+                    </th>
+                    <th scope="col" className="w-14 sm:w-20">
+                      Method
+                    </th>
+                    <th scope="col">Path</th>
+                    <th scope="col" className="hidden w-24 sm:table-cell">
+                      Size
+                    </th>
+                    <th scope="col" className="w-16 text-right">
+                      Duration
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tunnel.requests.map((request) => (
+                    <tr key={`${request.time}-${request.path}`}>
+                      <td className="hidden text-terminal-muted md:table-cell">
+                        {request.time}
+                      </td>
+                      <td>
+                        <span
+                          className={
+                            request.method === "POST"
+                              ? "text-[#e7c792]"
+                              : "text-lime"
+                          }
+                        >
+                          {request.method}
+                        </span>
+                      </td>
+                      <td className="break-all pr-3">{request.path}</td>
+                      <td className="hidden text-terminal-muted sm:table-cell">
+                        {request.size}
+                      </td>
+                      <td className="text-right text-terminal-muted">
+                        {request.duration}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="mt-4 font-mono text-[10px] text-terminal-muted">
+                4 requests, example traffic
+              </p>
+            </div>
           </div>
           <div className="manager-actions">
             <div className="flex min-w-0 items-center gap-2 text-terminal-muted">
@@ -364,7 +368,7 @@ export function ManagerPreview() {
           </div>
         </div>
       </div>
-      <figcaption className="mt-4 flex flex-wrap justify-between gap-2 text-[11px] text-white/60">
+      <figcaption className="mt-4 flex flex-wrap justify-between gap-2 text-[11px] text-muted">
         <span>Built for the terminal. Recreated for the web.</span>
         <span className="font-mono text-[10px]">
           Interactive preview with example data

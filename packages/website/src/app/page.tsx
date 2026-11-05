@@ -1,15 +1,5 @@
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Check,
-  ChevronDown,
-  Layers3,
-  Link2,
-  Server,
-  Webhook,
-} from "lucide-react";
+import { ArrowRight, ChevronDown } from "lucide-react";
 import { connection } from "next/server";
-import { CopyButton } from "@/components/copy-button";
 import { InstallCommands } from "@/components/install-commands";
 import { ManagerPreview } from "@/components/manager-preview";
 import { Navigation } from "@/components/navigation";
@@ -22,214 +12,172 @@ import { faqs } from "@/content/faq";
 import { site } from "@/lib/site";
 import { HeroCtaCopy } from "@/components/website-telemetry";
 
+const features = [
+  [
+    "Reconnect without a new link",
+    "While the CLI is running, transient connection failures retry the same URL. Explicitly closing a tunnel revokes it; a new tunnel gets a fresh URL.",
+  ],
+  [
+    "Owner-only controls",
+    "The client creates a private owner credential automatically. Sharing a public URL doesn't grant someone access to list, inspect or close your tunnels.",
+  ],
+  [
+    "Self-hosting",
+    "Run the open-source burrowd server on your own infrastructure and domain. Point the CLI at it with the --server option.",
+  ],
+] as const;
+
 export default async function HomePage() {
   await connection();
-
   return (
     <MarketingMotion>
       <Navigation github={site.github} />
-      <main id="main">
-        <section
-          className="page-container hero-section"
-          aria-labelledby="hero-heading"
-        >
-          <div className="min-w-0">
-            <p className="eyebrow flex items-center gap-2">
-              <span className="size-1.5 rounded-full bg-accent" /> BURROW /
-              HTTPS TUNNELS
-            </p>
-            <h1 id="hero-heading" className="hero-heading">
-              Localhost,
-              <br />
-              <em>shared.</em>
-            </h1>
-            <p className="hero-description">
-              Give your local app a public HTTPS link. Share previews, test
-              webhooks and inspect requests in your terminal.
-            </p>
-            <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <a
-                href="#install"
-                className="button-primary"
-                data-analytics-event="cta_clicked"
-                data-analytics-placement="hero"
-              >
-                <HeroCtaCopy /> <ArrowRight size={16} aria-hidden="true" />
-              </a>
-              <a href={site.github} className="text-link">
-                View source <ArrowUpRight size={14} aria-hidden="true" />
-              </a>
-            </div>
-            <div className="mt-6 flex w-fit max-w-full flex-wrap items-center gap-x-4 rounded-lg border border-line bg-white/40 px-3 py-0.5">
-              <code className="min-w-0 py-2 font-mono text-[10px] text-muted sm:text-[11px]">
-                <span className="mr-2 select-none text-accent">$</span>npm i -g
-                @miniaxolotl/burrowctl
-              </code>
-              <CopyButton
-                text="npm i -g @miniaxolotl/burrowctl"
-                label="Copy npm install command"
-                installPlacement="hero"
-              />
-            </div>
-            <p className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[10px] text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <Check size={12} aria-hidden="true" /> No account required
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Check size={12} aria-hidden="true" /> Free & open source
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Check size={12} aria-hidden="true" /> Self-hostable
-              </span>
-            </p>
-          </div>
-          <TunnelDemo />
-        </section>
-
-        <section
-          id="features"
-          className="page-container"
-          aria-label="What you can do with Burrow"
-        >
-          <div className="feature-strip" data-stagger>
-            {[
-              {
-                icon: Link2,
-                title: "Share your work",
-                description:
-                  "Let a teammate try your local app without deploying it.",
-              },
-              {
-                icon: Webhook,
-                title: "Test webhooks",
-                description:
-                  "Receive webhooks directly on your development server.",
-              },
-              {
-                icon: Layers3,
-                title: "Manage multiple tunnels",
-                description:
-                  "Manage your frontend, API, and request logs in one place.",
-              },
-            ].map(({ icon: Icon, title, description }) => (
-              <article key={title} data-reveal>
-                <Icon
-                  size={20}
-                  strokeWidth={1.5}
-                  className="mb-4 text-accent"
-                  aria-hidden="true"
-                />
-                <h2 className="text-base font-medium tracking-tight">
-                  {title}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-muted">
-                  {description}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <WorkflowStories />
-
-        <section
-          id="how-it-works"
-          className="dark-section section-space"
-          aria-labelledby="manager-heading"
-        >
-          <div className="page-container">
-            <div className="section-intro" data-reveal>
-              <div>
-                <p className="eyebrow text-highlight">THE TUNNEL MANAGER</p>
-                <h2 id="manager-heading" className="section-heading mt-3">
-                  One terminal.
-                  <br />
-                  <em>Your tunnels.</em>
-                </h2>
+      <main id="main" className="product-redesign terminal-home">
+        <div className="hero-field">
+          <section
+            className="page-container product-hero hero-section"
+            aria-labelledby="hero-heading"
+          >
+            <div className="product-hero-copy">
+              <h1 id="hero-heading" className="hero-title">
+                Your local app.
+                <br />A public link.
+              </h1>
+              <p className="hero-summary">
+                Share what’s running on your machine. Get feedback, test
+                webhooks and inspect requests without deploying.
+              </p>
+              <div className="hero-actions">
+                <a
+                  href="#install"
+                  className="button-primary"
+                  data-analytics-event="cta_clicked"
+                  data-analytics-placement="hero"
+                >
+                  <HeroCtaCopy />
+                  <ArrowRight size={17} aria-hidden="true" />
+                </a>
+                <a href={site.clientDocs} className="text-link">
+                  Read the docs
+                </a>
               </div>
-              <p>
-                Check your connection, copy a URL and inspect your requests. Try
-                the preview below.
+              <p className="hero-proof">
+                Free and open source. macOS and Linux. No account needed.
               </p>
             </div>
-            <ManagerPreview />
-          </div>
-        </section>
-
+            <div className="product-stage terminal-stage" data-reveal>
+              <TunnelDemo />
+            </div>
+          </section>
+        </div>
         <section
           id="install"
-          className="section-space bg-accent-soft/50"
+          className="feature-index"
           aria-labelledby="install-heading"
         >
-          <div className="page-container grid items-center gap-9 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
-            <div>
-              <p className="eyebrow">QUICKSTART</p>
-              <h2 id="install-heading" className="section-heading mt-3">
-                Two commands.
-                <br />
-                <em>One public link.</em>
+          <div className="page-container install-layout">
+            <div data-reveal>
+              <h2 id="install-heading" className="section-title">
+                Install and connect
               </h2>
-              <p className="mt-4 max-w-sm text-sm leading-7 text-muted">
-                Install the CLI, point it at your local port and share the URL.
-                Works on macOS and Linux, on x64 and ARM64.
+              <p>
+                Install the CLI, run your local app, then open a tunnel. Use npm
+                or a native binary for macOS or Linux, on x64 or ARM64.
               </p>
-              <a href={site.serverDocs} className="text-link mt-6">
-                <Server size={15} aria-hidden="true" /> Prefer to self-host?{" "}
-                <ArrowUpRight size={14} aria-hidden="true" />
+              <a href={site.serverDocs} className="text-link">
+                Prefer to self-host?
               </a>
             </div>
             <InstallCommands releases={site.releases} />
           </div>
         </section>
-
+        <WorkflowStories />
         <section
-          className="page-container section-space faq-section"
+          id="features"
+          className="feature-index"
+          aria-labelledby="features-heading"
+        >
+          <div className="page-container feature-index-layout">
+            <div className="feature-index-heading" data-reveal>
+              <h2 id="features-heading" className="section-title">
+                How tunnels work
+              </h2>
+              <a href={site.github} className="text-link">
+                Explore the source
+              </a>
+            </div>
+            <dl className="feature-list" data-stagger>
+              {features.map(([title, description]) => (
+                <div className="feature-row" key={title} data-reveal>
+                  <dt>{title}</dt>
+                  <dd>{description}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+        <section
+          id="how-it-works"
+          className="page-container story-section"
+          aria-labelledby="manager-heading"
+        >
+          <div className="section-lead" data-reveal>
+            <h2 id="manager-heading" className="section-title">
+              Tunnel manager
+            </h2>
+            <p>
+              Add ports, copy links and inspect requests from one terminal. Try
+              the illustrated manager below with sample tunnels.
+            </p>
+          </div>
+          <ManagerPreview />
+        </section>
+        <section
+          className="page-container product-facts"
+          aria-labelledby="public-heading"
+          data-reveal
+        >
+          <h2 id="public-heading" className="section-title">
+            Public access and privacy
+          </h2>
+          <div>
+            <p>
+              A tunnel URL makes your local service reachable from the internet.
+              Owner-only management protects tunnel controls, not the app behind
+              the link. Add authentication to your app before exposing sensitive
+              data.
+            </p>
+            <p>
+              Official CLI releases collect anonymous usage outcomes and
+              sanitized diagnostics. Turn them off with{" "}
+              <code>burrowctl telemetry disable</code>.{" "}
+              <a href={site.clientDocs}>Read the client guide</a> for ownership,
+              reconnection and privacy details.
+            </p>
+          </div>
+        </section>
+        <section
+          className="page-container story-section faq-section"
           aria-labelledby="faq-heading"
         >
           <div>
-            <p className="eyebrow">GOOD TO KNOW</p>
-            <h2 id="faq-heading" className="section-heading mt-3">
-              Common questions.
+            <h2 id="faq-heading" className="section-title">
+              Questions
             </h2>
-            <a href={site.clientDocs} className="text-link mt-4">
-              Read the docs <ArrowUpRight size={14} aria-hidden="true" />
+            <a href="/support" className="text-link">
+              Get support
             </a>
           </div>
-          <div className="border-t border-line">
+          <div className="question-list">
             {faqs.map(({ question, answer }) => (
-              <details key={question} name="faq" className="faq-item group">
+              <details key={question} name="faq" className="faq-item">
                 <summary>
                   {question}
-                  <ChevronDown
-                    size={16}
-                    className="shrink-0 transition-transform group-open:rotate-180"
-                    aria-hidden="true"
-                  />
+                  <ChevronDown size={18} aria-hidden="true" />
                 </summary>
                 <p>{answer}</p>
               </details>
             ))}
-          </div>
-        </section>
-        <section
-          className="border-y border-line bg-accent-soft/50"
-          aria-labelledby="closing-heading"
-        >
-          <div className="page-container flex flex-col items-start justify-between gap-8 py-16 md:flex-row md:items-center lg:py-20">
-            <div>
-              <p className="eyebrow">GET STARTED</p>
-              <h2 id="closing-heading" className="section-heading mt-5">
-                Your app is running.
-                <br />
-                <em>Give it a link.</em>
-              </h2>
-              <p className="mt-5 max-w-md text-sm leading-7 text-muted">
-                Install Burrow and share your first tunnel.
-              </p>
-            </div>
-            <a href="#install" className="button-primary">
-              Install Burrow <ArrowRight size={16} aria-hidden="true" />
-            </a>
           </div>
         </section>
         <StructuredData />

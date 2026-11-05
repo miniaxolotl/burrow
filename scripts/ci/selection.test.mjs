@@ -42,6 +42,7 @@ test("repository policy covers every workflow job and shared Go dependencies", (
   assert.deepEqual(classify(actual, ["protocol/message.go"]), {
     infrastructure: true,
     website: false,
+    "website-quality": false,
     lint: true,
     build: true,
     test: true,
@@ -49,13 +50,17 @@ test("repository policy covers every workflow job and shared Go dependencies", (
   assert.deepEqual(classify(actual, ["packages/website/src/page.tsx"]), {
     infrastructure: false,
     website: true,
+    "website-quality": true,
     lint: false,
     build: false,
     test: false,
   });
   for (const job of actual.jobs)
     assert.ok(
-      workflow.includes(`fromJSON(needs.changes.outputs.selection).${job}`),
+      workflow.includes(`fromJSON(needs.changes.outputs.selection).${job}`) ||
+        workflow.includes(
+          `fromJSON(needs.changes.outputs.selection)['${job}']`,
+        ),
     );
 });
 test("selection is conservative for empty/unknown paths and includes shared dependencies", () => {

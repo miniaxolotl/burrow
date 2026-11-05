@@ -1,11 +1,14 @@
 "use client";
 
 import { Check, Share2 } from "lucide-react";
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
+import styles from "./share-site.module.css";
 
 export function ShareSite({ url }: { url: string }) {
   const [status, setStatus] = useState<"idle" | "copied" | "fallback">("idle");
   const [busy, setBusy] = useState(false);
+  const fallback = useRef<HTMLDialogElement>(null);
+  const heading = useId();
 
   async function share() {
     setBusy(true);
@@ -26,6 +29,7 @@ export function ShareSite({ url }: { url: string }) {
       setStatus("copied");
     } catch {
       setStatus("fallback");
+      fallback.current?.showModal();
     } finally {
       setBusy(false);
     }
@@ -44,25 +48,35 @@ export function ShareSite({ url }: { url: string }) {
         ) : (
           <Share2 size={15} aria-hidden="true" />
         )}
-        {status === "copied" ? "Link copied" : "Share Burrow"}
+        <span className={styles.label}>
+          <span aria-hidden={status === "copied"}>Share Burrow</span>
+          <span aria-hidden={status !== "copied"}>Link copied</span>
+        </span>
       </button>
       <span role="status" className="sr-only">
         {status === "copied"
           ? "Burrow website link copied to your clipboard."
           : ""}
       </span>
-      {status === "fallback" && (
-        <label className="mt-2 block text-xs">
-          Copy this link to share Burrow
-          <input
-            aria-label="Website link to share"
-            readOnly
-            value={url}
-            onFocus={(event) => event.target.select()}
-            className="mt-2 block w-full rounded-md border border-line bg-paper p-3 font-mono text-xs text-forest"
-          />
-        </label>
-      )}
+      <dialog
+        ref={fallback}
+        aria-labelledby={heading}
+        className={styles.dialog}
+      >
+        <form method="dialog">
+          <h2 id={heading}>Share Burrow</h2>
+          <label>
+            Copy this link to share Burrow
+            <input
+              aria-label="Website link to share"
+              readOnly
+              value={url}
+              onFocus={(event) => event.target.select()}
+            />
+          </label>
+          <button type="submit">Done</button>
+        </form>
+      </dialog>
     </div>
   );
 }
