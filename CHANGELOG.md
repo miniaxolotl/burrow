@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.19](https://github.com/miniaxolotl/burrow/compare/v0.3.18...v0.3.19) (2026-11-05)
+
+
+### Bug Fixes
+
+* **server:** isolate proxied HTTP requests by host ([#81](https://github.com/miniaxolotl/burrow/issues/81)) ([c36f277](https://github.com/miniaxolotl/burrow/commit/c36f2774538c1935a988e7339e766ec7fba64be8))
+
 ## [0.3.18](https://github.com/miniaxolotl/burrow/compare/v0.3.17...v0.3.18) (2026-11-05)
 
 
