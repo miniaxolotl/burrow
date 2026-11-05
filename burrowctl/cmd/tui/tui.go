@@ -75,6 +75,7 @@ const (
 	stateLogs               // viewing request logs
 	stateConfirm            // confirmation prompt (close tunnel)
 	stateHelp               // help overlay
+	stateRoutes             // explicit startup route table
 )
 
 type sortMode int
@@ -115,6 +116,7 @@ type model struct {
 	logAutoFollow bool
 	sortMode      sortMode
 	confirmTarget *protocol.TunnelInfo
+	routeCursor   int
 }
 
 func newModel(client *internal.Client, server string) model {
@@ -234,6 +236,18 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	case stateLogs:
 		return m.handleLogsKey(msg)
+	case stateRoutes:
+		switch msg.String() {
+		case "esc", "r":
+			m.state = stateList
+		case "q", "ctrl+c":
+			return m, tea.Quit
+		case "down", "j":
+			m.routeCursor = min(max(0, len(m.client.Routes())-1), m.routeCursor+1)
+		case "up", "k":
+			m.routeCursor = max(0, m.routeCursor-1)
+		}
+		return m, nil
 	case stateConfirm:
 		return m.handleConfirmKey(msg)
 	case stateHelp:
@@ -276,6 +290,11 @@ func (m model) handleListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.cursor = min(len(m.tunnels)-1, m.cursor+10)
 
 	case "n":
+		if len(m.client.Routes()) > 0 {
+			m.status = "routes are fixed for this invocation; restart with explicit configuration"
+			m.statusIsErr = true
+			return m, nil
+		}
 		m.state = stateInput
 		m.input.SetValue("")
 		return m, m.input.Focus()
@@ -305,6 +324,8 @@ func (m model) handleListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.logs = nil
 			m.logsErr = ""
 		}
+	case "r":
+		m.state = stateRoutes
 
 	case "o":
 		if len(m.tunnels) > 0 {
@@ -335,7 +356,7 @@ func (m model) handleConfirmKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "enter":
 		if m.confirmTarget != nil {
-			if err := m.client.CloseTunnel(m.confirmTarget.Port); err != nil {
+			if err := m.client.CloseTunnelID(m.confirmTarget.TunnelID); err != nil {
 				m.status = err.Error()
 				m.statusIsErr = true
 				m.confirmTarget = nil
@@ -497,6 +518,9 @@ func (m model) View() string {
 	if m.state == stateLogs {
 		return m.viewLogs()
 	}
+	if m.state == stateRoutes {
+		return m.viewRoutes()
+	}
 
 	var b strings.Builder
 
@@ -602,7 +626,7 @@ func (m model) View() string {
 			b.WriteString("\n")
 		}
 		b.WriteString(ind + renderHelp([][2]string{
-			{"n", "new"}, {"c", "copy"}, {"o", "open"}, {"d", "close"}, {"l", "logs"}, {"s", "sort"}, {"g/G", "top/bot"}, {"?", "help"}, {"q", "quit"},
+			{"n", "new"}, {"c", "copy"}, {"o", "open"}, {"d", "close"}, {"l", "logs"}, {"r", "routes"}, {"s", "sort"}, {"g/G", "top/bot"}, {"?", "help"}, {"q", "quit"},
 		}) + "\n")
 	}
 

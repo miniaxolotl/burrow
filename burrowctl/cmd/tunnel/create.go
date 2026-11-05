@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"burrow/burrowctl/internal"
 	"burrow/burrowctl/internal/clioutput"
 	"burrow/burrowctl/internal/config"
+	"burrow/burrowctl/internal/routing"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -36,6 +38,27 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 		}
 		seen[port] = true
 	}
+	var routes *routing.Table
+	if cmd.Flags().Changed("config") {
+		if len(ports) != 0 {
+			return clioutput.Invalid(errors.New("positional ports cannot be combined with route config"))
+		}
+		path, _ := cmd.Flags().GetString("config")
+		file, err := os.Open(path)
+		if err != nil {
+			return clioutput.Invalid(errors.New("route config unavailable"))
+		}
+		data, err := io.ReadAll(io.LimitReader(file, routing.MaxConfig+1))
+		file.Close()
+		if err != nil {
+			return clioutput.Invalid(err)
+		}
+		routes, err = routing.Parse(data)
+		if err != nil {
+			return clioutput.Invalid(err)
+		}
+		ports = []int{int(routes.Routes[0].Port)}
+	}
 	name, _ := cmd.Flags().GetString("name")
 	replace, _ := cmd.Flags().GetBool("replace")
 	yes, _ := cmd.Flags().GetBool("yes")
@@ -51,6 +74,14 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 	client, err := configuredClient(cmd)
 	if err != nil {
 		return err
+	}
+	client.SetRoutes(routes)
+	if routes != nil && !clioutput.FromCommand(cmd).Structured() {
+		for _, route := range routes.Routes {
+			if _, err := fmt.Fprintf(clioutput.FromCommand(cmd), "route %s -> loopback:%d (strip_prefix=%t, host_header=%q)\n", route.Path, route.Port, route.StripPrefix, route.HostHeader); err != nil {
+				return err
+			}
+		}
 	}
 	if name != "" {
 		ctx, stop := context.WithTimeout(cmd.Context(), 5*time.Second)

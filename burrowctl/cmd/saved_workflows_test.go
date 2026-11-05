@@ -55,3 +55,21 @@ func TestWorkflowSavedDoesNotCreateCredential(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+func TestWorkflowInvalidRoutesExposeNothing(t *testing.T) {
+	command, home := workflowCommand(t, "tunnel", "--config", filepath.Join(t.TempDir(), "missing.json"), "--output", "jsonl")
+	var stdout, stderr bytes.Buffer
+	command.Stdout, command.Stderr = &stdout, &stderr
+	if err := command.Run(); err == nil {
+		t.Fatal("missing config accepted")
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("unstructured validation: %s", &stderr)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "burrow", "owners")); !os.IsNotExist(err) {
+		t.Fatal("route validation created owner")
+	}
+	if e := oneWorkflowEnvelope(t, stdout.Bytes()); e.Type != "error" {
+		t.Fatal(e)
+	}
+}

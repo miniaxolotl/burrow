@@ -76,3 +76,33 @@ func TestClientWaitsForMatchingRegistration(t *testing.T) {
 		t.Fatal("missing registered observation")
 	}
 }
+
+func TestTunnelIdentityDoesNotDependOnUpstreamPort(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u := websocket.Upgrader{}
+		conn, err := u.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		cfg := yamux.DefaultConfig()
+		cfg.LogOutput = io.Discard
+		session, err := yamux.Server(&protocol.WsConn{Conn: conn}, cfg)
+		if err != nil {
+			return
+		}
+		defer session.Close()
+		<-session.CloseChan()
+	}))
+	defer server.Close()
+	client := NewClient(strings.TrimPrefix(server.URL, "http://"), "synthetic-owner", "example.test", false)
+	defer client.Close()
+	for range 2 {
+		if _, err := client.CreateTunnel(t.Context(), 3000); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if tunnels := client.ListTunnels(); len(tunnels) != 2 || tunnels[0].TunnelID == tunnels[1].TunnelID {
+		t.Fatalf("upstream port used as identity: %+v", tunnels)
+	}
+}

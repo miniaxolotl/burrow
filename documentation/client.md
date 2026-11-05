@@ -66,8 +66,8 @@ There are no privileged users, global lists, or admin commands. Each command see
 
 **Development branch:** these additions are being implemented in the draft
 [workflow implementation](tunnel-workflows-implementation.md); this is not a
-claim that the published npm release already includes them. Routing and
-capture/replay remain pending.
+claim that the published npm release already includes them. Capture/replay remains
+pending.
 
 ```sh
 burrowctl tunnel 3000 --headless
@@ -135,6 +135,52 @@ revoke those IDs. A terminal authorization/ownership/revocation rejection during
 reconnect likewise stops the whole headless invocation nonzero.
 
 ## Automatic ownership
+
+### One hostname, multiple local services (development)
+
+Create an explicit route file, then run `burrowctl tunnel --config ./burrow.json`
+(optionally with `--name shop` and/or `--output jsonl`):
+
+```json
+{
+  "version": 1,
+  "routes": [
+    { "path": "/api", "port": 8080, "strip_prefix": true },
+    { "path": "/", "port": 3000 }
+  ]
+}
+```
+
+The longest escaped path-segment prefix wins, case-sensitively: `/api` matches
+`/api/x`, not `/apiculture` or `/%61pi/x`. Prefix stripping is explicit; `/api`
+and `/api/` become `/`, and `/api/x` becomes `/x`. Query/body and public Host are
+preserved; `host_header` optionally sets a bounded authority for that route.
+Unmatched paths return 404 unless `/` exists. An unavailable target returns 502
+without falling through. Targets are fixed loopback ports only, with IPv4/IPv6
+fallback, no environment proxy and no caller-selected destination.
+
+No file is auto-loaded or hot-reloaded. Reject positional ports plus `--config`,
+unknown/duplicate fields, unsupported versions, files over 64 KiB and more than
+32 routes before exposure. Prefixes cannot contain escapes, queries, fragments,
+dot segments, backslashes, repeated/trailing slashes (except `/`) or non-ASCII.
+Routed requests containing encoded separators, dot segments (including encoded
+dots), NUL, backslashes, repeated slashes or invalid escapes return 400, not a
+cleaned/redirected path. Plain single-port raw mode retains existing behavior.
+
+The private HTTP dispatcher admits one request/upgrade lifetime per yamux stream,
+with 32 KiB headers, at most 128 concurrent streams, bounded dial/header deadlines
+and explicit overload failure. It streams bodies, trailers, SSE and WebSocket
+upgrades without an overall short streaming deadline. It rejects CONNECT and
+absolute-form targets and does not forward a second pipelined request. It strips
+untrusted Forwarded/X-Forwarded/X-Real-IP and Burrow-management/proxy credential
+headers; no trusted client identity is asserted on this path.
+
+The route table appears in text and typed lifecycle/readiness data. Press `r` in
+the manager for the full scrollable startup table. Routed configuration is fixed
+for that invocation; the manager cannot add an inferred upstream. A routed tunnel
+counts as one server connection; the first port is informational metadata, not
+the complete route table. A shared public origin also shares cookie/security
+trust: configure application cookie paths, base paths and CORS appropriately.
 
 ### Saved URLs (development)
 

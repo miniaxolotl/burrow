@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"burrow/burrowctl/internal/routing"
 	"burrow/protocol"
 	"burrow/protocol/telemetry"
 
@@ -26,7 +27,7 @@ type Client struct {
 	token          string
 	domain         string
 	secure         bool
-	tunnels        map[uint16]*TunnelConn
+	tunnels        map[string]*TunnelConn
 	mu             sync.RWMutex
 	observer       telemetry.Observer
 	requestContext context.Context
@@ -38,6 +39,8 @@ type Client struct {
 	closeDone      chan struct{}
 	onEvent        func(LifecycleEvent)
 	attachment     *Attachment
+	routes         *routing.Table
+	streams        chan struct{}
 }
 
 // LifecycleEvent reports observed transport state, never application readiness.
@@ -111,12 +114,13 @@ func NewClientWithContext(ctx context.Context, server, token, domain string, sec
 		token:          token,
 		domain:         domain,
 		secure:         secure,
-		tunnels:        make(map[uint16]*TunnelConn),
+		tunnels:        make(map[string]*TunnelConn),
 		observer:       observer,
 		requestContext: ctx,
 		ctx:            clientContext,
 		cancel:         cancel,
 		closeDone:      make(chan struct{}),
+		streams:        make(chan struct{}, 128),
 	}
 }
 
@@ -179,7 +183,7 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 		tc.session.Close()
 		return "", context.Canceled
 	}
-	c.tunnels[port] = tc
+	c.tunnels[tc.ID] = tc
 	c.workers.Go(func() {
 		defer stopClientCancel()
 		<-tc.ctx.Done()
@@ -199,6 +203,14 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 	outcome = telemetry.Success
 	c.observer.Track(telemetry.TunnelOpened)
 	return tunnelURL, nil
+}
+
+func (c *Client) SetRoutes(routes *routing.Table) { c.routes = routes }
+func (c *Client) Routes() []routing.Route {
+	if c.routes == nil {
+		return nil
+	}
+	return append([]routing.Route(nil), c.routes.Routes...)
 }
 
 func (c *Client) trackLatency(tc *TunnelConn) {
@@ -371,8 +383,8 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 	defer tc.cancel()
 	defer func() {
 		c.mu.Lock()
-		if c.tunnels[port] == tc {
-			delete(c.tunnels, port)
+		if c.tunnels[tc.ID] == tc {
+			delete(c.tunnels, tc.ID)
 		}
 		c.mu.Unlock()
 	}()
@@ -446,6 +458,17 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 
 		reconnectDelay = time.Second
 		attempt = 0
+		if c.routes != nil {
+			select {
+			case c.streams <- struct{}{}:
+				c.workers.Go(func() { defer func() { <-c.streams }(); c.routes.ServeStream(tc.ctx, stream) })
+			default:
+				stream.SetWriteDeadline(time.Now().Add(time.Second))
+				io.WriteString(stream, "HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nContent-Length: 0\r\n\r\n")
+				stream.Close()
+			}
+			continue
+		}
 		c.workers.Go(func() {
 			s := stream
 			defer s.Close()
@@ -488,11 +511,26 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 
 func (c *Client) CloseTunnel(port uint16) error {
 	c.mu.RLock()
-	tc := c.tunnels[port]
 	id := ""
-	if tc != nil {
-		id = tc.ID
+	for _, tc := range c.tunnels {
+		if tc.Port == port {
+			if id != "" {
+				c.mu.RUnlock()
+				return errors.New("ambiguous port; select tunnel ID")
+			}
+			id = tc.ID
+		}
 	}
+	c.mu.RUnlock()
+	if id == "" {
+		return nil
+	}
+	return c.CloseTunnelID(id)
+}
+
+func (c *Client) CloseTunnelID(id string) error {
+	c.mu.RLock()
+	tc := c.tunnels[id]
 	c.mu.RUnlock()
 	if tc == nil {
 		return nil
@@ -503,11 +541,11 @@ func (c *Client) CloseTunnel(port uint16) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.tunnels[port] == tc {
+	if c.tunnels[id] == tc {
 		tc.cancel()
 		tc.session.Close()
 		tc.wsConn.Close()
-		delete(c.tunnels, port)
+		delete(c.tunnels, id)
 	}
 	return nil
 }
@@ -537,10 +575,10 @@ func (c *Client) ListTunnels() []*protocol.TunnelInfo {
 	defer c.mu.RUnlock()
 
 	tunnels := make([]*protocol.TunnelInfo, 0, len(c.tunnels))
-	for port, tc := range c.tunnels {
+	for _, tc := range c.tunnels {
 		tunnels = append(tunnels, &protocol.TunnelInfo{
 			TunnelID:   tc.ID,
-			Port:       port,
+			Port:       tc.Port,
 			URL:        tc.URL,
 			Status:     tc.status,
 			Latency:    tc.latency.Round(time.Millisecond).String(),
@@ -549,6 +587,9 @@ func (c *Client) ListTunnels() []*protocol.TunnelInfo {
 		})
 	}
 	sort.Slice(tunnels, func(i, j int) bool {
+		if tunnels[i].Port == tunnels[j].Port {
+			return tunnels[i].TunnelID < tunnels[j].TunnelID
+		}
 		return tunnels[i].Port < tunnels[j].Port
 	})
 	return tunnels
