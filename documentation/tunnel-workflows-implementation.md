@@ -9,14 +9,14 @@ until combined acceptance passes. Retarget and revalidate as parents merge.
 
 ## Checkpoints
 
-| Checkpoint                                     | Status                                                                                                                                                                                              |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Isolated CLI subprocess fixtures               | Implemented: temporary HOME, no inherited owner/server configuration, private-owner and help/validation baselines.                                                                                  |
-| Headless lifecycle and structured output       | Initial M1a implementation: headless/TTY detection, JSON/JSONL, numeric units, truthful transport events, signals/cancellation and bounded output/drain. Final combined acceptance remains pending. |
-| Registration acknowledgement and saved aliases | Pending.                                                                                                                                                                                            |
-| One-hostname local routing                     | Pending.                                                                                                                                                                                            |
-| Encrypted capture and durable local replay     | Pending.                                                                                                                                                                                            |
-| Combined acceptance and full exact-head gates  | Pending.                                                                                                                                                                                            |
+| Checkpoint                                     | Status                                                                                                                                                                                                 |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Isolated CLI subprocess fixtures               | Implemented: temporary HOME, no inherited owner/server configuration, private-owner and help/validation baselines.                                                                                     |
+| Headless lifecycle and structured output       | Initial M1a implementation: headless/TTY detection, JSON/JSONL, numeric units, truthful transport events, signals/cancellation and bounded output/drain. Final combined acceptance remains pending.    |
+| Registration acknowledgement and saved aliases | Implemented in child: negotiated acknowledgement, aggregate readiness, durable attachment CAS/nonce reconciliation, private locked aliases and close/replacement state. More fault acceptance pending. |
+| One-hostname local routing                     | Pending.                                                                                                                                                                                               |
+| Encrypted capture and durable local replay     | Pending.                                                                                                                                                                                               |
+| Combined acceptance and full exact-head gates  | Pending.                                                                                                                                                                                               |
 
 Each checkpoint uses focused passing commits with matching tests and documentation.
 Keep the PR draft until the whole plan's acceptance gates pass. No production
@@ -60,6 +60,22 @@ generation and `registration_confirmed: true`. Aggregate `ready` contains all
 acknowledged IDs/generations/URLs. Loss emits `not_ready` before reconnect details;
 recovery needs fresh acknowledgements for every tunnel. Neither registration nor
 a response status proves application processing succeeded.
+
+### Persistent attachment evidence
+
+Server unit tests cover conditional/idempotent commit, metadata expiry, stale
+refresh/cleanup, revocation and legacy bypass; live loopback tests reject busy
+sessions. Private-registry tests cover restart/uncertain attempt reuse, scope,
+locking, corrupt/newer schemas, symlinks/permissions and close/replacement races.
+An actual CLI subprocess reuses its URL after metadata removal and server restart
+with retained Redis. This passed against both miniredis and a disposable Redis
+7.4 container. The disconnect grace is shortened explicitly in that fixture;
+default-grace and partition-liveness acceptance remain pending. No hosted service
+or public tunnel is involved.
+
+The rollout path now enforces the attachment-state image compatibility floor
+documented in [deployment guidance](deploy.md). Release-policy tests include the
+new guard without weakening current-ref or single-instance checks.
 
 ### Signal-cause compatibility regression
 

@@ -51,8 +51,10 @@ func (r *RedisClient) Close() error {
 }
 
 var (
-	ErrTunnelOwnership = errors.New("tunnel ID is unavailable")
-	ErrTunnelRevoked   = errors.New("tunnel has been closed")
+	ErrTunnelOwnership    = errors.New("tunnel ID is unavailable")
+	ErrTunnelRevoked      = errors.New("tunnel has been closed")
+	ErrPersistentRequired = errors.New("persistent attachment required")
+	ErrStaleAttachment    = errors.New("stale attachment generation")
 )
 
 // Every ownership operation uses the same migration rule. Reservations have no
@@ -80,7 +82,10 @@ else
 end
 `
 
-var reserveTunnel = redis.NewScript(claimOwnerScript + `return 1`)
+const requireLegacyScript = `if redis.call('HGET', KEYS[2], 'persistent') == '1' then return -3 end
+`
+
+var reserveTunnel = redis.NewScript(claimOwnerScript + requireLegacyScript + `return 1`)
 
 // ReserveTunnel claims only the durable owner, leaving any live generation and
 // its keepalive intact until the replacement transport is ready.
@@ -92,7 +97,7 @@ func (r *RedisClient) ReserveTunnel(ctx context.Context, id, ownerHash string) e
 }
 
 // Installing a generation repeats the ownership/revocation check atomically.
-var claimTunnel = redis.NewScript(claimOwnerScript + `
+var claimTunnel = redis.NewScript(claimOwnerScript + requireLegacyScript + `
 redis.call('SET', KEYS[1], ARGV[2], 'PX', ARGV[3])
 return 1
 `)
@@ -126,6 +131,10 @@ func ownershipResult(result int, err error) error {
 		return ErrTunnelOwnership
 	case -2:
 		return ErrTunnelRevoked
+	case -3:
+		return ErrPersistentRequired
+	case -4:
+		return ErrStaleAttachment
 	case 1:
 		return nil
 	default:

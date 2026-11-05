@@ -38,8 +38,11 @@ func AddCommands(root *cobra.Command) {
 			return nil
 		}
 	}
-	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd)
+	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd, savedCmd)
 	TunnelCmd.Flags().Bool("headless", false, "Run without the interactive manager")
+	TunnelCmd.Flags().String("name", "", "Private saved alias (not a public subdomain)")
+	TunnelCmd.Flags().Bool("replace", false, "Replace a confirmed closed alias with a new URL")
+	TunnelCmd.Flags().Bool("yes", false, "Confirm the selected replacement")
 }
 
 // resolveToken returns the best available auth token.
@@ -59,6 +62,9 @@ func resolveToken(cmd *cobra.Command, server string) (string, error) {
 	}
 	if token != "" {
 		return token, nil
+	}
+	if cmd.Name() == "saved" {
+		return config.ExistingOwnerToken(server)
 	}
 	return config.OwnerToken(server)
 }

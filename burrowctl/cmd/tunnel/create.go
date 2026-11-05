@@ -1,12 +1,17 @@
 package tunnel
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	"burrow/burrowctl/cmd/tui"
+	"burrow/burrowctl/internal"
 	"burrow/burrowctl/internal/clioutput"
+	"burrow/burrowctl/internal/config"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -31,10 +36,76 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 		}
 		seen[port] = true
 	}
+	name, _ := cmd.Flags().GetString("name")
+	replace, _ := cmd.Flags().GetBool("replace")
+	yes, _ := cmd.Flags().GetBool("yes")
+	if cmd.Flags().Changed("name") {
+		if err := config.ValidateAlias(name); err != nil {
+			return clioutput.Invalid(err)
+		}
+	}
+	if (name != "" && len(ports) != 1) || (replace && name == "") {
+		return clioutput.Invalid(errors.New("named mode requires one tunnel; --replace requires --name"))
+	}
 	server := viper.GetString("server")
 	client, err := configuredClient(cmd)
 	if err != nil {
 		return err
+	}
+	if name != "" {
+		ctx, stop := context.WithTimeout(cmd.Context(), 5*time.Second)
+		caps, err := client.Capabilities(ctx)
+		stop()
+		if err != nil {
+			return err
+		}
+		if caps.PersistentAttachment != 1 || caps.Registration != 1 {
+			return errors.New("persistent attachments unavailable on server")
+		}
+		owner, err := resolveToken(cmd, server)
+		if err != nil {
+			return err
+		}
+		alias, err := config.OpenAlias(server, owner, name)
+		if err != nil {
+			return err
+		}
+		defer alias.Close()
+		if alias.Record().State == "uncertain" {
+			state, err := client.Reservation(alias.Record().TunnelID)
+			if err != nil {
+				return err
+			}
+			if state.State == "closed" {
+				err = alias.SetState("closed")
+			} else {
+				err = alias.SetState("saved")
+			}
+			if err != nil {
+				return err
+			}
+		}
+		if replace {
+			old := alias.Record()
+			if err := alias.Replace(yes); err != nil {
+				return err
+			}
+			if !clioutput.FromCommand(cmd).Structured() {
+				if _, err := fmt.Fprintf(clioutput.FromCommand(cmd), "Replacing closed URL %s with a new random URL; target port %d\n", old.URL, ports[0]); err != nil {
+					return err
+				}
+			}
+		}
+		client.SetAttachment(&internal.Attachment{TunnelID: alias.Record().TunnelID, Prepare: func() (string, string, string, error) {
+			attempt, err := alias.Prepare()
+			return attempt.ID, attempt.Expected, attempt.Nonce, err
+		}, Acknowledge: alias.Acknowledge, Reject: func(status int) error {
+			state := "conflict"
+			if status == 410 {
+				state = "closed"
+			}
+			return alias.SetState(state)
+		}})
 	}
 
 	if headless(cmd) {

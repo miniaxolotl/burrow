@@ -66,7 +66,7 @@ func Prepare(cmd *cobra.Command) error {
 	}
 	if format != "text" {
 		switch cmd.Name() {
-		case "tunnel", "list", "logs", "close":
+		case "tunnel", "list", "logs", "close", "saved":
 		default:
 			return Invalid(errors.New("structured output is supported for tunnel, list, logs and close"))
 		}

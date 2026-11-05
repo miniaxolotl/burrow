@@ -19,6 +19,10 @@ for (const supersede of [false, true])
     executable("python3", "#!/bin/sh\nexit 0\n");
     executable("curl", "#!/bin/sh\nexit 0\n");
     executable(
+      "docker",
+      '#!/bin/sh\ncase "$1" in pull) exit 0;; image) echo \'{"io.bramble.burrow.attachment-state":"1"}\';; *) exit 1;; esac\n',
+    );
+    executable(
       "node",
       `#!/bin/sh
 if [ "$1" = scripts/infra/wait-app.mjs ]; then

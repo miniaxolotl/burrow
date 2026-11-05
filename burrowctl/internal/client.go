@@ -37,6 +37,7 @@ type Client struct {
 	closeOnce      sync.Once
 	closeDone      chan struct{}
 	onEvent        func(LifecycleEvent)
+	attachment     *Attachment
 }
 
 // LifecycleEvent reports observed transport state, never application readiness.
@@ -141,8 +142,28 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 	outcome := telemetry.Unavailable
 	defer func() { c.observer.Operation(telemetry.Connect, started, outcome) }()
 	tunnelID := protocol.RandomTunnelID()
+	if c.attachment != nil {
+		tunnelID = c.attachment.TunnelID
+	}
 	c.emit(LifecycleEvent{Type: "connecting", TunnelID: tunnelID, Port: port})
-	tc, err := c.createTunnelSession(tctx, tunnelID, port)
+	startup, stopStartup := context.WithTimeout(tctx, 30*time.Second)
+	var tc *TunnelConn
+	var err error
+	for {
+		tc, err = c.createTunnelSession(startup, tunnelID, port)
+		var rejected *connectionRejected
+		if !errors.As(err, &rejected) || rejected.status != http.StatusLocked {
+			break
+		}
+		select {
+		case <-startup.Done():
+			err = startup.Err()
+		case <-time.After(250 * time.Millisecond):
+			continue
+		}
+		break
+	}
+	stopStartup()
 	if err != nil {
 		c.emit(LifecycleEvent{Type: "failed", TunnelID: tunnelID, Port: port, Code: "connection_failed"})
 		return "", err
@@ -211,6 +232,16 @@ func (c *Client) trackLatency(tc *TunnelConn) {
 
 func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port uint16) (*TunnelConn, error) {
 	header := http.Header{"X-Tunnel-Token": {c.token}, protocol.RegistrationHeader: {protocol.RegistrationVersion}}
+	if c.attachment != nil {
+		id, expected, nonce, err := c.attachment.Prepare()
+		if err != nil {
+			return nil, err
+		}
+		header.Set(protocol.AttachmentHeader, "1")
+		header.Set(protocol.AttachmentIDHeader, id)
+		header.Set(protocol.ExpectedGenerationHeader, expected)
+		header.Set(protocol.AttemptHeader, nonce)
+	}
 	scheme := "ws"
 	if c.secure {
 		scheme = "wss"
@@ -244,6 +275,12 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 			return nil, connectContext.Err()
 		}
 		if resp != nil {
+			if c.attachment != nil && c.attachment.Reject != nil && (resp.StatusCode == 401 || resp.StatusCode == 403 || resp.StatusCode == 409 || resp.StatusCode == 410) {
+				if err := c.attachment.Reject(resp.StatusCode); err != nil {
+					resp.Body.Close()
+					return nil, err
+				}
+			}
 			body, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
 			resp.Body.Close()
 			msg := strings.TrimSpace(string(body))
@@ -267,6 +304,10 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 
 	cfg := yamux.DefaultConfig()
 	cfg.KeepAliveInterval = 30 * time.Second
+	if c.attachment != nil {
+		cfg.KeepAliveInterval = 10 * time.Second
+		cfg.ConnectionWriteTimeout = 20 * time.Second
+	}
 	// Expected disconnects and remote closure must not corrupt the TUI output.
 	cfg.LogOutput = io.Discard
 	wrappedConn := &protocol.WsConn{Conn: conn}
@@ -277,6 +318,11 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 	}
 	c.emit(LifecycleEvent{Type: "connected", TunnelID: tunnelID, Port: port, URL: tunnelURL})
 	generation := ""
+	if c.attachment != nil && resp.Header.Get(protocol.RegistrationHeader) != "1" {
+		session.Close()
+		conn.Close()
+		return nil, errors.New("required registration capability unavailable")
+	}
 	if resp.Header.Get(protocol.RegistrationHeader) != "" {
 		if resp.Header.Get(protocol.RegistrationHeader) != protocol.RegistrationVersion {
 			session.Close()
@@ -298,6 +344,13 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 			session.Close()
 			conn.Close()
 			return nil, fmt.Errorf("registration acknowledgement failed: %w", err)
+		}
+		if c.attachment != nil {
+			if err := c.attachment.Acknowledge(generation, tunnelURL); err != nil {
+				session.Close()
+				conn.Close()
+				return nil, err
+			}
 		}
 		c.emit(LifecycleEvent{Type: "registered", TunnelID: tunnelID, Port: port, URL: tunnelURL, Generation: generation, RegistrationConfirmed: true})
 	}

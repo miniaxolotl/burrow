@@ -66,8 +66,8 @@ There are no privileged users, global lists, or admin commands. Each command see
 
 **Development branch:** these additions are being implemented in the draft
 [workflow implementation](tunnel-workflows-implementation.md); this is not a
-claim that the published npm release already includes them. Stable aliases,
-one-hostname routing and capture/replay remain pending.
+claim that the published npm release already includes them. Routing and
+capture/replay remain pending.
 
 ```sh
 burrowctl tunnel 3000 --headless
@@ -135,6 +135,42 @@ revoke those IDs. A terminal authorization/ownership/revocation rejection during
 reconnect likewise stops the whole headless invocation nonzero.
 
 ## Automatic ownership
+
+### Saved URLs (development)
+
+```sh
+burrowctl tunnel 3000 --name webhook --output jsonl
+burrowctl saved --output json
+burrowctl close TUNNEL_ID --output json
+burrowctl tunnel 3000 --name webhook --replace --yes --output jsonl
+```
+
+Names are private local aliases, not vanity subdomains. A saved alias reuses its
+random URL across CLI/server restarts for the same canonical server and owner.
+Unnamed commands still create fresh URLs. One named tunnel is allowed per command;
+ports are explicit. `saved` reports local saved/closed/uncertain/conflict state and
+observation time, not a live server snapshot, and never generates an owner token.
+
+Persistent mode requires capability discovery and registration support; old or
+unreachable servers fail before a persistent claim, with no random-URL fallback.
+Private candidate IDs, logical attachments and attempt nonces are atomically
+persisted before admission. Kernel-held locks prevent simultaneous local use.
+After uncertain admission, the same nonce reconciles the committed generation;
+a stale generation is terminal, never an automatic takeover. Copying private owner
+and alias files gives their holder equivalent authority, not a new trust boundary.
+
+Normal exit disconnects without revoking the URL. Explicit `close` is permanent;
+uncertain closes are reconciled via an owner-only reservation read before reuse.
+Replacement requires a confirmed closed alias and `--yes` and chooses a new random
+ID; it never clears a tombstone. Replacement text warns about the old URL and target.
+Missing/corrupt/newer local state fails without discarding it. Preserve files and
+owner credentials for recovery; a URL alone cannot recover ownership.
+
+Only one server instance is supported. Persistent sessions heartbeat every ten
+seconds; an unresponsive transport is closed after a twenty-second ping timeout
+(at most thirty seconds from an idle failure). Busy admission may wait within the
+30-second startup deadline. Connection metadata expiry does not expire ownership
+or fencing. Legacy clients cannot attach to persistent IDs, even as the same owner.
 
 The first tunnel command generates a random 256-bit owner credential for that server. It is stored under `~/.config/burrow/owners/<server-hash>.token`, with directory permissions 0700 and file permissions 0600. Concurrent first launches share one identity. Different servers receive different credentials; returning to a server reuses its identity.
 
