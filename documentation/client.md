@@ -62,6 +62,75 @@ burrowctl tunnel 3000 --server staging.brmbl.dev
 
 There are no privileged users, global lists, or admin commands. Each command sees only the tunnels belonging to its owner credential. `list` works from a second terminal using the same server and local configuration.
 
+## Headless mode and structured output
+
+**Development branch:** these additions are being implemented in the draft
+[workflow implementation](tunnel-workflows-implementation.md); this is not a
+claim that the published npm release already includes them. Stable aliases,
+one-hostname routing and capture/replay remain pending.
+
+```sh
+burrowctl tunnel 3000 --headless
+burrowctl tunnel 3000 --output jsonl
+burrowctl list --output json
+burrowctl logs TUNNEL_ID --tail 20 --output json
+burrowctl logs TUNNEL_ID --follow --output jsonl
+burrowctl close TUNNEL_ID --output json
+```
+
+An ordinary interactive terminal still opens the manager. When stdin or stdout
+is not a terminal, `tunnel` defaults to plain headless output. `--headless` makes
+that choice explicit; JSON/JSONL implies it. Headless mode never opens a browser,
+copies a URL or reads interactive input. Keep the process running to forward.
+
+| Format  | Contract                                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------------------- |
+| `text`  | Human-readable output without TUI control codes in headless mode.                                                   |
+| `json`  | One result/error envelope for `list`, non-following `logs` and `close`.                                             |
+| `jsonl` | One envelope per line; required for machine-readable `tunnel` and `logs --follow`. Finite commands also support it. |
+
+Structured stdout contains only envelopes. Errors use that same format, not a
+second human error or usage banner. Human errors use stderr; a broken/blocked
+output sink can require a short stderr diagnostic because stdout is unavailable.
+Help, version and telemetry preferences remain ordinary text, not structured APIs.
+
+Every envelope has `schema_version: 1`, `type`, UTC `timestamp`, per-invocation
+increasing `sequence`, nullable `tunnel_id`, and `data`. `timestamp` is emission
+time; transport events separately include their actual `data.observed_at` so
+queued output does not pretend an old observation is fresh. Ignore unknown
+additive fields/event types; incompatible meanings require a schema-version change.
+
+- Finite success: `result`; failure: `error` with a bounded `data.code` and a
+  sanitized message. Current codes are `invalid_argument` and `operation_failed`.
+  Provider response bodies and owner credentials are not printed in machine errors.
+- Transport events: `connecting`, `connected`, `disconnected`, `reconnecting`,
+  `failed`; clean process cancellation emits `stopped`. Reconnect events include
+  consecutive `attempt` and actual `retry_delay_ms`, with capped jittered backoff.
+- **No `ready` event yet.** `registration_confirmed` is currently false even on
+  `connected`: WebSocket/yamux establishment is not a server-registration
+  acknowledgement, successful local request or successful application processing.
+- List results contain `tunnels` and `count`; unknown `latency_ms` is null, and
+  response usage is `total_size_bytes`. Log results are arrays; follow emits `log`
+  entries without repeating a snapshot. `--tail` applies only to the first
+  followed snapshot; entry IDs preserve late request completions.
+- Log `duration_ms` uses integer milliseconds; `size_bytes` retains the server's
+  response-stream measurement, including HTTP headers. Unknown `status_code` is
+  null, not zero/200; the current server forwarding path does not populate HTTP
+  status. These remain metadata logs, not replayable request captures.
+
+Exit codes are 0 for successful commands/clean SIGINT or SIGTERM shutdown, 1 for
+runtime/output failure, and 2 for invalid arguments/configuration. Streaming
+commands reject `--output json`; use `jsonl` instead. Arguments are checked before
+creating an owner. Connection startup is bounded to 30 seconds and shutdown drain
+to five seconds. An output write blocked for two seconds fails rather than
+leaving forwarding running invisibly behind a stalled consumer.
+
+Headless startup stops the invocation if any requested connection fails and
+disconnects connections it already opened. This is rollback, **not atomic public
+exposure**: a connection may have been briefly reachable. It does not permanently
+revoke those IDs. A terminal authorization/ownership/revocation rejection during
+reconnect likewise stops the whole headless invocation nonzero.
+
 ## Automatic ownership
 
 The first tunnel command generates a random 256-bit owner credential for that server. It is stored under `~/.config/burrow/owners/<server-hash>.token`, with directory permissions 0700 and file permissions 0600. Concurrent first launches share one identity. Different servers receive different credentials; returning to a server reuses its identity.

@@ -1,10 +1,14 @@
 package cmd
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"burrow/burrowctl/cmd/tunnel"
+	"burrow/burrowctl/internal/clioutput"
 	"burrow/burrowctl/internal/config"
 	"burrow/protocol/telemetry"
 
@@ -22,12 +26,24 @@ var rootCmd = &cobra.Command{
 var configErr error
 
 func Execute(config telemetry.Config) (err error) {
+	return ExecuteContext(context.Background(), config)
+}
+
+func ExecuteContext(ctx context.Context, config telemetry.Config) (err error) {
+	rootCmd.SetContext(ctx)
+	rootCmd.SilenceErrors = true
+	rootCmd.SilenceUsage = true
+	rootCmd.SetFlagErrorFunc(func(_ *cobra.Command, err error) error { return clioutput.Invalid(err) })
 	var reporter *telemetry.Reporter
 	started := time.Now()
 	operation := telemetry.Command
 	rootCmd.PersistentPreRunE = func(command *cobra.Command, _ []string) error {
+		if err := clioutput.Prepare(command); err != nil {
+			return err
+		}
+		loadClientConfig()
 		if configErr != nil {
-			return configErr
+			return clioutput.Invalid(configErr)
 		}
 		switch command.Name() {
 		case "tunnel":
@@ -61,7 +77,20 @@ func Execute(config telemetry.Config) (err error) {
 			reporter.Track(telemetry.CommandCompleted)
 		}
 	}()
-	return rootCmd.Execute()
+	command, err := rootCmd.ExecuteC()
+	if errors.Is(err, context.Canceled) && ctx.Err() != nil {
+		if output := clioutput.FromCommand(command); output.Structured() {
+			return output.Emit("stopped", "", map[string]string{"reason": "cancelled"})
+		}
+		return nil
+	}
+	if err != nil {
+		if writeErr := clioutput.Report(command, err); writeErr != nil {
+			fmt.Fprintln(rootCmd.ErrOrStderr(), "Error: command output unavailable")
+			return writeErr
+		}
+	}
+	return err
 }
 
 func SetVersion(v string) {
@@ -69,13 +98,12 @@ func SetVersion(v string) {
 }
 
 func init() {
-	cobra.OnInitialize(loadClientConfig)
-
 	viper.SetEnvPrefix("BURROW")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
 	viper.AutomaticEnv()
 
 	tunnel.AddCommands(rootCmd)
+	rootCmd.PersistentFlags().String("output", "text", "Output format: text, json (finite commands), or jsonl")
 	rootCmd.AddCommand(telemetryCommand())
 }
 

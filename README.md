@@ -14,7 +14,8 @@ and publication boundaries; source changes are not a production rollout.
 
 The [tunnel workflow development plan](documentation/tunnel-workflows-plan.md)
 proposes stable URLs across CLI restarts, local replay, headless/structured output
-and one-hostname routing. These additions are planned, not currently available.
+and one-hostname routing. See [implementation status](documentation/tunnel-workflows-implementation.md)
+for development progress; this is not a published-release announcement.
 
 ## Quick start
 

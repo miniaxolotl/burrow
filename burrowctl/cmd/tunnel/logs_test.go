@@ -27,7 +27,11 @@ func TestFollowLogsIncludesLateCompletionsAndRollingBuffers(t *testing.T) {
 		{afterRestart},         // A fresh buffer may contain older timestamps.
 		{afterRestart},
 	} {
-		seen = printLogBatch(&out, snapshot, seen, 1)
+		var err error
+		seen, err = printLogBatch(&out, snapshot, seen, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
 		if len(seen) > len(snapshot) {
 			t.Fatal("follow state grew beyond the rolling buffer")
 		}
@@ -44,10 +48,16 @@ func TestFollowLogsIncludesLateCompletionsAndRollingBuffers(t *testing.T) {
 
 func TestFollowLogsTailAppliesOnlyToInitialSnapshot(t *testing.T) {
 	var out bytes.Buffer
-	seen := printLogBatch(&out, nil, nil, 1)
-	printLogBatch(&out, []*protocol.TunnelLog{
+	seen, err := printLogBatch(&out, nil, nil, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = printLogBatch(&out, []*protocol.TunnelLog{
 		{ID: "first", Path: "/first"}, {ID: "second", Path: "/second"},
 	}, seen, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !strings.Contains(out.String(), "/first") || !strings.Contains(out.String(), "/second") {
 		t.Fatalf("tail suppressed newly completed requests: %s", out.String())
 	}
