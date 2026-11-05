@@ -159,6 +159,43 @@ mise exec opentofu@1.12.6 -- bash scripts/infra/check.sh
 BURROW_SMOKE_SERVER=brmbl.dev go test ./burrowctl/internal -run TestLiveTunnel -count=1 -v
 ```
 
+The smoke test uses a fresh in-memory owner credential, checks apex health between
+tunnel requests, and explicitly revokes its own tunnel at completion. It never
+loads a globally installed client's configuration.
+
+### Bounded live load testing
+
+Run only with authorization for the target service. This is intentionally **not**
+part of deployment smoke testing or normal CI:
+
+```bash
+BURROW_LOAD_SERVER=brmbl.dev go test ./burrowctl/internal -run '^TestLiveTunnelLoad$' -count=1 -v -timeout 4m
+```
+
+The fixture uses a private temporary HOME/config, fresh in-memory owner and unique
+response marker. It exposes only synthetic loopback services through three new
+tunnels. It never invokes or edits the global CLI or another owner's tunnels.
+Run from a separate machine/temporary Droplet for an independent test location;
+copy only a compiled test binary, not local credentials or provider secrets.
+
+The fixed ramp is 5, 15, 30, 60 and 100 requests/second for ten seconds each, with
+at most 32 in flight and 2,100 measured small requests overall. Measured requests
+are never retried. Incorrect status/marker/path/body, a request failure or observed
+latency over two seconds stops the ramp. The test also checks management routing,
+64 KiB/1 MiB/4 MiB upload-and-echo integrity, the 200-entry history bound, response
+usage retained after history eviction, and rejection of a transport message over
+1 MiB. Cleanup revokes only its own IDs and verifies its owner has no active
+tunnels; persistent revoked ownership tombstones remain by design.
+
+Capture actual completed requests, achieved throughput, errors and latency
+percentiles. A short successful ramp establishes only the workload tested, not
+maximum capacity, a sustained-load SLO or deployment continuity. Stop on baseline
+correctness failures instead of interpreting them as saturation. Destroy any
+temporary Droplet and SSH key and verify their absence, allowing for provider
+readback delay. [Investigation and reproduction](request-isolation.md).
+
+### Deployment continuity limits
+
 App Platform runs **one instance per environment** because active WebSocket and
 yamux sessions live in Go memory. During a deployment, clients reconnect using
 their existing reconnect behavior. Horizontal scaling requires connection-aware
