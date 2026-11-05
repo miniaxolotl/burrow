@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.17](https://github.com/miniaxolotl/burrow/compare/v0.3.16...v0.3.17) (2026-11-04)
+
+
+### Bug Fixes
+
+* **deps:** resolve blocked security updates ([#74](https://github.com/miniaxolotl/burrow/issues/74)) ([64b4a6c](https://github.com/miniaxolotl/burrow/commit/64b4a6c8b340861c90a1662e2e15a231fa3fa3b0))
+
 ## [0.3.16](https://github.com/miniaxolotl/burrow/compare/v0.3.15...v0.3.16) (2026-11-04)
 
 
