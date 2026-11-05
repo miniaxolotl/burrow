@@ -14,6 +14,14 @@ import (
 
 var ErrBusy = errors.New("local state is in use")
 
+func Check(path string) error {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	return check(info, false)
+}
+
 func check(info os.FileInfo, dir bool) error {
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok || stat.Uid != uint32(os.Getuid()) || info.Mode()&os.ModeSymlink != 0 || info.IsDir() != dir || (!dir && !info.Mode().IsRegular()) || info.Mode().Perm()&0077 != 0 {

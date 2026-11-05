@@ -17,6 +17,12 @@ import (
 
 const MaxHeaders = 32 * 1024
 
+type Observation interface {
+	Wrap(io.ReadCloser) io.ReadCloser
+	Complete()
+	Unavailable(string)
+}
+
 // DialLoopback does not resolve DNS, use environment proxies or accept a host
 // from public input. Both address families share a five-second preparation bound.
 func DialLoopback(ctx context.Context, port uint16) (net.Conn, error) {
@@ -61,6 +67,14 @@ func (t *Table) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	var observation Observation
+	if t.Observe != nil {
+		observation = t.Observe(r, route, path)
+		if observation != nil {
+			r.Body = observation.Wrap(r.Body)
+			defer observation.Complete()
+		}
+	}
 	transport := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) { return DialLoopback(ctx, route.Port) }, DisableKeepAlives: true, DisableCompression: true, ResponseHeaderTimeout: 30 * time.Second, MaxResponseHeaderBytes: MaxHeaders}
 	defer transport.CloseIdleConnections()
 	proxy := &httputil.ReverseProxy{
@@ -82,6 +96,12 @@ func (t *Table) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}, Transport: transport, ErrorLog: log.New(io.Discard, "", 0),
+		ModifyResponse: func(response *http.Response) error {
+			if observation != nil && (response.StatusCode == 101 || strings.HasPrefix(strings.ToLower(response.Header.Get("Content-Type")), "text/event-stream")) {
+				observation.Unavailable("streaming_or_upgrade")
+			}
+			return nil
+		},
 		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, _ error) {
 			http.Error(w, fmt.Sprintf("Local upstream unavailable for route %s", route.Path), 502)
 		},

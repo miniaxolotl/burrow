@@ -3,6 +3,7 @@ package routing
 import (
 	"errors"
 	"net"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -20,8 +21,9 @@ type Route struct {
 	HostHeader  string `json:"host_header,omitempty"`
 }
 type Table struct {
-	Version int     `json:"version"`
-	Routes  []Route `json:"routes"`
+	Version int                                            `json:"version"`
+	Routes  []Route                                        `json:"routes"`
+	Observe func(*http.Request, Route, string) Observation `json:"-"`
 }
 
 func Parse(data []byte) (*Table, error) {
