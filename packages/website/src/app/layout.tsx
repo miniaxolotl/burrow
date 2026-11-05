@@ -14,6 +14,9 @@ import "./brand-family.css";
 import "./marketing-ui.css";
 import "./site-chrome.css";
 import "./cookie-consent.css";
+import "./product-design.css";
+import "./family-finish.css";
+import "./composition.css";
 
 const sans = localFont({
   src: [
@@ -91,7 +94,15 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${sans.variable} ${mono.variable}`}>
+      <head>
+        <link
+          rel="alternate"
+          type="text/plain"
+          href="/llms.txt"
+          title="Public product guide"
+        />
+      </head>
+      <body className={`marketing-site ${sans.variable} ${mono.variable}`}>
         <a href="#main" className="skip-link">
           Skip to content
         </a>

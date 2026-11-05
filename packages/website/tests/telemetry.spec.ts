@@ -310,7 +310,7 @@ test("provider failures leave the product usable", async ({
   await page.locator("[data-analytics-event=cta_clicked]").click();
   await expect(page).toHaveURL(/#install$/);
   await page
-    .getByRole("button", { name: "Copy install the cli command", exact: true })
+    .getByRole("button", { name: "Copy npm install command", exact: true })
     .click();
   await expect(
     page.getByText("Copied to clipboard.", { exact: true }),

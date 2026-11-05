@@ -1,0 +1,18 @@
+{
+  "source": "Bramble Labs marketing kit",
+  "derivative": "sRGB WebP, quality 86, at most 2400px wide; no upscaling",
+  "assets": [
+    {
+      "file": "/images/kit/burrow-code.webp",
+      "kitSource": "_source/assets/photos/burrow-code.jpg",
+      "kitSourceSha256": "dc4cc7c7b2f7e88c6e7a7c1d667dc90dba979d65e67d174fcd78a4721d062fde",
+      "sha256": "cb29ba8f0f75171441c0fb90e96b069083b04f598bdac8e61c2e1e961a4e6227",
+      "width": 2400,
+      "height": 1600,
+      "source": "https://images.unsplash.com/photo-1607799279861-4dd421887fb3",
+      "license": "https://unsplash.com/license",
+      "creditRecord": "marketing/_source/assets/photos/CREDITS.md",
+      "use": "Illustrative marketing photography, not product capture or customer data"
+    }
+  ]
+}
