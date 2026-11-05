@@ -19,6 +19,16 @@ for (const supersede of [false, true])
     executable("python3", "#!/bin/sh\nexit 0\n");
     executable("curl", "#!/bin/sh\nexit 0\n");
     executable(
+      "node",
+      `#!/bin/sh
+if [ "$1" = scripts/infra/wait-app.mjs ]; then
+  echo provider-generation-ready >> "$FENCE_LOG"
+  exit 0
+fi
+exec "${process.execPath}" "$@"
+`,
+    );
+    executable(
       "gh",
       `#!/usr/bin/env node
 import {appendFileSync,readFileSync} from 'node:fs';

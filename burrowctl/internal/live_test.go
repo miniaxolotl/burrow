@@ -44,8 +44,7 @@ func TestLiveTunnel(t *testing.T) {
 	}
 	httpClient := &http.Client{Timeout: 20 * time.Second}
 	for _, path := range []string{"/", "/health", "/tunnels", "/nested/path?probe=1"} {
-		req, _ := http.NewRequestWithContext(ctx, http.MethodPost, url+path, strings.NewReader("forwarded-body"))
-		resp, err := httpClient.Do(req)
+		resp, err := liveRequest(ctx, httpClient, http.MethodPost, url+path, "forwarded-body")
 		if err != nil {
 			t.Fatal(err)
 		}
