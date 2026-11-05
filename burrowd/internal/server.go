@@ -8,14 +8,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"burrow/protocol"
@@ -447,9 +448,8 @@ func (s *Server) expireTunnel(tunnelID, sessionID string, pending *pendingRemova
 	s.registry.Remove(ctx, tunnelID, sessionID)
 }
 
-// handleTCP proxies an inbound request through the yamux tunnel to the client's
-// local service. Both WebSocket and plain HTTP are handled by writing the full
-// HTTP request into the tunnel stream and then relaying raw bytes bidirectionally.
+// handleTCP opens one yamux stream for each HTTP request. An ingress connection
+// can be reused across hosts, so only negotiated upgrades may own that connection.
 func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	started := time.Now()
 	outcome := telemetry.Unavailable
@@ -494,33 +494,46 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// HTTP and WebSocket upgrades share the same request forwarding and byte relay.
-func (s *Server) proxyStream(w http.ResponseWriter, r *http.Request, stream net.Conn) (int64, bool) {
-	hj, ok := w.(http.Hijacker)
-	if !ok {
-		return 0, false
-	}
-	// Finish reading the original request body before hijacking. Reading it
-	// afterward starts net/http's background reader on a connection we own,
-	// which can consume the first byte of the next keep-alive request.
-	if err := r.Write(stream); err != nil {
-		jsonError(w, "Failed to forward request", http.StatusBadGateway)
-		return 0, false
-	}
-	client, brw, err := hj.Hijack()
-	if err != nil {
-		return 0, false
-	}
-	defer client.Close()
+// responseConn counts response-stream bytes, including HTTP headers, as before.
+// Upgrade forwarding can read concurrently while the proxy finishes shutting down.
+type responseConn struct {
+	net.Conn
+	bytes atomic.Int64
+}
 
-	var respSize int64
-	done := make(chan struct{}, 2)
-	// Keep using the returned reader: it can contain pipelined request bytes.
-	go func() { io.Copy(stream, brw.Reader); stream.Close(); done <- struct{}{} }()
-	go func() { n, _ := io.Copy(client, stream); respSize = n; client.Close(); done <- struct{}{} }()
-	<-done
-	<-done
-	return respSize, true
+func (c *responseConn) Read(p []byte) (int, error) {
+	n, err := c.Conn.Read(p)
+	c.bytes.Add(int64(n))
+	return n, err
+}
+
+// Keep normal HTTP under net/http's request dispatcher. Relaying a hijacked
+// connection would send subsequent requests (even other hosts or owner APIs) to
+// the first local service. ReverseProxy hijacks only a negotiated 101 upgrade.
+func (s *Server) proxyStream(w http.ResponseWriter, r *http.Request, stream net.Conn) (int64, bool) {
+	response := &responseConn{Conn: stream}
+	transport := &http.Transport{
+		DialContext: func(context.Context, string, string) (net.Conn, error) {
+			return response, nil
+		},
+		DisableKeepAlives:  true, // Each stream belongs to exactly one request.
+		DisableCompression: true,
+	}
+	defer transport.CloseIdleConnections()
+	ok := true
+	proxy := &httputil.ReverseProxy{
+		Director: func(out *http.Request) {
+			out.URL.Scheme = "http"
+			out.URL.Host = r.Host
+		},
+		Transport: transport,
+		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, _ error) {
+			ok = false
+			jsonError(w, "Failed to forward request", http.StatusBadGateway)
+		},
+	}
+	proxy.ServeHTTP(w, r)
+	return response.bytes.Load(), ok
 }
 
 func (s *Server) Start(addr string) error {

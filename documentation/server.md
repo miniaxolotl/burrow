@@ -59,6 +59,32 @@ Each log entry has an opaque `id` for deduplication. Entries are appended when r
 
 Traffic to `https://<id>.<domain>` goes to the exposed application. Its authentication is independent of Burrow management access. A shareable URL is never proof of ownership.
 
+## Request isolation and usage bounds
+
+Every HTTP request is routed by its current Host, even when an ingress reuses the
+same origin connection for different tunnel hosts or the management API. Ordinary
+HTTP stays under Go's request dispatcher; one request uses one yamux stream and a
+request-scoped HTTP transport. Only a successfully negotiated protocol upgrade
+(such as WebSocket) takes over the connection. HTTP/1 keep-alive, HTTP/2 responses,
+streaming bodies and WebSocket upgrades are covered by regression tests.
+
+Request history retains **200 completed requests per tunnel** in memory. Usage
+counts bytes read from the local service's response stream, including HTTP
+headers; it is not bidirectional bandwidth accounting, a billing meter or a
+transfer allowance. Counts survive history eviction but reset when tunnel state
+is cleaned up. HTTP request bodies are streamed rather than limited by the
+**1 MiB transport WebSocket-message** bound: yamux splits larger HTTP payloads
+across messages.
+
+There is currently no application-level requests-per-second, transfer-volume or
+per-owner tunnel-count quota. This is not an unlimited-capacity guarantee. Hosted
+edge, memory, connection, compute and Redis/provider limits still apply. Production
+uses one 0.5 GB App Platform instance; infrastructure declares a $20/month Upstash
+usage budget with autoscaling disabled. Maximum safe capacity requires measured
+acceptance, not inference from these settings. See
+[the request-isolation investigation](request-isolation.md) and
+[bounded live testing](deploy.md#bounded-live-load-testing).
+
 ## Ownership lifecycle
 
 - Redis atomically binds each ID to an owner hash. A different owner cannot replace the connection, claim its ID, read its logs, or close it.
