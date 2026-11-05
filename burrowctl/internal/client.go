@@ -42,14 +42,16 @@ type Client struct {
 // LifecycleEvent reports observed transport state, never application readiness.
 // Error codes are bounded vocabulary, not remote response bodies or credentials.
 type LifecycleEvent struct {
-	ObservedAt   time.Time
-	Type         string
-	TunnelID     string
-	Port         uint16
-	URL          string
-	Attempt      int
-	RetryDelayMS int64
-	Code         string
+	ObservedAt            time.Time
+	Type                  string
+	TunnelID              string
+	Port                  uint16
+	URL                   string
+	Attempt               int
+	RetryDelayMS          int64
+	Code                  string
+	Generation            string
+	RegistrationConfirmed bool
 }
 
 func (c *Client) SetEventHandler(handler func(LifecycleEvent)) {
@@ -90,6 +92,7 @@ type TunnelConn struct {
 	totalSize  int64
 	forwarded  sync.Once
 	status     string
+	generation string
 }
 
 func NewClient(server, token, domain string, secure bool, observers ...telemetry.Observer) *Client {
@@ -168,7 +171,6 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 	c.mu.Unlock()
 
 	tunnelURL := tc.URL
-	c.emit(LifecycleEvent{Type: "connected", TunnelID: tc.ID, Port: port, URL: tc.URL})
 	c.workers.Go(func() { c.trackLatency(tc) })
 	c.workers.Go(func() { c.handleTunnel(tc, port) })
 	connected = true
@@ -208,7 +210,7 @@ func (c *Client) trackLatency(tc *TunnelConn) {
 }
 
 func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port uint16) (*TunnelConn, error) {
-	header := http.Header{"X-Tunnel-Token": []string{c.token}}
+	header := http.Header{"X-Tunnel-Token": {c.token}, protocol.RegistrationHeader: {protocol.RegistrationVersion}}
 	scheme := "ws"
 	if c.secure {
 		scheme = "wss"
@@ -273,15 +275,42 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 		conn.Close()
 		return nil, fmt.Errorf("failed to create yamux session: %w", err)
 	}
+	c.emit(LifecycleEvent{Type: "connected", TunnelID: tunnelID, Port: port, URL: tunnelURL})
+	generation := ""
+	if resp.Header.Get(protocol.RegistrationHeader) != "" {
+		if resp.Header.Get(protocol.RegistrationHeader) != protocol.RegistrationVersion {
+			session.Close()
+			conn.Close()
+			return nil, errors.New("unsupported registration version")
+		}
+		stop := context.AfterFunc(connectContext, func() { session.Close(); conn.Close() })
+		control, err := session.AcceptStream()
+		if err == nil {
+			deadline, _ := connectContext.Deadline()
+			control.SetReadDeadline(deadline)
+			var ack protocol.Registration
+			ack, err = protocol.ReadRegistration(control, tunnelID)
+			control.Close()
+			generation = ack.Generation
+		}
+		stop()
+		if err != nil {
+			session.Close()
+			conn.Close()
+			return nil, fmt.Errorf("registration acknowledgement failed: %w", err)
+		}
+		c.emit(LifecycleEvent{Type: "registered", TunnelID: tunnelID, Port: port, URL: tunnelURL, Generation: generation, RegistrationConfirmed: true})
+	}
 
 	return &TunnelConn{
-		ID:      tunnelID,
-		Port:    port,
-		URL:     tunnelURL,
-		wsConn:  conn,
-		session: session,
-		latency: latency,
-		status:  "active",
+		ID:         tunnelID,
+		Port:       port,
+		URL:        tunnelURL,
+		wsConn:     conn,
+		session:    session,
+		latency:    latency,
+		status:     "active",
+		generation: generation,
 	}, nil
 }
 
@@ -353,8 +382,8 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			tc.reconnects++
 			tc.URL = newTC.URL
 			tc.status = "active"
+			tc.generation = newTC.generation
 			c.mu.Unlock()
-			c.emit(LifecycleEvent{Type: "connected", TunnelID: tc.ID, Port: port, URL: newTC.URL})
 			c.observer.Track(telemetry.TunnelReconnected)
 			c.observer.Operation(telemetry.Reconnect, started, telemetry.Success)
 			reconnectDelay = time.Second

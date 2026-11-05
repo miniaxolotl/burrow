@@ -291,6 +291,10 @@ func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	if version := r.Header.Get(protocol.RegistrationHeader); version != "" && version != protocol.RegistrationVersion {
+		jsonError(w, "Unsupported registration version", http.StatusBadRequest)
+		return
+	}
 	ownerHash := requestOwner(w, r)
 	if ownerHash == "" {
 		return
@@ -382,7 +386,12 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		}
 		return nil
 	}
-	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Tunnel-URL": []string{tunnelURL}, "Cache-Control": []string{"no-store"}})
+	headers := http.Header{"X-Tunnel-URL": {tunnelURL}, "Cache-Control": {"no-store"}}
+	registration := r.Header.Get(protocol.RegistrationHeader) == protocol.RegistrationVersion
+	if registration {
+		headers.Set(protocol.RegistrationHeader, protocol.RegistrationVersion)
+	}
+	conn, err := s.upgrader.Upgrade(w, r, headers)
 	if err != nil {
 		return nil
 	}
@@ -393,6 +402,16 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 	if err != nil {
 		conn.Close()
 		return nil
+	}
+	var control *yamux.Stream
+	if registration {
+		control, err = session.conn.OpenStream()
+		if err != nil {
+			session.conn.Close()
+			return nil
+		}
+		defer control.Close()
+		control.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	}
 	// Commit the new generation only after the handshake succeeds. A failed
 	// upgrade cannot invalidate the previous connection or its concurrent refresh.
@@ -411,6 +430,13 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 	s.mu.Unlock()
 	if previous != nil {
 		previous.conn.Close()
+	}
+	if control != nil {
+		if err := json.NewEncoder(control).Encode(protocol.Registration{Version: 1, TunnelID: tunnelID, Generation: session.id}); err != nil {
+			// Return the installed session so the normal deferred disconnect path
+			// runs even if the acknowledgement was lost after commit.
+			session.conn.Close()
+		}
 	}
 	outcome = telemetry.Success
 	return session

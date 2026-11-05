@@ -2,9 +2,10 @@
 
 This is an in-progress implementation of the
 [workflow development plan](tunnel-workflows-plan.md), not a release announcement.
-All four features belong to one draft implementation PR stacked on planning
-PR #84. After that parent merges, retarget the same implementation PR to
-`development` and revalidate. Do not create per-feature implementation PRs.
+The owner subsequently requested a second implementation PR stacked on #88 for
+all remaining features. #88 preserves the verified initial headless checkpoint;
+`feat/tunnel-workflows-complete` contains the remaining work. Keep the child draft
+until combined acceptance passes. Retarget and revalidate as parents merge.
 
 ## Checkpoints
 
@@ -34,10 +35,31 @@ deployment, public tunnel or application-content capture is part of these tests.
 - Full normal Go tests and vet pass locally. The full race suite also passed in
   the existing Go 1.26.10 container with network disabled and read-only source/cache;
   rerun it on each published checkpoint. The host itself has no C compiler.
-- No registration acknowledgement is implemented yet: output deliberately reports
-  `registration_confirmed: false` and never emits `ready`. Saved aliases, routing,
-  encrypted capture/replay and real-Redis acceptance remain subsequent checkpoints
-  in this same implementation PR.
+- #88 has no registration acknowledgement. The child adds negotiated registration
+  and aggregate `ready` / `not_ready`; stable aliases, routing and capture/replay
+  are not implied by that barrier. Combined acceptance remains pending.
+
+### Registration protocol
+
+Clients offer `X-Burrow-Registration: 1`; servers echo it only when supported.
+Other requested versions are rejected before ownership reservation. Without the
+echo, new clients retain transport-only legacy behavior and never emit `ready`.
+No application probe is sent.
+
+The first server-opened yamux stream is reserved for a single JSON registration
+object followed by EOF, capped at 2048 bytes: version 1, tunnel ID and generation.
+The server opens this stream before exposing the session, then writes only after
+Redis registration and active-session installation. HTTP uses separate streams.
+The server write deadline is five seconds; client acceptance/read is within the
+30-second connection/startup deadline and cancelled with the command. Invalid,
+oversized or mismatched acknowledgements fail startup. No control data is sent
+to legacy clients.
+
+`connected` reports transport establishment; `registered` includes the matching
+generation and `registration_confirmed: true`. Aggregate `ready` contains all
+acknowledged IDs/generations/URLs. Loss emits `not_ready` before reconnect details;
+recovery needs fresh acknowledgements for every tunnel. Neither registration nor
+a response status proves application processing succeeded.
 
 ### Signal-cause compatibility regression
 

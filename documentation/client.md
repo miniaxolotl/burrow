@@ -106,9 +106,12 @@ additive fields/event types; incompatible meanings require a schema-version chan
 - Transport events: `connecting`, `connected`, `disconnected`, `reconnecting`,
   `failed`; clean process cancellation emits `stopped`. Reconnect events include
   consecutive `attempt` and actual `retry_delay_ms`, with capped jittered backoff.
-- **No `ready` event yet.** `registration_confirmed` is currently false even on
-  `connected`: WebSocket/yamux establishment is not a server-registration
-  acknowledgement, successful local request or successful application processing.
+- `connected` means transport only. On a compatible server, `registered` carries
+  its acknowledged generation and `registration_confirmed: true`; aggregate
+  `ready` follows only after every requested tunnel is registered. `not_ready`
+  invalidates that barrier on connection loss. Old servers have no registration
+  barrier and never produce `ready`. None of these proves application health or
+  successful application processing.
 - List results contain `tunnels` and `count`; unknown `latency_ms` is null, and
   response usage is `total_size_bytes`. Log results are arrays; follow emits `log`
   entries without repeating a snapshot. `--tail` applies only to the first
