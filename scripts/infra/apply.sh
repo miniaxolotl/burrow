@@ -26,6 +26,8 @@ python3 scripts/infra/domain-records.py "$root" --wait
 tofu -chdir="$root" plan -input=false -lock-timeout=120s -out=tfplan
 fence
 tofu -chdir="$root" apply -input=false tfplan
+app_id="$(tofu -chdir="$root" output -raw app_id)"
+node scripts/infra/wait-app.mjs "$app_id" "$TF_VAR_image_digest"
 url="$(tofu -chdir="$root" output -raw url)"
 for _ in $(seq 1 90); do
   if curl --fail --silent --show-error --max-time 10 "$url/health" >/dev/null 2>&1; then

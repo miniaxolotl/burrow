@@ -67,8 +67,14 @@ the complete website tree before the production merge.
 6. App Platform supplies wildcard certificate verification tokens. Deployment
    refreshes their TXT records through OpenTofu. **Infrastructure Maintenance**
    may also be dispatched explicitly on production for certificate reconciliation.
-7. Deployment waits for HTTPS health, then creates a real WSS/yamux tunnel and
-   checks HTTP body, headers, query strings, and API-like paths end to end.
+7. Deployment first waits for the provider's active single-instance generation
+   to match the exact requested digest, with no deployment still in progress.
+   A healthy previous generation cannot satisfy this five-minute bounded gate.
+   It then checks HTTPS health and a real WSS/yamux tunnel: HTTP body, headers,
+   query strings and API-like paths must all match end to end. Synthetic smoke
+   requests may retry edge 502/503/504 responses within their existing 90-second
+   caller deadline while routes converge. Other statuses, wrong successful bodies
+   and deadline expiry still fail; this is not business-request retry policy.
 
 The npm registry serves npm, pnpm, Yarn, and Bun. Native archives cover Linux and
 macOS on amd64/arm64. Docker images cover Linux amd64/arm64. There is currently
