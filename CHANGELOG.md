@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.18](https://github.com/miniaxolotl/burrow/compare/v0.3.17...v0.3.18) (2026-11-05)
+
+
+### Bug Fixes
+
+* **deploy:** await active provider generation before smoke ([#77](https://github.com/miniaxolotl/burrow/issues/77)) ([df15758](https://github.com/miniaxolotl/burrow/commit/df15758af9f418e3904ad7f4c49946d4e1779487))
+
 ## [0.3.17](https://github.com/miniaxolotl/burrow/compare/v0.3.16...v0.3.17) (2026-11-04)
 
 
