@@ -69,8 +69,10 @@ Size each spike before scheduling it; there is no calendar estimate here.
 
 ### Commit organization within the single implementation PR
 
-Use one task branch/worktree and one PR targeting `development`; do not open
-stacked or per-feature implementation PRs. Suggested focused commit subjects:
+Use one task branch/worktree and one implementation PR. The owner's subsequent
+instruction is to stack it on planning PR #84 until that parent merges, then
+retarget the same PR to `development` and revalidate. Do not create per-feature
+implementation PRs or a stack of feature PRs. Suggested focused commit subjects:
 
 1. `test(tunnels): add isolated workflow fixtures`
 2. `feat(cli): add cancellable headless output` — lifecycle and versioned encoders.
