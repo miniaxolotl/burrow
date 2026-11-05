@@ -38,3 +38,13 @@ deployment, public tunnel or application-content capture is part of these tests.
   `registration_confirmed: false` and never emits `ready`. Saved aliases, routing,
   encrypted capture/replay and real-Redis acceptance remain subsequent checkpoints
   in this same implementation PR.
+
+### Signal-cause compatibility regression
+
+The first full source CI run caught a Go 1.26.2-specific cancellation case: an
+interrupted HTTP request can wrap the signal context's cause (`terminated signal
+received`) rather than `context.Canceled`. The CLI now recognizes either the
+cancelled command context's error or its cause, without treating unrelated errors
+as clean shutdown. Text and JSON subprocess regressions cover it; both passed
+500 repetitions each on CI's exact Go 1.26.2 toolchain after the fix. Do not infer
+CI success from a newer local toolchain's passing result alone.

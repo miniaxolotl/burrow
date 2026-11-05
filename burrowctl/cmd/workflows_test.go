@@ -470,7 +470,7 @@ func TestWorkflowSignalCancelsManagementRequest(t *testing.T) {
 	}
 	command.Process.Signal(syscall.SIGTERM)
 	if err := command.Wait(); err != nil || stderr.Len() != 0 {
-		t.Fatalf("management stop: %v, stderr=%s", err, &stderr)
+		t.Fatalf("management stop: %v, stderr=%s, stdout=%s", err, &stderr, &stdout)
 	}
 	select {
 	case <-cancelled:
@@ -479,6 +479,31 @@ func TestWorkflowSignalCancelsManagementRequest(t *testing.T) {
 	}
 	if event := oneWorkflowEnvelope(t, stdout.Bytes()); event.Type != "stopped" {
 		t.Fatalf("wrong cancelled result: %+v", event)
+	}
+}
+
+func TestWorkflowTextSignalCancelsManagementRequest(t *testing.T) {
+	started := make(chan struct{})
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		close(started)
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+	command, _ := workflowCommand(t, "list", "--server", strings.TrimPrefix(server.URL, "http://"))
+	var stdout, stderr bytes.Buffer
+	command.Stdout, command.Stderr = &stdout, &stderr
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { command.Process.Kill() })
+	select {
+	case <-started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("management request did not start")
+	}
+	command.Process.Signal(syscall.SIGTERM)
+	if err := command.Wait(); err != nil || stderr.Len() != 0 || stdout.Len() != 0 {
+		t.Fatalf("text management stop: %v, stderr=%s, stdout=%s", err, &stderr, &stdout)
 	}
 }
 

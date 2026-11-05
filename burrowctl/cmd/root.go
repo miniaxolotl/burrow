@@ -78,7 +78,9 @@ func ExecuteContext(ctx context.Context, config telemetry.Config) (err error) {
 		}
 	}()
 	command, err := rootCmd.ExecuteC()
-	if errors.Is(err, context.Canceled) && ctx.Err() != nil {
+	// Transports may wrap Cause(ctx), not Err(ctx). In particular, signal
+	// contexts can carry a signal-specific cause instead of context.Canceled.
+	if ctx.Err() != nil && (errors.Is(err, ctx.Err()) || errors.Is(err, context.Cause(ctx))) {
 		if output := clioutput.FromCommand(command); output.Structured() {
 			return output.Emit("stopped", "", map[string]string{"reason": "cancelled"})
 		}
