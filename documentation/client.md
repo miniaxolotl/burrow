@@ -136,6 +136,14 @@ exposure**: a connection may have been briefly reachable. It does not permanentl
 revoke those IDs. A terminal authorization/ownership/revocation rejection during
 reconnect likewise stops the whole headless invocation nonzero.
 
+## Planned operational improvements
+
+The [tunnel operations plan](tunnel-operations-plan.md) proposes deployment-aware
+draining, local health diagnostics and richer metadata inspection. These are not
+current commands or health guarantees. Registration readiness does not prove
+local application health; the current log status may be unknown. Capture/replay
+remains a separate explicit opt-in.
+
 ## Automatic ownership
 
 ### Encrypted local capture and durable replay (development)

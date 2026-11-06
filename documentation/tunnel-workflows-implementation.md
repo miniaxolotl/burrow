@@ -1,13 +1,16 @@
 # Tunnel workflow implementation
 
-This is an in-progress implementation of the
+This records the merged development implementation of the
 [workflow development plan](tunnel-workflows-plan.md), not a release announcement.
-The owner requested implementation PR #90 stacked on #88, then explicitly split
+The owner merged #84, #88 and #90 in order. The implementation was delivered as
+PR #90 stacked on #88, with an explicit split of
 macOS secure capture into [draft follow-up #91](https://github.com/miniaxolotl/burrow/pull/91)
 because native macOS hardware is currently unavailable. #88 preserves the initial
 headless checkpoint; #90 delivers the remaining workflows with **Linux-only capture
 and replay**. Ordinary macOS tunneling, aliases, routing and headless mode remain
-available; they do not enable capture. Retarget and revalidate as parents merge.
+available; they do not enable capture. #91 remains a draft targeting development.
+The next [operations plan](tunnel-operations-plan.md) is a separate proposal, not
+part of this implemented scope.
 
 ## Checkpoints
 
@@ -18,13 +21,20 @@ available; they do not enable capture. Retarget and revalidate as parents merge.
 | Registration acknowledgement and saved aliases | Implemented: negotiated acknowledgement, aggregate readiness, durable attachment CAS/nonce reconciliation, private locked aliases and close/replacement state; restart and partition tests pass. |
 | One-hostname local routing                     | Implemented: strict config, bounded private HTTP adapter, loopback routing, upgrade/SSE/trailer compatibility and scrollable TUI route table; exercised in the combined scenario.                |
 | Encrypted capture and durable local replay     | Linux CLI, native TUI, real-service combination and storage/crash tests pass. macOS adapter and native acceptance are separately deferred in #91, not a #90 blocker.                             |
-| Combined acceptance and full exact-head gates  | Linux combined acceptance and full source CI passed at a42a6c9; scope-only documentation changes require current-head CI recorded in #90.                                                        |
+| Combined acceptance and full exact-head gates  | Linux combined acceptance passed; native PR CI passed all nine jobs at #88 head a1fc16b and #90 head 94c50df before merge.                                                                       |
 
 Each checkpoint uses focused passing commits with matching tests and documentation.
-Readiness for #90 uses the Linux capture scope above; #91 stays draft until its
+The merged #90 uses the Linux capture scope above; #91 stays draft until its
 macOS implementation and native acceptance pass. No production
 deployment or public tunnel is part of these tests. Capture fixtures use only
 synthetic application content and isolated credential facilities.
+
+Final native PR evidence: [#88 CI](https://github.com/miniaxolotl/burrow/actions/runs/42150609083)
+and [#90 CI](https://github.com/miniaxolotl/burrow/actions/runs/42150627605). Their
+heads include the native-stack admission repair; earlier independent green
+source dispatches alone did not establish merge readiness. The merged development
+tree at `4f5340b` exactly matched tested #90 head `94c50df`. Historical checkpoint
+details below retain the original verification/toolchain context.
 
 ## Implemented checkpoint evidence
 
@@ -158,7 +168,7 @@ controlled SQLite failures are not proof of every OS/filesystem outage mode.
 
 The owner moved macOS capture implementation/native acceptance to #91; it no
 longer blocks #90. The non-Linux rejection guard stays in place, and no native
-macOS capture test is claimed. Record exact-current-head source CI in #90.
+macOS capture test is claimed. Final exact-head native CI is linked above.
 
 The final uncached parallel pass found a test-only fixed-sleep assumption after
 CLI exit. The server may observe that disconnect later under load. Restart

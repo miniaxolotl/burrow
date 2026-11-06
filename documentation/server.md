@@ -41,9 +41,11 @@ burrowd stop
 
 Remote deployments require TLS termination and a wildcard certificate. Production uses `brmbl.dev`; staging uses `staging.brmbl.dev`. See [deployment](deploy.md).
 
-## Five API routes
+## API routes
 
-All management requests require `X-Tunnel-Token: <owner-credential>`. The CLI creates this credential automatically; no account is needed. URL query credentials are rejected.
+Owner-scoped management requests require `X-Tunnel-Token: <owner-credential>`.
+Health and capability discovery are public exceptions. The CLI creates the
+credential automatically; no account is needed. URL query credentials are rejected.
 
 | Method    | Route                                         | Access / result                                |
 | --------- | --------------------------------------------- | ---------------------------------------------- |
@@ -52,6 +54,17 @@ All management requests require `X-Tunnel-Token: <owner-credential>`. The CLI cr
 | WebSocket | `/tunnels/connect?tunnel_id=<id>&port=<port>` | Create or reconnect an owned tunnel            |
 | GET       | `/tunnels/<id>/logs`                          | Owner's request history, up to 200 entries     |
 | DELETE    | `/tunnels/<id>`                               | Owner-only closure and permanent ID revocation |
+
+Development also provides public `GET /.well-known/burrow-capabilities` for
+registration/persistent-attachment negotiation and owner-only
+`GET /tunnels/<id>/reservation` for saved-alias reconciliation. These accompany
+the [merged workflow implementation](tunnel-workflows-implementation.md), not a
+claim that every published server already supports them.
+
+The proposed [tunnel operations plan](tunnel-operations-plan.md) adds bounded
+draining, optional lifecycle notices and a separate readiness endpoint. None is
+implemented by the planning PR. `/health` currently reports only the fixed response
+above, not Redis readiness, tunnel registration or local application health.
 
 The list response is `{"tunnels":[...],"count":N}`. Both fields use the same owner-filtered snapshot. Disconnected grace-period records are not counted. There is no global count/list endpoint, no `all` scope, and no uptime disclosure. Former admin tokens have no special meaning. Private responses use `Cache-Control: no-store` and never contain owner credentials or hashes.
 
