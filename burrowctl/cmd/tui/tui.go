@@ -623,6 +623,9 @@ func (m model) View() string {
 		lat := truncate(t.Latency, colLatWidth)
 		recons := strconv.Itoa(t.Reconnects)
 		size := formatSize(t.TotalSize)
+		if t.TotalSize == 0 {
+			size = "—"
+		} // No measured local bytes; HTTP metadata is not byte accounting.
 
 		if i == m.cursor {
 			statusText := "● " + t.Status
