@@ -267,3 +267,13 @@ func TestShutdownWaiterCanCancelWithoutClaimingCompletion(t *testing.T) {
 		t.Fatalf("cancelled waiter changed shared outcome: %v", err)
 	}
 }
+
+func TestImmediateDrainWithoutRequestsIsClean(t *testing.T) {
+	s := NewServer(nil, "example.test", false)
+	if err := s.SetDrainTimeout(0); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Shutdown(t.Context()); err != nil {
+		t.Fatalf("idle immediate drain claimed an interruption: %v", err)
+	}
+}

@@ -257,13 +257,17 @@ func (s *Server) tunnelSnapshot(ownerHash string) []*protocol.TunnelInfo {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	tunnels := make([]*protocol.TunnelInfo, 0)
+	status := "active"
+	if s.closing {
+		status = "draining"
+	}
 	for id, session := range s.connections {
 		if session.ownerHash != ownerHash {
 			continue
 		}
 		tunnels = append(tunnels, &protocol.TunnelInfo{
 			TunnelID: id, Port: session.port, URL: s.registry.tunnelURL(id),
-			Status: "active", TotalSize: s.totalSize[id],
+			Status: status, TotalSize: s.totalSize[id],
 		})
 	}
 	sort.Slice(tunnels, func(i, j int) bool { return tunnels[i].TunnelID < tunnels[j].TunnelID })

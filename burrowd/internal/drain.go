@@ -31,6 +31,15 @@ func drainRejected(w http.ResponseWriter) {
 	jsonError(w, "Server draining", http.StatusServiceUnavailable)
 }
 
+// inflightRequests reports whether the admission barrier still owns live
+// request work. The map is the synchronous source of truth: entries are removed
+// by each handler's release path before its WaitGroup counter drops.
+func (s *Server) inflightRequests() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.requestCancels) > 0
+}
+
 func (s *Server) shutdown(parent context.Context, started chan<- struct{}) error {
 	ctx, cancel := context.WithTimeout(parent, 20*time.Second)
 	defer cancel()
@@ -65,19 +74,30 @@ func (s *Server) shutdown(parent context.Context, started chan<- struct{}) error
 
 	drained := make(chan struct{})
 	go func() { s.requests.Wait(); close(drained) }()
-	timer := time.NewTimer(s.drainTimeout)
-	defer timer.Stop()
 	var result error
-	if ctx.Err() != nil {
+	switch {
+	case ctx.Err() != nil:
 		result = ctx.Err()
-	} else {
+	case s.drainTimeout <= 0:
+		// Zero means no waiting budget. Only claim an interruption when an
+		// admitted request is actually still in flight.
+		if s.inflightRequests() {
+			result = ErrDrainTimeout
+		}
+	default:
+		timer := time.NewTimer(s.drainTimeout)
 		select {
 		case <-drained:
 		case <-timer.C:
-			result = ErrDrainTimeout
+			// Requests that finished exactly at the boundary were not
+			// interrupted; only in-flight work owned by the barrier was.
+			if s.inflightRequests() {
+				result = ErrDrainTimeout
+			}
 		case <-ctx.Done():
 			result = ctx.Err()
 		}
+		timer.Stop()
 	}
 	s.mu.Lock()
 	s.forceClosing = true
