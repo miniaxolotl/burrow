@@ -207,6 +207,23 @@ correctness failures instead of interpreting them as saturation. Destroy any
 temporary Droplet and SSH key and verify their absence, allowing for provider
 readback delay. [Investigation and reproduction](request-isolation.md).
 
+For separately authorized heavier testing, the normal smoke/load flags cannot
+enable the heavy profile. Both an explicit hostname and its measured-request
+ceiling acknowledgement are required:
+
+```bash
+BURROW_HEAVY_LOAD_SERVER=brmbl.dev BURROW_HEAVY_LOAD_CONFIRM=52000 go test ./burrowctl/internal -run '^TestLiveTunnelHeavyLoad$' -count=1 -v -timeout 4m
+```
+
+This fixed profile plans 100/250/500/750/1,000 RPS, 20 seconds per stage, at most
+128 in flight and 52,000 measured 1-KiB echo requests, plus bounded control and
+payload probes. It retains fresh owner/config isolation, integrity checks and
+first-error/observed-latency safety stops, and checks apex health before stages.
+Capture generator resource use separately from production-server resource use.
+Do not increase ceilings or relax guards to hide a failed stage. The
+[5 November heavy run](heavy-load-2026-11-05.md) stopped at its 250-RPS latency guard;
+the higher planned stages were not executed.
+
 ### Deployment continuity limits
 
 App Platform runs **one instance per environment** because active WebSocket and

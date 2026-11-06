@@ -26,7 +26,24 @@ import (
 // Its fixed ceiling is three tunnels, 100 RPS, 32 in flight and 2100 load requests.
 // Run only with operator authorization; this is not a saturation benchmark.
 func TestLiveTunnelLoad(t *testing.T) {
-	server := os.Getenv("BURROW_LOAD_SERVER")
+	runLiveTunnelLoad(t, os.Getenv("BURROW_LOAD_SERVER"), false)
+}
+
+// Heavy traffic needs both a separate hostname switch and the exact planned
+// request ceiling. Normal smoke/load flags can never opt into this profile.
+func TestLiveTunnelHeavyLoad(t *testing.T) {
+	server := os.Getenv("BURROW_HEAVY_LOAD_SERVER")
+	if server == "" {
+		t.Skip("set BURROW_HEAVY_LOAD_SERVER for authorized heavy live testing")
+	}
+	if os.Getenv("BURROW_HEAVY_LOAD_CONFIRM") != "52000" {
+		t.Fatal("heavy profile requires BURROW_HEAVY_LOAD_CONFIRM=52000 to acknowledge its fixed request ceiling")
+	}
+	runLiveTunnelLoad(t, server, true)
+}
+
+func runLiveTunnelLoad(t *testing.T, server string, heavy bool) {
+	t.Helper()
 	if server == "" {
 		t.Skip("set BURROW_LOAD_SERVER for authorized bounded live load testing")
 	}
@@ -40,9 +57,16 @@ func TestLiveTunnelLoad(t *testing.T) {
 	defer cancel()
 	owner, marker := rand.Text(), rand.Text()
 	client := NewClient(server, owner, server, true)
+	stages := liveLoadProfile(heavy)
+	maxInFlight := 0
+	for _, stage := range stages {
+		if stage.concurrency > maxInFlight {
+			maxInFlight = stage.concurrency
+		}
+	}
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.MaxConnsPerHost = 32
-	transport.MaxIdleConnsPerHost = 32
+	transport.MaxConnsPerHost = maxInFlight
+	transport.MaxIdleConnsPerHost = maxInFlight
 	transport.ResponseHeaderTimeout = 8 * time.Second
 	public := &http.Client{Transport: transport, Timeout: 10 * time.Second}
 	defer transport.CloseIdleConnections()
@@ -79,6 +103,21 @@ func TestLiveTunnelLoad(t *testing.T) {
 		}
 		return time.Since(started), err
 	}
+	checkHealth := func() {
+		checkCtx, stop := context.WithTimeout(ctx, 2*time.Second)
+		defer stop()
+		req, _ := http.NewRequestWithContext(checkCtx, http.MethodGet, "https://"+server+"/health", nil)
+		resp, err := public.Do(req)
+		if err != nil {
+			t.Fatalf("apex health safety stop: %v", err)
+		}
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 128))
+		resp.Body.Close()
+		if err != nil || resp.StatusCode != 200 || string(body) != `{"status":"ok"}` {
+			t.Fatalf("apex health safety stop: status=%d expected_json=%t err=%v", resp.StatusCode, string(body) == `{"status":"ok"}`, err)
+		}
+	}
+	checkHealth()
 	for i := 0; i < 3; i++ {
 		local := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			body, err := io.ReadAll(io.LimitReader(r.Body, 4*1024*1024+1))
@@ -109,7 +148,8 @@ func TestLiveTunnelLoad(t *testing.T) {
 		t.Fatalf("three isolated tunnels: list=%+v err=%v", list, err)
 	}
 	t.Log("three simultaneous tunnels verified with a fresh owner and unique fixture marker; global installation/config untouched")
-	for _, stage := range []struct{ rps, concurrency int }{{5, 2}, {15, 5}, {30, 10}, {60, 20}, {100, 32}} {
+	for _, stage := range stages {
+		checkHealth()
 		stageCtx, stop := context.WithCancel(ctx)
 		var wg sync.WaitGroup
 		var mu sync.Mutex
@@ -120,7 +160,7 @@ func TestLiveTunnelLoad(t *testing.T) {
 		started := time.Now()
 		peak := 0
 	stageLoop:
-		for i := 0; i < stage.rps*10; i++ {
+		for i := 0; i < stage.rps*stage.seconds; i++ {
 			select {
 			case <-stageCtx.Done():
 				break stageLoop
@@ -166,7 +206,7 @@ func TestLiveTunnelLoad(t *testing.T) {
 		if len(failures) > 0 {
 			t.Fatalf("load stopped on first error: %v", failures[0])
 		}
-		if len(samples) != stage.rps*10 {
+		if len(samples) != stage.rps*stage.seconds {
 			t.Fatal("bounded load schedule interrupted")
 		}
 		// Check management routing too, without exposing any fixture credential to logs.
