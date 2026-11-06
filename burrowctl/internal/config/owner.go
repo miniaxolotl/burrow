@@ -80,3 +80,26 @@ func StoredToken(server string) (string, error) {
 	}
 	return cfg.Token, nil
 }
+
+// ExistingOwnerToken is a read, never first-use identity generation.
+func ExistingOwnerToken(server string) (string, error) {
+	origin, err := internal.ServerURL(server)
+	if err != nil {
+		return "", err
+	}
+	h := sha256.Sum256([]byte(origin.String()))
+	base, err := configDir()
+	if err != nil {
+		return "", err
+	}
+	data, err := os.ReadFile(filepath.Join(base, "owners", hex.EncodeToString(h[:])+".token"))
+	if err != nil {
+		return "", errors.New("existing owner credential required")
+	}
+	token := strings.TrimSpace(string(data))
+	decoded, err := base64.RawURLEncoding.DecodeString(token)
+	if err != nil || len(decoded) != 32 {
+		return "", errors.New("invalid existing owner credential")
+	}
+	return token, nil
+}

@@ -56,3 +56,66 @@ service is repaired. After rollout, run both the
 [deployment smoke and isolated bounded load test](deploy.md#bounded-live-load-testing).
 Record new results separately from the v0.3.18 failure above. A passing 100-RPS
 short ramp is not proof of maximum or sustained capacity.
+
+## Production verification — v0.3.19
+
+The repair shipped on 5 November 2026 through
+[fix #81](https://github.com/miniaxolotl/burrow/pull/81),
+[source release #82](https://github.com/miniaxolotl/burrow/pull/82), and
+[frozen promotion #83](https://github.com/miniaxolotl/burrow/pull/83).
+[Deployment 42107710694](https://github.com/miniaxolotl/burrow/actions/runs/42107710694)
+passed publication, immutable-image rollout and the enhanced HTTPS/reconnection
+smoke test. Exact source `552ee32a7a15e89241e12c881597834fcfc5f80f` and production
+merge `1478cfff563c467b2587c99bd65395b47923217a` have identical trees. App Platform
+reported ACTIVE deployment `0fbd1f17-e615-405f-82a5-4b900cc00542`; its image matched
+the published manifest:
+
+```text
+ghcr.io/miniaxolotl/burrowd@sha256:17eab6978efac142d936ac00f46b9fa42723ee05753509e7067d9f37a20c546d
+```
+
+An independent temporary Toronto `s-1vcpu-1gb-intel` Droplet ran the exact-release
+compiled `TestLiveTunnelLoad` and `TestLiveTunnel` against production. The load
+fixture kept HTTP keep-alive enabled, used a fresh in-memory owner and unique
+marker/path/body checks, and forwarded through three simultaneous synthetic
+tunnels. **All 2,100 measured load requests passed without retries or errors.**
+
+| Target RPS | Requests | Achieved RPS | p50 | p95 | p99 |
+| --- | --- | --- | --- | --- | --- |
+| 5 | 50 | 4.98 | 32 ms | 59 ms | 65 ms |
+| 15 | 150 | 14.96 | 28 ms | 68 ms | 113 ms |
+| 30 | 300 | 29.92 | 27 ms | 43 ms | 73 ms |
+| 60 | 600 | 59.81 | 28 ms | 39 ms | 64 ms |
+| 100 | 1,000 | 99.58 | 28 ms | 40 ms | 58 ms |
+
+Each stage lasted about ten seconds. Peak observed in-flight requests were six
+(the safety ceiling was 32); the largest observed latency across stages was
+211 ms. These are end-to-end measurements from that generator, not isolated
+server CPU timings. They establish the tested short workload, **not maximum
+capacity, a sustained-load SLO, a bandwidth allowance or a 32-concurrent-request
+acceptance result**.
+
+Additional live checks passed:
+
+- Management routing retained the three-test-tunnel owner scope between stages.
+- Upload-and-echo integrity: 64 KiB in 39 ms, 1 MiB in 150 ms, 4 MiB in 513 ms.
+- History retained 200 entries, including the latest payload completion. For the
+  payload tunnel, response-stream usage was 6,205,518 bytes versus 5,561,189 bytes
+  in retained entries, confirming eviction did not erase its cumulative count.
+- A transport WebSocket message of 1 MiB + 1 byte was rejected with close code
+  1009. This is distinct from the successfully streamed 4 MiB HTTP body.
+- The separate smoke verified HTTPS bodies/headers, query strings, API-like
+  application paths, apex health isolation and same-URL reconnection in 2.59 s.
+- Published npm CLI `0.3.19` launched from an isolated cache. Public website/apex
+  health returned HTTP 200 with valid TLS; `www` redirected to `useburrow.app`.
+  The production website deployment reported success for the production commit.
+
+Both tests passed. Active test-owner tunnels were explicitly closed and absence
+verified. The temporary Droplet, provider SSH key and local private-key files were
+removed and their absence verified. Persistent revoked tunnel ownership
+tombstones remain by design. The operator's global CLI/config was never changed.
+
+A later [heavier 100–1,000 RPS plan](heavy-load-2026-11-05.md) stopped at the
+250-RPS stage after one 3.5-second response exceeded the test latency guard. All
+7,000 completed responses had correct status/content; higher stages were not run.
+That follow-up does not turn this bounded acceptance into a maximum-capacity claim.

@@ -1,5 +1,18 @@
 # Deploy & release
 
+## Persistent attachment compatibility floor
+
+After persistent-mode IDs are enabled, pre-fencing server images are not safe
+rollback targets. Every `scripts/infra/apply.sh` path now pulls the exact immutable
+GHCR digest and requires `io.bramble.burrow.attachment-state=1` before planning or
+applying infrastructure. Missing/newer/older labels and registry failures fail
+closed. The existing single-instance and current-ref gates remain required.
+Use a verified compatible last-good digest or a reviewed forward fix. Do not erase
+owner mode/generation records or tombstones to permit downgrade. Older deployment
+scripts/manual provider mutations are not supported bypasses; preserve this guard
+when reviewing any release or rollback. This is source policy, not evidence that
+a deployment has occurred.
+
 Follow [shared release/naming conventions](release-conventions.md). Release Please
 uses the upstream Node strategy for the root/npm/Go version mappings, patch-first
 automatic bumps and explicit `Release-As` minor/major/breaking decisions. Existing
@@ -193,6 +206,23 @@ maximum capacity, a sustained-load SLO or deployment continuity. Stop on baselin
 correctness failures instead of interpreting them as saturation. Destroy any
 temporary Droplet and SSH key and verify their absence, allowing for provider
 readback delay. [Investigation and reproduction](request-isolation.md).
+
+For separately authorized heavier testing, the normal smoke/load flags cannot
+enable the heavy profile. Both an explicit hostname and its measured-request
+ceiling acknowledgement are required:
+
+```bash
+BURROW_HEAVY_LOAD_SERVER=brmbl.dev BURROW_HEAVY_LOAD_CONFIRM=52000 go test ./burrowctl/internal -run '^TestLiveTunnelHeavyLoad$' -count=1 -v -timeout 4m
+```
+
+This fixed profile plans 100/250/500/750/1,000 RPS, 20 seconds per stage, at most
+128 in flight and 52,000 measured 1-KiB echo requests, plus bounded control and
+payload probes. It retains fresh owner/config isolation, integrity checks and
+first-error/observed-latency safety stops, and checks apex health before stages.
+Capture generator resource use separately from production-server resource use.
+Do not increase ceilings or relax guards to hide a failed stage. The
+[5 November heavy run](heavy-load-2026-11-05.md) stopped at its 250-RPS latency guard;
+the higher planned stages were not executed.
 
 ### Deployment continuity limits
 
