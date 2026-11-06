@@ -2,9 +2,14 @@ package internal
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"net/http"
+	"sync"
 	"time"
+
+	"burrow/protocol"
 )
 
 var ErrDrainTimeout = errors.New("request drain deadline exceeded; remaining streams interrupted")
@@ -35,10 +40,23 @@ func (s *Server) shutdown(parent context.Context) error {
 	}
 	s.pendingRemoves = make(map[string]*pendingRemoval)
 	srv := s.httpServer
+	deadline := time.Now().Add(s.drainTimeout)
+	if end, ok := ctx.Deadline(); ok && end.Before(deadline) {
+		deadline = end
+	}
+	notices := make([]*tunnelSession, 0, len(s.connections))
+	for _, session := range s.connections {
+		if session.lifecycle != nil {
+			notices = append(notices, session)
+		}
+	}
 	s.mu.Unlock()
 	if srv != nil {
 		srv.SetKeepAlivesEnabled(false)
 	}
+	// A fixed-size worker set, not one goroutine or serial timeout per tunnel.
+	notified := make(chan struct{})
+	go func() { s.notifyDraining(notices, deadline); close(notified) }()
 
 	drained := make(chan struct{})
 	go func() { s.requests.Wait(); close(drained) }()
@@ -68,6 +86,7 @@ func (s *Server) shutdown(parent context.Context) error {
 	s.mu.Unlock()
 	// Closing yamux ends both normal and hijacked upgrade lifetimes. Never close
 	// transports while holding the map/admission lock.
+	<-notified
 	for _, session := range sessions {
 		session.conn.Close()
 	}
@@ -91,6 +110,41 @@ func (s *Server) shutdown(parent context.Context) error {
 		}
 	}
 	return result
+}
+
+func (s *Server) notifyDraining(sessions []*tunnelSession, deadline time.Time) {
+	var workers sync.WaitGroup
+	work := make(chan *tunnelSession)
+	for range min(8, len(sessions)) {
+		workers.Go(func() {
+			for session := range work {
+				wait := time.NewTimer(max(0, time.Until(deadline)))
+				select {
+				case <-session.lifecycleReady:
+				case <-wait.C:
+				}
+				wait.Stop()
+				if !time.Now().Before(deadline) {
+					continue
+				}
+				end := minTime(deadline, time.Now().Add(time.Second))
+				session.lifecycle.SetWriteDeadline(end)
+				json.NewEncoder(session.lifecycle).Encode(protocol.Lifecycle{Version: 1, Type: "draining", TunnelID: session.tunnelID, Generation: session.id, Reason: "server_shutdown", RemainingMS: max(0, time.Until(deadline).Milliseconds()), NoticeID: rand.Text()})
+			}
+		})
+	}
+	for _, session := range sessions {
+		work <- session
+	}
+	close(work)
+	workers.Wait()
+}
+
+func minTime(a, b time.Time) time.Time {
+	if a.Before(b) {
+		return a
+	}
+	return b
 }
 
 func (s *Server) handleReady(w http.ResponseWriter, r *http.Request) {

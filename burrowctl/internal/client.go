@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -59,6 +60,8 @@ type LifecycleEvent struct {
 	Generation            string
 	RegistrationConfirmed bool
 	CaptureID             string
+	RemainingMS           int64
+	LifecycleConfirmed    bool
 }
 
 func (c *Client) SetEventHandler(handler func(LifecycleEvent)) {
@@ -87,20 +90,22 @@ type connectionRejected struct {
 func (e *connectionRejected) Error() string { return e.message }
 
 type TunnelConn struct {
-	ID         string
-	Port       uint16
-	URL        string
-	wsConn     *websocket.Conn
-	session    *yamux.Session
-	ctx        context.Context
-	cancel     context.CancelFunc
-	latency    time.Duration
-	reconnects int
-	totalSize  int64
-	forwarded  sync.Once
-	status     string
-	generation string
-	dispatcher *routing.Table
+	ID              string
+	Port            uint16
+	URL             string
+	wsConn          *websocket.Conn
+	session         *yamux.Session
+	ctx             context.Context
+	cancel          context.CancelFunc
+	latency         time.Duration
+	reconnects      int
+	totalSize       int64
+	forwarded       sync.Once
+	status          string
+	generation      string
+	dispatcher      *routing.Table
+	lifecycle       *yamux.Stream
+	lifecycleReader *bufio.Reader
 }
 
 func NewClient(server, token, domain string, secure bool, observers ...telemetry.Observer) *Client {
@@ -293,7 +298,7 @@ func (c *Client) trackLatency(tc *TunnelConn) {
 }
 
 func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port uint16) (*TunnelConn, error) {
-	header := http.Header{"X-Tunnel-Token": {c.token}, protocol.RegistrationHeader: {protocol.RegistrationVersion}}
+	header := http.Header{"X-Tunnel-Token": {c.token}, protocol.RegistrationHeader: {protocol.RegistrationVersion}, protocol.LifecycleHeader: {"1"}}
 	if c.attachment != nil {
 		id, expected, nonce, err := c.attachment.Prepare()
 		if err != nil {
@@ -380,6 +385,8 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 	}
 	c.emit(LifecycleEvent{Type: "connected", TunnelID: tunnelID, Port: port, URL: tunnelURL})
 	generation := ""
+	var lifecycle *yamux.Stream
+	var lifecycleReader *bufio.Reader
 	if c.attachment != nil && resp.Header.Get(protocol.RegistrationHeader) != "1" {
 		session.Close()
 		conn.Close()
@@ -414,7 +421,31 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 				return nil, err
 			}
 		}
-		c.emit(LifecycleEvent{Type: "registered", TunnelID: tunnelID, Port: port, URL: tunnelURL, Generation: generation, RegistrationConfirmed: true})
+	}
+	if version := resp.Header.Get(protocol.LifecycleHeader); version != "" {
+		if version != "1" || generation == "" {
+			session.Close()
+			conn.Close()
+			return nil, errors.New("invalid lifecycle negotiation")
+		}
+		stop := context.AfterFunc(connectContext, func() { session.Close(); conn.Close() })
+		lifecycle, err = session.AcceptStream()
+		if err == nil {
+			deadline, _ := connectContext.Deadline()
+			lifecycle.SetReadDeadline(deadline)
+			lifecycleReader = bufio.NewReaderSize(lifecycle, protocol.MaxLifecycleSize)
+			_, err = protocol.ReadLifecycle(lifecycleReader, tunnelID, generation, "hello")
+			lifecycle.SetReadDeadline(time.Time{})
+		}
+		stop()
+		if err != nil {
+			session.Close()
+			conn.Close()
+			return nil, fmt.Errorf("lifecycle hello failed: %w", err)
+		}
+	}
+	if generation != "" {
+		c.emit(LifecycleEvent{Type: "registered", TunnelID: tunnelID, Port: port, URL: tunnelURL, Generation: generation, RegistrationConfirmed: true, LifecycleConfirmed: lifecycle != nil})
 	}
 
 	return &TunnelConn{
@@ -426,6 +457,7 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 		latency:    latency,
 		status:     "active",
 		generation: generation,
+		lifecycle:  lifecycle, lifecycleReader: lifecycleReader,
 	}, nil
 }
 
@@ -442,6 +474,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 	localAddr := fmt.Sprintf("localhost:%d", port)
 	reconnectDelay := time.Second
 	attempt := 0
+	c.watchLifecycle(tc)
 
 	for {
 		stream, err := tc.session.AcceptStream()
@@ -450,11 +483,16 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 				return
 			}
 			c.mu.Lock()
-			wasConnected := tc.status == "active"
+			wasConnected := tc.status == "active" || tc.status == "draining"
+			code := "transport_lost"
+			if tc.status == "draining" {
+				code = "server_draining"
+			}
+			generation := tc.generation
 			tc.status = "reconnecting"
 			c.mu.Unlock()
 			if wasConnected {
-				c.emit(LifecycleEvent{Type: "disconnected", TunnelID: tc.ID, Port: port, Code: "transport_lost"})
+				c.emit(LifecycleEvent{Type: "disconnected", TunnelID: tc.ID, Port: port, Code: code, Generation: generation})
 			}
 			attempt++
 			delay := reconnectDelay/2 + time.Duration(rand.Int64N(int64(reconnectDelay/2)))
@@ -498,7 +536,9 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			tc.URL = newTC.URL
 			tc.status = "active"
 			tc.generation = newTC.generation
+			tc.lifecycle, tc.lifecycleReader = newTC.lifecycle, newTC.lifecycleReader
 			c.mu.Unlock()
+			c.watchLifecycle(tc)
 			c.observer.Track(telemetry.TunnelReconnected)
 			c.observer.Operation(telemetry.Reconnect, started, telemetry.Success)
 			reconnectDelay = time.Second

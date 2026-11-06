@@ -1,5 +1,22 @@
 # burrowctl
 
+## Planned-shutdown observations
+
+New peers optionally negotiate lifecycle v1 alongside registration v1. The
+registration stream still contains exactly one object plus EOF; a separate second
+reserved stream carries a bounded hello and generation-scoped `draining` notice.
+The client validates both before reporting `registered`. `lifecycle_confirmed`
+distinguishes this support from legacy registration-only servers.
+
+On a valid notice, headless output emits `not_ready` with `reason=server_draining`
+and `draining` with `generation`, `remaining_ms` (an estimate) and observation time.
+Existing forwarding is not cancelled by the notice. The client waits for closure
+or the advertised deadline, then uses the usual same-ID capped jittered reconnect.
+Fresh registration of every tunnel is required to restore `ready`. An abrupt lost
+transport is not proof of planned shutdown. Requests are never automatically
+replayed. Invalid/lost negotiated control channels reconnect fail-closed; legacy
+peers do not receive a control stream and retain ordinary reconnect behavior.
+
 Share local services over HTTPS. No account, login, or manual credential setup.
 
 ## Before you start

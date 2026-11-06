@@ -32,10 +32,13 @@ const maxLogsPerTunnel = 200
 var validTunnelID = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
 
 type tunnelSession struct {
-	conn      *yamux.Session
-	ownerHash string
-	id        string
-	port      uint16
+	conn           *yamux.Session
+	ownerHash      string
+	id             string
+	port           uint16
+	lifecycle      *yamux.Stream
+	lifecycleReady chan struct{}
+	tunnelID       string
 }
 
 type pendingRemoval struct {
@@ -109,7 +112,7 @@ func NewServer(registry *TunnelRegistry, domain string, secure bool, observers .
 	s.mux.HandleFunc("GET /ready", s.handleReady)
 	s.mux.HandleFunc("GET "+protocol.CapabilityPath, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(protocol.Capabilities{Version: 1, Registration: 1, PersistentAttachment: 1})
+		json.NewEncoder(w).Encode(protocol.Capabilities{Version: 1, Registration: 1, PersistentAttachment: 1, Lifecycle: 1})
 	})
 	s.mux.HandleFunc("GET /tunnels/{id}/reservation", s.handleReservation)
 	s.mux.HandleFunc("GET /tunnels", s.handleTunnelList)
@@ -321,6 +324,10 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	s.handlers.Add(1)
 	s.mu.Unlock()
 	defer s.handlers.Done()
+	if version := r.Header.Get(protocol.LifecycleHeader); version != "" && (version != "1" || r.Header.Get(protocol.RegistrationHeader) != "1") {
+		jsonError(w, "Lifecycle requires registration v1 and lifecycle v1", http.StatusBadRequest)
+		return
+	}
 	if version := r.Header.Get(protocol.RegistrationHeader); version != "" && version != protocol.RegistrationVersion {
 		jsonError(w, "Unsupported registration version", http.StatusBadRequest)
 		return
@@ -410,7 +417,8 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 	stop := context.AfterFunc(s.intake, cancel)
 	defer stop()
 	r = r.WithContext(ctx)
-	session := &tunnelSession{ownerHash: ownerHash, id: rand.Text(), port: port}
+	session := &tunnelSession{ownerHash: ownerHash, id: rand.Text(), port: port, tunnelID: tunnelID, lifecycleReady: make(chan struct{})}
+	defer close(session.lifecycleReady)
 	persistent := r.Header.Get(protocol.AttachmentHeader) != ""
 	if persistent {
 		if r.Header.Get(protocol.AttachmentHeader) != "1" || r.Header.Get(protocol.RegistrationHeader) != "1" || !validAttachment(r.Header.Get(protocol.AttachmentIDHeader), false) || !validAttachment(r.Header.Get(protocol.AttemptHeader), false) || !validAttachment(r.Header.Get(protocol.ExpectedGenerationHeader), true) {
@@ -467,6 +475,9 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 	if registration {
 		headers.Set(protocol.RegistrationHeader, protocol.RegistrationVersion)
 	}
+	if r.Header.Get(protocol.LifecycleHeader) == "1" {
+		headers.Set(protocol.LifecycleHeader, "1")
+	}
 	conn, err := s.upgrader.Upgrade(w, r, headers)
 	if err != nil {
 		return nil
@@ -494,6 +505,14 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		}
 		defer control.Close()
 		control.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	}
+	if headers.Get(protocol.LifecycleHeader) == "1" {
+		session.lifecycle, err = session.conn.OpenStream()
+		if err != nil {
+			session.conn.Close()
+			return nil
+		}
+		session.lifecycle.SetWriteDeadline(time.Now().Add(5 * time.Second))
 	}
 	// Commit the new generation only after the handshake succeeds. A failed
 	// upgrade cannot invalidate the previous connection or its concurrent refresh.
@@ -529,6 +548,13 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 			// runs even if the acknowledgement was lost after commit.
 			session.conn.Close()
 		}
+		control.Close() // EOF before the client consumes the separate lifecycle hello.
+	}
+	if session.lifecycle != nil {
+		if err := json.NewEncoder(session.lifecycle).Encode(protocol.Lifecycle{Version: 1, Type: "hello", TunnelID: tunnelID, Generation: session.id}); err != nil {
+			session.conn.Close()
+		}
+		session.lifecycle.SetWriteDeadline(time.Time{})
 	}
 	outcome = telemetry.Success
 	return session
