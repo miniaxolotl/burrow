@@ -188,3 +188,29 @@ func TestShutdownSharesFirstResult(t *testing.T) {
 		t.Fatalf("inconsistent shutdown: first=%v second=%v", first, second)
 	}
 }
+
+func TestShutdownWaiterCanCancelWithoutClaimingCompletion(t *testing.T) {
+	s := NewServer(nil, "example.test", false)
+	s.requests.Add(1)
+	first := make(chan error, 1)
+	go func() { first <- s.Shutdown(t.Context()) }()
+	<-s.intake.Done()
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	second := make(chan error, 1)
+	go func() { second <- s.Shutdown(ctx) }()
+	select {
+	case err := <-second:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("cancelled waiter: %v", err)
+		}
+	case <-time.After(50 * time.Millisecond):
+		s.requests.Done()
+		<-first
+		t.Fatal("shutdown waiter ignored its cancellation")
+	}
+	s.requests.Done()
+	if err := <-first; err != nil {
+		t.Fatalf("cancelled waiter changed shared outcome: %v", err)
+	}
+}

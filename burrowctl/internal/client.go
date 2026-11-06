@@ -463,11 +463,14 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 
 	reconnectDelay := time.Second
 	attempt := 0
+	forwardContext, stopForwarding := context.WithCancel(tc.ctx)
+	defer func() { stopForwarding() }()
 	c.watchLifecycle(tc)
 
 	for {
 		stream, err := tc.session.AcceptStream()
 		if err != nil {
+			stopForwarding() // Old-generation local I/O cannot survive into a replacement.
 			if tc.ctx.Err() != nil {
 				return
 			}
@@ -531,6 +534,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			tc.history = newTC.history
 			tc.lifecycle, tc.lifecycleReader = newTC.lifecycle, newTC.lifecycleReader
 			c.mu.Unlock()
+			forwardContext, stopForwarding = context.WithCancel(tc.ctx)
 			c.watchLifecycle(tc)
 			c.observer.Track(telemetry.TunnelReconnected)
 			c.observer.Operation(telemetry.Reconnect, started, telemetry.Success)
@@ -545,6 +549,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			select {
 			case c.streams <- struct{}{}:
 				generation := tc.sessionKey()
+				streamContext := forwardContext
 				table := *tc.dispatcher
 				table.Report = func(e routing.Exchange) { c.recordExchange(tc.ID, generation, e) }
 				table.Headers = func(route routing.Route, status int, at time.Time) {
@@ -556,7 +561,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 					c.recordTCP(tc.ID, generation, port, start, err)
 					return conn, err
 				}
-				c.workers.Go(func() { defer func() { <-c.streams }(); table.ServeStream(tc.ctx, stream) })
+				c.workers.Go(func() { defer func() { <-c.streams }(); table.ServeStream(streamContext, stream) })
 			default:
 				at := time.Now().UTC()
 				c.recordExchange(tc.ID, tc.sessionKey(), routing.Exchange{StartedAt: at, CompletedAt: at, Status: 503, Origin: "client_proxy", Outcome: "rejected", Reason: "overloaded"})
@@ -567,6 +572,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			continue
 		}
 		generation := tc.sessionKey()
+		streamContext := forwardContext
 		c.workers.Go(func() {
 			s := stream
 			defer s.Close()
@@ -574,13 +580,13 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			outcome := telemetry.Unavailable
 			defer func() { c.observer.Operation(telemetry.Forward, started, outcome) }()
 
-			conn, err := routing.DialLoopback(tc.ctx, port)
+			conn, err := routing.DialLoopback(streamContext, port)
 			c.recordTCP(tc.ID, generation, port, started, err)
 			if err != nil {
 				return
 			}
 			defer conn.Close()
-			stopCancel := context.AfterFunc(tc.ctx, func() { conn.Close(); s.Close() })
+			stopCancel := context.AfterFunc(streamContext, func() { conn.Close(); s.Close() })
 			defer stopCancel()
 
 			done := make(chan struct{}, 2)

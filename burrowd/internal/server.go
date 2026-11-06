@@ -61,6 +61,7 @@ type Server struct {
 	httpServer     *http.Server
 	closeOnce      sync.Once
 	shutdownErr    error
+	shutdownDone   chan struct{}
 	drainTimeout   time.Duration
 	requests       sync.WaitGroup
 	handlers       sync.WaitGroup
@@ -94,6 +95,7 @@ func NewServer(registry *TunnelRegistry, domain string, secure bool, observers .
 		observer:       observer,
 		drainTimeout:   15 * time.Second,
 		requestCancels: make(map[*http.Request]context.CancelFunc),
+		shutdownDone:   make(chan struct{}),
 		intake:         intake, stopIntake: stopIntake,
 	}
 	for i := range s.operations {
@@ -774,7 +776,19 @@ func (s *Server) Start(addr string) error {
 
 func (s *Server) Shutdown(ctx context.Context) error {
 	s.closeOnce.Do(func() {
-		s.shutdownErr = s.shutdown(ctx)
+		started := make(chan struct{})
+		go func() { s.shutdownErr = s.shutdown(ctx, started); close(s.shutdownDone) }()
+		<-started // The short admission transition is synchronous; cleanup is owned.
 	})
-	return s.shutdownErr
+	select {
+	case <-s.shutdownDone:
+		return s.shutdownErr
+	default:
+	}
+	select {
+	case <-s.shutdownDone:
+		return s.shutdownErr
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

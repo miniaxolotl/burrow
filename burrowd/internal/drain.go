@@ -29,7 +29,7 @@ func drainRejected(w http.ResponseWriter) {
 	jsonError(w, "Server draining", http.StatusServiceUnavailable)
 }
 
-func (s *Server) shutdown(parent context.Context) error {
+func (s *Server) shutdown(parent context.Context, started chan<- struct{}) error {
 	ctx, cancel := context.WithTimeout(parent, 20*time.Second)
 	defer cancel()
 	s.mu.Lock()
@@ -51,6 +51,7 @@ func (s *Server) shutdown(parent context.Context) error {
 		}
 	}
 	s.mu.Unlock()
+	close(started)
 	if srv != nil {
 		srv.SetKeepAlivesEnabled(false)
 	}
