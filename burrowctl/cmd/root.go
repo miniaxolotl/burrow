@@ -41,6 +41,9 @@ func ExecuteContext(ctx context.Context, config telemetry.Config) (err error) {
 		if err := clioutput.Prepare(command); err != nil {
 			return err
 		}
+		if command.Name() == "doctor" {
+			return nil
+		}
 		loadClientConfig()
 		if configErr != nil {
 			return clioutput.Invalid(configErr)

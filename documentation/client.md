@@ -1,5 +1,23 @@
 # burrowctl
 
+## Health and explicit diagnostics
+
+`burrowctl doctor 3000 8080 --output json` (or `doctor --config ./burrow.json`)
+checks the configured apex `/health` once and TCP-connects/closes each explicit
+loopback target. It creates no tunnel, owner credential, capture store or keyring
+entry, follows no redirects and sends no application HTTP requests. TCP connects
+can be visible to an app and prove only socket reachability, not application
+health. Route targets are deduplicated. Limits: 32 targets, four concurrent TCP
+checks, five seconds per target, ten seconds total; unchecked targets are reported.
+Exits: 0 requested checks satisfied, 1 failed/incomplete, 2 invalid input. Clean
+cancellation reports stopped rather than a successful summary.
+
+Running clients use one shared bounded apex read (two-second deadline, at least
+five seconds between reads), not per-tunnel latency polling. Failures replace the
+current result; observations older than 30 seconds are stale. Local TCP health
+comes only from real forwarding unless a recheck is explicitly requested. It is
+generation-scoped and separate from registration/admission and application status.
+
 ## Planned-shutdown observations
 
 New peers optionally negotiate lifecycle v1 alongside registration v1. The

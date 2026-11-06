@@ -75,7 +75,11 @@ func (t *Table) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			defer observation.Complete()
 		}
 	}
-	transport := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) { return DialLoopback(ctx, route.Port) }, DisableKeepAlives: true, DisableCompression: true, ResponseHeaderTimeout: 30 * time.Second, MaxResponseHeaderBytes: MaxHeaders}
+	dial := t.Dial
+	if dial == nil {
+		dial = DialLoopback
+	}
+	transport := &http.Transport{DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) { return dial(ctx, route.Port) }, DisableKeepAlives: true, DisableCompression: true, ResponseHeaderTimeout: 30 * time.Second, MaxResponseHeaderBytes: MaxHeaders}
 	defer transport.CloseIdleConnections()
 	proxy := &httputil.ReverseProxy{
 		Rewrite: func(req *httputil.ProxyRequest) {

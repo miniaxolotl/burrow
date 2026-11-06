@@ -43,7 +43,8 @@ func AddCommands(root *cobra.Command) {
 			return nil
 		}
 	}
-	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd, savedCmd)
+	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd, savedCmd, doctorCmd)
+	doctorCmd.Flags().String("config", "", "Explicit route configuration; TCP connect/close only (visible to the app)")
 	addCaptureCommands(root)
 	TunnelCmd.Flags().Bool("headless", false, "Run without the interactive manager")
 	TunnelCmd.Flags().String("name", "", "Private saved alias (not a public subdomain)")
