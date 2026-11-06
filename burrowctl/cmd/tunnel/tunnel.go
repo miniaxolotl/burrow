@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"burrow/burrowctl/internal"
+	"burrow/burrowctl/internal/clioutput"
 	"burrow/burrowctl/internal/config"
 	"burrow/protocol/telemetry"
 
@@ -13,9 +14,14 @@ import (
 )
 
 var TunnelCmd = &cobra.Command{
-	Use:     "tunnel <port> [port...]",
-	Short:   "Share local ports and open the tunnel manager",
-	Args:    cobra.MinimumNArgs(1),
+	Use:   "tunnel <port> [port...]",
+	Short: "Share local ports and open the tunnel manager",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 && !cmd.Flags().Changed("config") {
+			return fmt.Errorf("a port or --config is required")
+		}
+		return nil
+	},
 	Example: "  burrowctl tunnel 3000\n  burrowctl tunnel 3000 8080",
 	RunE:    runTunnelCreate,
 }
@@ -28,7 +34,24 @@ func AddCommands(root *cobra.Command) {
 	for _, name := range []string{"server", "token", "domain"} {
 		viper.BindPFlag(name, flags.Lookup(name))
 	}
-	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd)
+	for _, command := range []*cobra.Command{TunnelCmd, listCmd, logsCmd, closeCmd} {
+		validate := command.Args
+		command.Args = func(cmd *cobra.Command, args []string) error {
+			if err := validate(cmd, args); err != nil {
+				return clioutput.Invalid(err)
+			}
+			return nil
+		}
+	}
+	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd, savedCmd)
+	addCaptureCommands(root)
+	TunnelCmd.Flags().Bool("headless", false, "Run without the interactive manager")
+	TunnelCmd.Flags().String("name", "", "Private saved alias (not a public subdomain)")
+	TunnelCmd.Flags().String("config", "", "Explicit versioned route configuration file")
+	TunnelCmd.Flags().Bool("capture", false, "Explicitly capture bounded requests in encrypted local storage")
+	TunnelCmd.Flags().StringSlice("capture-exclude", nil, "Do not capture these explicit path prefixes")
+	TunnelCmd.Flags().Bool("replace", false, "Replace a confirmed closed alias with a new URL")
+	TunnelCmd.Flags().Bool("yes", false, "Confirm the selected replacement")
 }
 
 // resolveToken returns the best available auth token.
@@ -49,6 +72,9 @@ func resolveToken(cmd *cobra.Command, server string) (string, error) {
 	if token != "" {
 		return token, nil
 	}
+	if cmd.Name() == "saved" || cmd.Name() == "replay" || cmd.Parent() != nil && (cmd.Parent().Name() == "requests" || cmd.Parent().Name() == "replay") {
+		return config.ExistingOwnerToken(server)
+	}
 	return config.OwnerToken(server)
 }
 
@@ -61,5 +87,5 @@ func configuredClient(cmd *cobra.Command) (*internal.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load owner credential: %w", err)
 	}
-	return internal.NewClient(server.Host, token, viper.GetString("domain"), server.Scheme == "https", telemetry.FromContext(cmd.Context())), nil
+	return internal.NewClientWithContext(cmd.Context(), server.Host, token, viper.GetString("domain"), server.Scheme == "https", telemetry.FromContext(cmd.Context())), nil
 }

@@ -1,5 +1,18 @@
 # Deploy & release
 
+## Persistent attachment compatibility floor
+
+After persistent-mode IDs are enabled, pre-fencing server images are not safe
+rollback targets. Every `scripts/infra/apply.sh` path now pulls the exact immutable
+GHCR digest and requires `io.bramble.burrow.attachment-state=1` before planning or
+applying infrastructure. Missing/newer/older labels and registry failures fail
+closed. The existing single-instance and current-ref gates remain required.
+Use a verified compatible last-good digest or a reviewed forward fix. Do not erase
+owner mode/generation records or tombstones to permit downgrade. Older deployment
+scripts/manual provider mutations are not supported bypasses; preserve this guard
+when reviewing any release or rollback. This is source policy, not evidence that
+a deployment has occurred.
+
 Follow [shared release/naming conventions](release-conventions.md). Release Please
 uses the upstream Node strategy for the root/npm/Go version mappings, patch-first
 automatic bumps and explicit `Release-As` minor/major/breaking decisions. Existing

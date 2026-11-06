@@ -16,7 +16,7 @@ func (c *Client) api(method, path string, result any) error {
 	if c.secure {
 		scheme = "https"
 	}
-	req, err := http.NewRequest(method, fmt.Sprintf("%s://%s%s", scheme, c.server, path), nil)
+	req, err := http.NewRequestWithContext(c.requestContext, method, fmt.Sprintf("%s://%s%s", scheme, c.server, path), nil)
 	if err != nil {
 		return err
 	}
