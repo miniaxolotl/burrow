@@ -114,3 +114,8 @@ Both tests passed. Active test-owner tunnels were explicitly closed and absence
 verified. The temporary Droplet, provider SSH key and local private-key files were
 removed and their absence verified. Persistent revoked tunnel ownership
 tombstones remain by design. The operator's global CLI/config was never changed.
+
+A later [heavier 100–1,000 RPS plan](heavy-load-2026-11-05.md) stopped at the
+250-RPS stage after one 3.5-second response exceeded the test latency guard. All
+7,000 completed responses had correct status/content; higher stages were not run.
+That follow-up does not turn this bounded acceptance into a maximum-capacity claim.
