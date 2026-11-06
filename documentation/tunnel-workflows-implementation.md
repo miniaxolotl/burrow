@@ -161,6 +161,18 @@ fixtures now wait on actual registry metadata removal within bounded deadlines;
 the grace values are unchanged. The focused restart regression passed 30 repeated
 runs on Go 1.26.2 after this change.
 
+### Standalone image-build regression
+
+Source CI found that workspace dependency synchronization had updated module
+requirements without retaining every standalone `go.mod` checksum in the server
+and protocol `go.sum` files. Workspace builds passed, but the server-only Docker
+context failed on `golang.org/x/sys v0.49.0`. The same Docker failure reproduced
+locally. Regenerating each affected module's download checksums with `GOWORK=off`
+fixed the image build without changing dependency versions or Docker behavior.
+A policy regression now checks declared external requirement checksums in all
+three modules. The full Docker image and standalone readonly client/protocol
+builds passed after the repair; source CI remains a separate exact-head gate.
+
 ### Signal-cause compatibility regression
 
 The first full source CI run caught a Go 1.26.2-specific cancellation case: an
