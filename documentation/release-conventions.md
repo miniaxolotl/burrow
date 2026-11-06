@@ -59,6 +59,14 @@ deliberately stacked PR names its real parent and gets explicit exact-head sourc
 CI when ordinary trigger filters do not cover that base. Retarget/revalidate after
 the parent merges.
 
+GitHub-native stacks rooted at `development` can run native PR validation even
+when their immediate base is another task branch. Admission verifies fresh
+GitHub stack membership, same-repository scope and exact event head/base identity;
+it requires the full source suite and never reuses promotion CI. Missing/drifted
+stack metadata fails closed. A production target still requires the frozen
+promotion path regardless of stack metadata. Preserve stack order when merging;
+do not detach native stack PRs or weaken required checks to clear admission.
+
 Use worktrees under `~/Development/bramble-labs/worktrees/<project>` (a distinct
 task suffix when that path is occupied). Keep `plan.md`, `notes.md`, `status.md`
 under `~/Development/bramble-labs/plans/<project>`, outside Git. Assign PRs to

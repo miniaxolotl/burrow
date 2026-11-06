@@ -24,7 +24,8 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH:-$(go env GOARCH)} \
 
 FROM alpine:3.23
 
-LABEL org.opencontainers.image.source="https://github.com/miniaxolotl/burrow" \
+LABEL io.bramble.burrow.attachment-state="1" \
+      org.opencontainers.image.source="https://github.com/miniaxolotl/burrow" \
       org.opencontainers.image.url="https://useburrow.app" \
       org.opencontainers.image.documentation="https://github.com/miniaxolotl/burrow#readme" \
       org.opencontainers.image.title="burrowd" \

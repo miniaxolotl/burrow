@@ -91,6 +91,11 @@ func NewServer(registry *TunnelRegistry, domain string, secure bool, observers .
 	s.mux = http.NewServeMux()
 	s.mux.HandleFunc("/", s.handleRoot)
 	s.mux.HandleFunc("GET /health", s.handleHealth)
+	s.mux.HandleFunc("GET "+protocol.CapabilityPath, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(protocol.Capabilities{Version: 1, Registration: 1, PersistentAttachment: 1})
+	})
+	s.mux.HandleFunc("GET /tunnels/{id}/reservation", s.handleReservation)
 	s.mux.HandleFunc("GET /tunnels", s.handleTunnelList)
 	s.mux.HandleFunc("GET /tunnels/connect", s.handleWebSocket)
 	s.mux.HandleFunc("GET /tunnels/{id}/logs", s.handleLogs)
@@ -291,6 +296,10 @@ func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	if version := r.Header.Get(protocol.RegistrationHeader); version != "" && version != protocol.RegistrationVersion {
+		jsonError(w, "Unsupported registration version", http.StatusBadRequest)
+		return
+	}
 	ownerHash := requestOwner(w, r)
 	if ownerHash == "" {
 		return
@@ -369,10 +378,35 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		return nil
 	}
 	session := &tunnelSession{ownerHash: ownerHash, id: rand.Text(), port: port}
-	tunnelURL, err := s.registry.Reserve(r.Context(), tunnelID, ownerHash)
+	persistent := r.Header.Get(protocol.AttachmentHeader) != ""
+	if persistent {
+		if r.Header.Get(protocol.AttachmentHeader) != "1" || r.Header.Get(protocol.RegistrationHeader) != "1" || !validAttachment(r.Header.Get(protocol.AttachmentIDHeader), false) || !validAttachment(r.Header.Get(protocol.AttemptHeader), false) || !validAttachment(r.Header.Get(protocol.ExpectedGenerationHeader), true) {
+			jsonError(w, "Invalid attachment negotiation", http.StatusBadRequest)
+			return nil
+		}
+		s.mu.RLock()
+		live := s.connections[tunnelID]
+		s.mu.RUnlock()
+		if live != nil && !live.conn.IsClosed() {
+			if live.ownerHash != ownerHash {
+				jsonError(w, "Tunnel ID is unavailable", http.StatusConflict)
+			} else {
+				jsonError(w, "Tunnel attachment busy", http.StatusLocked)
+			}
+			return nil
+		}
+	}
+	var tunnelURL string
+	var err error
+	if persistent {
+		err = s.registry.redis.ReservePersistent(r.Context(), tunnelID, ownerHash)
+		tunnelURL = s.registry.tunnelURL(tunnelID)
+	} else {
+		tunnelURL, err = s.registry.Reserve(r.Context(), tunnelID, ownerHash)
+	}
 	if err != nil {
 		switch {
-		case errors.Is(err, ErrTunnelOwnership):
+		case errors.Is(err, ErrTunnelOwnership), errors.Is(err, ErrPersistentRequired), errors.Is(err, ErrStaleAttachment):
 			jsonError(w, "Tunnel ID is unavailable", http.StatusConflict)
 		case errors.Is(err, ErrTunnelRevoked):
 			jsonError(w, "Tunnel has been closed", http.StatusGone)
@@ -382,21 +416,58 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		}
 		return nil
 	}
-	conn, err := s.upgrader.Upgrade(w, r, http.Header{"X-Tunnel-URL": []string{tunnelURL}, "Cache-Control": []string{"no-store"}})
+	if persistent {
+		if err := s.registry.redis.CheckPersistent(r.Context(), tunnelID, ownerHash, r.Header.Get(protocol.AttachmentIDHeader), r.Header.Get(protocol.ExpectedGenerationHeader), r.Header.Get(protocol.AttemptHeader)); err != nil {
+			status := http.StatusServiceUnavailable
+			if errors.Is(err, ErrStaleAttachment) || errors.Is(err, ErrTunnelOwnership) || errors.Is(err, ErrPersistentRequired) {
+				status = http.StatusConflict
+			}
+			if errors.Is(err, ErrTunnelRevoked) {
+				status = http.StatusGone
+			}
+			jsonError(w, "Attachment admission rejected", status)
+			return nil
+		}
+	}
+	headers := http.Header{"X-Tunnel-URL": {tunnelURL}, "Cache-Control": {"no-store"}}
+	registration := r.Header.Get(protocol.RegistrationHeader) == protocol.RegistrationVersion
+	if registration {
+		headers.Set(protocol.RegistrationHeader, protocol.RegistrationVersion)
+	}
+	conn, err := s.upgrader.Upgrade(w, r, headers)
 	if err != nil {
 		return nil
 	}
 	conn.SetReadLimit(protocol.MaxMessageSize)
 	cfg := yamux.DefaultConfig()
 	cfg.KeepAliveInterval = 30 * time.Second
+	if persistent {
+		cfg.KeepAliveInterval = 10 * time.Second
+		cfg.ConnectionWriteTimeout = 20 * time.Second
+	}
 	session.conn, err = yamux.Server(&protocol.WsConn{Conn: conn}, cfg)
 	if err != nil {
 		conn.Close()
 		return nil
 	}
+	var control *yamux.Stream
+	if registration {
+		control, err = session.conn.OpenStream()
+		if err != nil {
+			session.conn.Close()
+			return nil
+		}
+		defer control.Close()
+		control.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	}
 	// Commit the new generation only after the handshake succeeds. A failed
 	// upgrade cannot invalidate the previous connection or its concurrent refresh.
-	if _, err := s.registry.Register(r.Context(), tunnelID, port, ownerHash, session.id); err != nil {
+	if persistent {
+		session.id, err = s.registry.redis.SetPersistent(r.Context(), tunnelID, port, ownerHash, r.Header.Get(protocol.AttachmentIDHeader), r.Header.Get(protocol.ExpectedGenerationHeader), r.Header.Get(protocol.AttemptHeader), session.id)
+	} else {
+		_, err = s.registry.Register(r.Context(), tunnelID, port, ownerHash, session.id)
+	}
+	if err != nil {
 		outcome = telemetry.Failure
 		session.conn.Close()
 		return nil
@@ -411,6 +482,13 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 	s.mu.Unlock()
 	if previous != nil {
 		previous.conn.Close()
+	}
+	if control != nil {
+		if err := json.NewEncoder(control).Encode(protocol.Registration{Version: 1, TunnelID: tunnelID, Generation: session.id}); err != nil {
+			// Return the installed session so the normal deferred disconnect path
+			// runs even if the acknowledgement was lost after commit.
+			session.conn.Close()
+		}
 	}
 	outcome = telemetry.Success
 	return session
