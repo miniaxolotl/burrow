@@ -25,8 +25,10 @@ func (r *readiness) observe(event internal.LifecycleEvent) (string, []acknowledg
 		if event.RegistrationConfirmed && event.Generation != "" {
 			r.ack[event.TunnelID] = acknowledgedTunnel{event.TunnelID, event.Generation, event.URL}
 		}
-	case "disconnected", "failed":
-		delete(r.ack, event.TunnelID)
+	case "disconnected", "failed", "draining":
+		if current, ok := r.ack[event.TunnelID]; ok && (event.Generation == "" || current.Generation == event.Generation) {
+			delete(r.ack, event.TunnelID)
+		}
 	}
 	now := len(r.ack) == r.count
 	if now == r.ready {

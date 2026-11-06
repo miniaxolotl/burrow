@@ -10,6 +10,7 @@ type Capabilities struct {
 	Version              int `json:"version"`
 	Registration         int `json:"registration"`
 	PersistentAttachment int `json:"persistent_attachment"`
+	Lifecycle            int `json:"lifecycle,omitempty"`
 }
 
 type Reservation struct {

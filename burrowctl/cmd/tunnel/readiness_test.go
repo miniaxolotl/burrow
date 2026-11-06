@@ -24,3 +24,14 @@ func TestReadinessTracksAllAcknowledgedGenerations(t *testing.T) {
 		}
 	}
 }
+
+func TestDrainInvalidatesOnlyMatchingGeneration(t *testing.T) {
+	r := newReadiness(1)
+	r.observe(internal.LifecycleEvent{Type: "registered", TunnelID: "a", Generation: "g2", RegistrationConfirmed: true})
+	if kind, _ := r.observe(internal.LifecycleEvent{Type: "draining", TunnelID: "a", Generation: "g1"}); kind != "" {
+		t.Fatal("old notice changed readiness")
+	}
+	if kind, _ := r.observe(internal.LifecycleEvent{Type: "draining", TunnelID: "a", Generation: "g2"}); kind != "not_ready" {
+		t.Fatalf("drain did not invalidate readiness: %q", kind)
+	}
+}

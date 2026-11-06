@@ -43,12 +43,14 @@ func AddCommands(root *cobra.Command) {
 			return nil
 		}
 	}
-	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd, savedCmd)
+	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd, savedCmd, doctorCmd)
+	doctorCmd.Flags().String("config", "", "Explicit route configuration; TCP connect/close only (visible to the app)")
 	addCaptureCommands(root)
 	TunnelCmd.Flags().Bool("headless", false, "Run without the interactive manager")
 	TunnelCmd.Flags().String("name", "", "Private saved alias (not a public subdomain)")
 	TunnelCmd.Flags().String("config", "", "Explicit versioned route configuration file")
 	TunnelCmd.Flags().Bool("capture", false, "Explicitly capture bounded requests in encrypted local storage")
+	TunnelCmd.Flags().Bool("inspect", false, "Keep bounded in-memory HTTP metadata (strict dispatcher; no capture/replay)")
 	TunnelCmd.Flags().StringSlice("capture-exclude", nil, "Do not capture these explicit path prefixes")
 	TunnelCmd.Flags().Bool("replace", false, "Replace a confirmed closed alias with a new URL")
 	TunnelCmd.Flags().Bool("yes", false, "Confirm the selected replacement")

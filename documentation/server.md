@@ -1,5 +1,22 @@
 # burrowd
 
+## Bounded process shutdown
+
+`burrowd serve --drain-timeout 15s` (`BURROW_DRAIN_TIMEOUT`) stops new public
+requests and registrations atomically, returning 503 with `Retry-After: 1` and
+`Cache-Control: no-store`. Already admitted requests, including SSE and upgrades,
+may finish until the deadline. Zero means immediate interruption; accepted
+values are 0–15 seconds. Cleanup gets at most five more seconds within a 20-second
+total cap (or the caller's earlier deadline). Concurrent shutdown callers share
+the first shutdown outcome; deadline interruption is reported as an error. Burrow
+never automatically resends an interrupted request.
+
+`GET /health` remains content-free liveness. `GET /ready` returns 200 only while
+admitting traffic and after a bounded successful Redis read (one-second deadline,
+one-second single-flight cache); otherwise it returns content-free 503. Tunnel
+subdomains still forward `/health` and `/ready` to their local apps. Hosted health
+checks remain unchanged pending authorized provider termination-order evidence.
+
 ## Operational telemetry
 
 Official server releases can report content-free connection/forwarding outcomes,
@@ -47,13 +64,14 @@ Owner-scoped management requests require `X-Tunnel-Token: <owner-credential>`.
 Health and capability discovery are public exceptions. The CLI creates the
 credential automatically; no account is needed. URL query credentials are rejected.
 
-| Method    | Route                                         | Access / result                                |
-| --------- | --------------------------------------------- | ---------------------------------------------- |
-| GET       | `/health`                                     | Public; only `{"status":"ok"}`                 |
-| GET       | `/tunnels`                                    | Owner's connected tunnels and count            |
-| WebSocket | `/tunnels/connect?tunnel_id=<id>&port=<port>` | Create or reconnect an owned tunnel            |
-| GET       | `/tunnels/<id>/logs`                          | Owner's request history, up to 200 entries     |
-| DELETE    | `/tunnels/<id>`                               | Owner-only closure and permanent ID revocation |
+| Method    | Route                                         | Access / result                                        |
+| --------- | --------------------------------------------- | ------------------------------------------------------ |
+| GET       | `/health`                                     | Public; only `{"status":"ok"}`                         |
+| GET       | `/ready`                                      | Public; content-free serving/Redis readiness (200/503) |
+| GET       | `/tunnels`                                    | Owner's connected tunnels and count                    |
+| WebSocket | `/tunnels/connect?tunnel_id=<id>&port=<port>` | Create or reconnect an owned tunnel                    |
+| GET       | `/tunnels/<id>/logs`                          | Owner's request history, up to 200 entries             |
+| DELETE    | `/tunnels/<id>`                               | Owner-only closure and permanent ID revocation         |
 
 Development also provides public `GET /.well-known/burrow-capabilities` for
 registration/persistent-attachment negotiation and owner-only
@@ -61,10 +79,10 @@ registration/persistent-attachment negotiation and owner-only
 the [merged workflow implementation](tunnel-workflows-implementation.md), not a
 claim that every published server already supports them.
 
-The proposed [tunnel operations plan](tunnel-operations-plan.md) adds bounded
-draining, optional lifecycle notices and a separate readiness endpoint. None is
-implemented by the planning PR. `/health` currently reports only the fixed response
-above, not Redis readiness, tunnel registration or local application health.
+The [operations implementation](tunnel-operations-implementation.md), stacked on
+the historical plan, adds bounded draining, optional lifecycle notices and `/ready`.
+This does not change hosted health probes or establish deployment continuity.
+`/health` remains liveness, not Redis readiness or application health.
 
 The list response is `{"tunnels":[...],"count":N}`. Both fields use the same owner-filtered snapshot. Disconnected grace-period records are not counted. There is no global count/list endpoint, no `all` scope, and no uptime disclosure. Former admin tokens have no special meaning. Private responses use `Cache-Control: no-store` and never contain owner credentials or hashes.
 
@@ -81,7 +99,13 @@ request-scoped HTTP transport. Only a successfully negotiated protocol upgrade
 (such as WebSocket) takes over the connection. HTTP/1 keep-alive, HTTP/2 responses,
 streaming bodies and WebSocket upgrades are covered by regression tests.
 
-Request history retains **200 completed requests per tunnel** in memory. Usage
+Request history retains at most **200 completed requests and 512 KiB per tunnel**
+in memory, with 2 KiB UTF-8 paths (no query, explicit truncation). Existing retained
+server history survives same-owner reconnect during the grace window, with each
+new row labelled by generation; stale callbacks cannot append. Final status
+origin is `tunnel_peer`, not proven application
+status; server-generated proxy failures use `server_proxy`. Interrupted bodies
+can retain HTTP 200 with an interrupted outcome. Usage
 counts bytes read from the local service's response stream, including HTTP
 headers; it is not bidirectional bandwidth accounting, a billing meter or a
 transfer allowance. Counts survive history eviction but reset when tunnel state

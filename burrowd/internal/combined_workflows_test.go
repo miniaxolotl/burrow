@@ -94,7 +94,7 @@ func TestCombinedWorkflowsRealServices(t *testing.T) {
 		} `json:"data"`
 	}
 	start := func(recording bool) (*exec.Cmd, *bufio.Scanner, *bytes.Buffer, envelope) {
-		args := []string{"tunnel", "--name", "combined", "--config", routeFile, "--output", "jsonl"}
+		args := []string{"tunnel", "--name", "combined", "--config", routeFile, "--inspect", "--output", "jsonl"}
 		if recording {
 			args = append(args, "--capture")
 		}
