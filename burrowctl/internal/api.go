@@ -1,8 +1,10 @@
 package internal
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -12,11 +14,15 @@ import (
 // Both the interactive manager and standalone commands use this owner-scoped
 // API, including the same credential and redirect policy.
 func (c *Client) api(method, path string, result any) error {
+	return c.apiContext(c.requestContext, method, path, result)
+}
+
+func (c *Client) apiContext(ctx context.Context, method, path string, result any) error {
 	scheme := "http"
 	if c.secure {
 		scheme = "https"
 	}
-	req, err := http.NewRequestWithContext(c.requestContext, method, fmt.Sprintf("%s://%s%s", scheme, c.server, path), nil)
+	req, err := http.NewRequestWithContext(ctx, method, fmt.Sprintf("%s://%s%s", scheme, c.server, path), nil)
 	if err != nil {
 		return err
 	}
@@ -34,15 +40,38 @@ func (c *Client) api(method, path string, result any) error {
 		return fmt.Errorf("server returned %s", resp.Status)
 	}
 	if result != nil {
-		return json.NewDecoder(resp.Body).Decode(result)
+		return json.NewDecoder(io.LimitReader(resp.Body, 1024*1024)).Decode(result)
 	}
 	return nil
 }
 
 func (c *Client) GetLogs(id string) ([]*protocol.TunnelLog, error) {
+	return c.GetLogsContext(c.requestContext, id)
+}
+
+func (c *Client) GetLogsContext(ctx context.Context, id string) ([]*protocol.TunnelLog, error) {
 	var logs []*protocol.TunnelLog
-	err := c.api(http.MethodGet, "/tunnels/"+url.PathEscape(id)+"/logs", &logs)
-	return logs, err
+	err := c.apiContext(ctx, http.MethodGet, "/tunnels/"+url.PathEscape(id)+"/logs", &logs)
+	if err != nil {
+		return nil, err
+	}
+	if len(logs) > protocol.MaxMetadataEntries {
+		logs = logs[len(logs)-protocol.MaxMetadataEntries:]
+	}
+	for _, entry := range logs {
+		if entry == nil {
+			return nil, fmt.Errorf("invalid request metadata")
+		}
+		path, truncated := protocol.ClipPath(entry.Path)
+		entry.Path = path
+		entry.PathTruncated = entry.PathTruncated || truncated
+		entry.Route = "" // A server snapshot cannot supply local route knowledge.
+	}
+	if len(logs) == 0 {
+		return []*protocol.TunnelLog{}, nil
+	}
+	bounded, _ := protocol.AppendMetadata(logs[:len(logs)-1], logs[len(logs)-1])
+	return bounded, nil
 }
 
 func (c *Client) RemoteTunnels() (*protocol.TunnelList, error) {

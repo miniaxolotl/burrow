@@ -1,12 +1,14 @@
 package routing
 
 import (
+	"context"
 	"errors"
 	"net"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"burrow/burrowctl/internal/strictjson"
 )
@@ -21,9 +23,12 @@ type Route struct {
 	HostHeader  string `json:"host_header,omitempty"`
 }
 type Table struct {
-	Version int                                            `json:"version"`
-	Routes  []Route                                        `json:"routes"`
-	Observe func(*http.Request, Route, string) Observation `json:"-"`
+	Version int                                             `json:"version"`
+	Routes  []Route                                         `json:"routes"`
+	Observe func(*http.Request, Route, string) Observation  `json:"-"`
+	Dial    func(context.Context, uint16) (net.Conn, error) `json:"-"`
+	Report  func(Exchange)                                  `json:"-"`
+	Headers func(Route, int, time.Time)                     `json:"-"`
 }
 
 func Parse(data []byte) (*Table, error) {

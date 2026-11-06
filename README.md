@@ -12,10 +12,16 @@ same source as the website's public reference pages. The
 [discovery maintenance guide](documentation/website-discovery.md) explains builds
 and publication boundaries; source changes are not a production rollout.
 
-The [tunnel workflow development plan](documentation/tunnel-workflows-plan.md)
-proposes stable URLs across CLI restarts, local replay, headless/structured output
-and one-hostname routing. See [implementation status](documentation/tunnel-workflows-implementation.md)
-for development progress; this is not a published-release announcement.
+The [tunnel workflow implementation](documentation/tunnel-workflows-implementation.md)
+records merged development support for saved URLs, Linux local capture/replay,
+headless/structured output and one-hostname routing, with
+[the original plan](documentation/tunnel-workflows-plan.md) retained for context.
+This is not a published-release announcement.
+
+The [operations implementation](documentation/tunnel-operations-implementation.md)
+adds bounded draining/notices, `doctor` and opt-in `--inspect` metadata, stacked on
+the historical [plan](documentation/tunnel-operations-plan.md). Hosted termination
+and native macOS acceptance are separate pending gates, not release guarantees.
 
 ## Quick start
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.21](https://github.com/miniaxolotl/burrow/compare/v0.3.20...v0.3.21) (2026-11-06)
+
+
+### Features
+
+* **tunnels:** implement bounded drain, diagnostics and inspection ([#97](https://github.com/miniaxolotl/burrow/issues/97)) ([6c0c5ba](https://github.com/miniaxolotl/burrow/commit/6c0c5ba616d3e1afad52ab3786bebe49165b2129))
+* **website:** refine terminal stories and adaptive icons ([e04e48f](https://github.com/miniaxolotl/burrow/commit/e04e48f110f227cf327a85abe33a8eb941ed656b))
+* **website:** refine terminal stories and favicons ([2f48fd4](https://github.com/miniaxolotl/burrow/commit/2f48fd4af8ca4ca8119e8e7a024fb5a02a22ebfe))
+
 ## [0.3.20](https://github.com/miniaxolotl/burrow/compare/v0.3.19...v0.3.20) (2026-11-06)
 
 

@@ -41,6 +41,18 @@ func readConfig() (*clientConfig, string, error) {
 	return &cfg, cfgFile, nil
 }
 
+// ExistingServer reads a saved default without initializing owner/config state.
+func ExistingServer() (string, error) {
+	cfg, _, err := readConfig()
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return cfg.Server, nil
+}
+
 func EnsureConfig() (string, error) {
 	dir, err := configDir()
 	if err != nil {

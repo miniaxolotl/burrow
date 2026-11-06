@@ -30,22 +30,29 @@ func listData(result *protocol.TunnelList) any {
 }
 
 type logData struct {
-	ID         string    `json:"id"`
-	Timestamp  time.Time `json:"timestamp"`
-	Method     string    `json:"method"`
-	Path       string    `json:"path"`
-	StatusCode *int      `json:"status_code"`
-	SizeBytes  int64     `json:"size_bytes"`
-	DurationMS *int64    `json:"duration_ms"`
-	IP         string    `json:"ip"`
+	ID            string    `json:"id"`
+	Timestamp     time.Time `json:"timestamp"`
+	Method        string    `json:"method"`
+	Path          string    `json:"path"`
+	StatusCode    *int      `json:"status_code"`
+	SizeBytes     int64     `json:"size_bytes"`
+	DurationMS    *int64    `json:"duration_ms"`
+	IP            string    `json:"ip"`
+	Source        string    `json:"source"`
+	Generation    string    `json:"generation,omitempty"`
+	CompletedAt   time.Time `json:"completed_at,omitempty"`
+	StatusOrigin  string    `json:"status_origin,omitempty"`
+	Outcome       string    `json:"outcome,omitempty"`
+	Reason        string    `json:"reason,omitempty"`
+	PathTruncated bool      `json:"path_truncated,omitempty"`
 }
 
 func requestData(entry *protocol.TunnelLog) logData {
 	var status *int
-	if entry.StatusCode >= 100 && entry.StatusCode <= 599 {
+	if entry.StatusCode == 101 || entry.StatusCode >= 200 && entry.StatusCode <= 599 {
 		status = &entry.StatusCode
 	}
-	return logData{entry.ID, entry.Timestamp.UTC(), entry.Method, entry.Path, status, entry.Size, milliseconds(entry.Duration), entry.IP}
+	return logData{ID: entry.ID, Timestamp: entry.Timestamp.UTC(), Method: entry.Method, Path: entry.Path, StatusCode: status, SizeBytes: entry.Size, DurationMS: milliseconds(entry.Duration), IP: entry.IP, Source: "server_logs", Generation: entry.Generation, CompletedAt: entry.CompletedAt, StatusOrigin: entry.StatusOrigin, Outcome: entry.Outcome, Reason: entry.Reason, PathTruncated: entry.PathTruncated}
 }
 
 func requestsData(entries []*protocol.TunnelLog) []logData {

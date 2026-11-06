@@ -16,7 +16,9 @@ import (
 	"burrow/burrowctl/internal/capture"
 	"burrow/burrowctl/internal/clioutput"
 	"burrow/burrowctl/internal/config"
+	"burrow/burrowctl/internal/inspection"
 	"burrow/burrowctl/internal/localstate"
+	"burrow/protocol"
 	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -140,6 +142,17 @@ func approve(cmd *cobra.Command, warning string) error {
 func addCaptureCommands(root *cobra.Command) {
 	requests := &cobra.Command{Use: "requests", Short: "Manage opt-in encrypted local request captures"}
 	list := &cobra.Command{Use: "list", Args: arguments(cobra.NoArgs), RunE: func(cmd *cobra.Command, _ []string) error { return requestsCommand(cmd, "list", "") }}
+	addFilters(list)
+	list.Args = func(cmd *cobra.Command, args []string) error {
+		if err := arguments(cobra.NoArgs)(cmd, args); err != nil {
+			return err
+		}
+		_, err := readFilters(cmd, "capture")
+		if err != nil {
+			return clioutput.Invalid(err)
+		}
+		return nil
+	}
 	del := &cobra.Command{Use: "delete <request-id>", Args: arguments(cobra.ExactArgs(1)), RunE: func(cmd *cobra.Command, args []string) error { return requestsCommand(cmd, "delete", args[0]) }}
 	clear := &cobra.Command{Use: "clear", Args: arguments(cobra.NoArgs), RunE: func(cmd *cobra.Command, _ []string) error { return requestsCommand(cmd, "clear", "") }}
 	for _, cmd := range []*cobra.Command{list, del, clear} {
@@ -211,6 +224,14 @@ func addCaptureCommands(root *cobra.Command) {
 }
 
 func requestsCommand(cmd *cobra.Command, operation, id string) error {
+	var query inspection.Query
+	if operation == "list" {
+		var err error
+		query, err = readFilters(cmd, "capture")
+		if err != nil {
+			return clioutput.Invalid(err)
+		}
+	}
 	store, owner, err := captureStore(cmd)
 	if err != nil {
 		return err
@@ -226,6 +247,14 @@ func requestsCommand(cmd *cobra.Command, operation, id string) error {
 		if err != nil {
 			return err
 		}
+		retained := len(items)
+		filtered := items[:0]
+		for _, item := range items {
+			if query.Match(&protocol.TunnelLog{ID: item.ID, Method: item.Method, Route: item.Route}) {
+				filtered = append(filtered, item)
+			}
+		}
+		items = filtered
 		if out.Structured() {
 			return out.Emit("result", tunnel, items)
 		}
@@ -234,11 +263,12 @@ func requestsCommand(cmd *cobra.Command, operation, id string) error {
 			if item.LastJob != nil {
 				job = " · last job " + item.LastJob.ID + " " + item.LastJob.State
 			}
-			if _, err := fmt.Fprintf(out, "%s %s %s · %d bytes · redacted=%t%s\n", item.ID, item.Method, item.Route, item.SizeBytes, item.Redacted, job); err != nil {
+			if _, err := fmt.Fprintf(out, "%s %s %s · %d bytes · redacted=%t%s\n", item.ID, inspection.Safe(item.Method), inspection.Safe(item.Route), item.SizeBytes, item.Redacted, job); err != nil {
 				return err
 			}
 		}
-		return nil
+		_, err = fmt.Fprintf(out, "%d matching / %d retained · encrypted capture summaries\n", len(items), retained)
+		return err
 	}
 	if err := approve(cmd, "Erase selected local captures? This prevents future replay but cannot undo requests already dispatched."); err != nil {
 		return err

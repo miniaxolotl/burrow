@@ -78,7 +78,9 @@ func runHeadless(cmd *cobra.Command, client *internal.Client, ports []int) (err 
 				Generation            string          `json:"generation,omitempty"`
 				Routes                []routing.Route `json:"routes,omitempty"`
 				CaptureID             string          `json:"capture_id,omitempty"`
-			}{ObservedAt: event.ObservedAt, Port: event.Port, URL: event.URL, Attempt: event.Attempt, RetryDelayMS: event.RetryDelayMS, Code: event.Code, RegistrationConfirmed: event.RegistrationConfirmed, Generation: event.Generation, Routes: client.Routes(), CaptureID: event.CaptureID}
+				RemainingMS           int64           `json:"remaining_ms,omitempty"`
+				LifecycleConfirmed    bool            `json:"lifecycle_confirmed"`
+			}{ObservedAt: event.ObservedAt, Port: event.Port, URL: event.URL, Attempt: event.Attempt, RetryDelayMS: event.RetryDelayMS, Code: event.Code, RegistrationConfirmed: event.RegistrationConfirmed, Generation: event.Generation, Routes: client.Routes(), CaptureID: event.CaptureID, RemainingMS: event.RemainingMS, LifecycleConfirmed: event.LifecycleConfirmed}
 			if err := output.Emit(event.Type, event.TunnelID, data); err != nil {
 				return err
 			}

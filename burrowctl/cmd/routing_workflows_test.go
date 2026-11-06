@@ -95,3 +95,59 @@ func TestWorkflowRoutesOneLegacyWireTunnelToTwoLocalServices(t *testing.T) {
 		t.Fatalf("routed stop: %v %s", err, &stderr)
 	}
 }
+
+func TestInspectEnablesPrivateHTTPDispatcherWithoutCapture(t *testing.T) {
+	app := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, "app") }))
+	defer app.Close()
+	_, port, _ := net.SplitHostPort(app.Listener.Addr().String())
+	server, opened := workflowTunnelPeer(t, "")
+	command, home := workflowCommand(t, "tunnel", port, "--inspect", "--server", server, "--output", "jsonl")
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var stderr bytes.Buffer
+	command.Stderr = &stderr
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer command.Process.Kill()
+	scanner := bufio.NewScanner(stdout)
+	connected := false
+	for scanner.Scan() {
+		var e workflowEnvelope
+		json.Unmarshal(scanner.Bytes(), &e)
+		if e.Type == "connected" {
+			connected = true
+			break
+		}
+	}
+	if !connected {
+		t.Fatalf("inspected tunnel did not connect: %s", &stderr)
+	}
+	session := <-opened
+	stream, err := session.Open()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stream.Close()
+	stream.SetDeadline(time.Now().Add(time.Second))
+	fmt.Fprint(stream, "GET /api/%2e%2e/private HTTP/1.1\r\nHost: public.test\r\nConnection: close\r\n\r\n")
+	resp, err := http.ReadResponse(bufio.NewReader(stream), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != 400 {
+		t.Fatal("inspection did not use strict HTTP path policy")
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "burrow", "captures")); !os.IsNotExist(err) {
+		t.Fatal("inspection opened a capture store")
+	}
+	command.Process.Signal(syscall.SIGTERM)
+	for scanner.Scan() {
+	}
+	if err := command.Wait(); err != nil {
+		t.Fatal(err)
+	}
+}
