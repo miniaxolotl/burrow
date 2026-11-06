@@ -69,13 +69,16 @@ var (
 type viewState int
 
 const (
-	stateList     viewState = iota
-	stateInput              // entering a port number
-	stateCreating           // tunnel creation in flight
-	stateLogs               // viewing request logs
-	stateConfirm            // confirmation prompt (close tunnel)
-	stateHelp               // help overlay
-	stateRoutes             // explicit startup route table
+	stateList          viewState = iota
+	stateInput                   // entering a port number
+	stateCreating                // tunnel creation in flight
+	stateLogs                    // viewing request logs
+	stateConfirm                 // confirmation prompt (close tunnel)
+	stateHelp                    // help overlay
+	stateRoutes                  // explicit startup route table
+	stateRequests                // encrypted local capture summaries
+	stateReplayConfirm           // scoped duplicate-effect approval
+	stateEraseConfirm            // scoped local capture erasure approval
 )
 
 type sortMode int
@@ -117,6 +120,7 @@ type model struct {
 	sortMode      sortMode
 	confirmTarget *protocol.TunnelInfo
 	routeCursor   int
+	capture       captureView
 }
 
 func newModel(client *internal.Client, server string) model {
@@ -198,6 +202,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
+		if (m.state == stateRequests || m.state == stateReplayConfirm || m.state == stateEraseConfirm) && !m.capture.loading {
+			m.capture.loading = true
+			return m, tea.Batch(doTick(), m.loadCaptures())
+		}
 		return m, doTick()
 
 	case spinner.TickMsg:
@@ -220,6 +228,60 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		return m.handleKey(msg)
+	case captureRowsMsg:
+		return m.applyCaptureRows(msg), nil
+	case capturePreviewMsg:
+		m.capture.busy = false
+		if m.state != stateRequests {
+			return m, nil
+		}
+		if msg.err {
+			m.capture.feedback = "Replay preview unavailable or configuration changed"
+			m.state = stateRequests
+		} else {
+			m.capture.preview = msg.preview
+			m.capture.retryParent = ""
+			if previous := msg.preview.PreviousJob; previous != nil && (previous.State == "uncertain" || previous.State == "recovering") {
+				m.capture.retryParent = previous.ID
+				m.capture.job = *previous
+			}
+			m.state = stateReplayConfirm
+		}
+	case captureQueuedMsg:
+		if m.state == stateReplayConfirm {
+			m.state = stateRequests
+		}
+		if msg.err {
+			m.capture.busy = false
+			m.capture.feedback = "Approval was not committed; no request dispatched"
+			return m, nil
+		}
+		m.capture.job = msg.job
+		m.capture.feedback = "Replay queued durably (not completed)"
+		return m, func() tea.Msg {
+			job, err := m.client.RunReplay(msg.job.ID)
+			return captureResultMsg{job: job, err: err != nil}
+		}
+	case captureResultMsg:
+		m.capture.busy = false
+		if msg.job.ID != "" {
+			m.capture.job = msg.job
+		}
+		if msg.err {
+			m.capture.feedback = "Replay returned an error; inspect the persisted outcome above"
+		} else {
+			m.capture.feedback = "Response status committed; application processing is not verified"
+		}
+	case captureErasedMsg:
+		m.capture.busy = false
+		if m.state == stateEraseConfirm {
+			m.state = stateRequests
+		}
+		if msg.err {
+			m.capture.feedback = "Erasure was not committed"
+		} else {
+			m.capture.feedback = "Local erasure committed; dispatched effects cannot be undone"
+		}
 	}
 
 	return m, nil
@@ -227,6 +289,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch m.state {
+	case stateRequests, stateReplayConfirm, stateEraseConfirm:
+		return m.handleCaptureKey(msg)
 	case stateInput:
 		return m.handleInputKey(msg)
 	case stateCreating:
@@ -290,7 +354,7 @@ func (m model) handleListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.cursor = min(len(m.tunnels)-1, m.cursor+10)
 
 	case "n":
-		if len(m.client.Routes()) > 0 {
+		if m.client.FixedConfiguration() {
 			m.status = "routes are fixed for this invocation; restart with explicit configuration"
 			m.statusIsErr = true
 			return m, nil
@@ -326,6 +390,18 @@ func (m model) handleListKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "r":
 		m.state = stateRoutes
+	case "x":
+		if m.client.CaptureStore() == nil {
+			m.status = "Capture was not enabled; use requests/replay commands for saved local records"
+			m.statusIsErr = true
+			return m, nil
+		}
+		if len(m.tunnels) > 0 && m.cursor < len(m.tunnels) {
+			m.capture.tunnel = m.tunnels[m.cursor].TunnelID
+			m.state = stateRequests
+			m.capture.loading = true
+			return m, m.loadCaptures()
+		}
 
 	case "o":
 		if len(m.tunnels) > 0 {
@@ -521,6 +597,9 @@ func (m model) View() string {
 	if m.state == stateRoutes {
 		return m.viewRoutes()
 	}
+	if m.state == stateRequests || m.state == stateReplayConfirm || m.state == stateEraseConfirm {
+		return m.viewCaptures()
+	}
 
 	var b strings.Builder
 
@@ -626,7 +705,7 @@ func (m model) View() string {
 			b.WriteString("\n")
 		}
 		b.WriteString(ind + renderHelp([][2]string{
-			{"n", "new"}, {"c", "copy"}, {"o", "open"}, {"d", "close"}, {"l", "logs"}, {"r", "routes"}, {"s", "sort"}, {"g/G", "top/bot"}, {"?", "help"}, {"q", "quit"},
+			{"n", "new"}, {"c", "copy"}, {"o", "open"}, {"d", "close"}, {"l", "logs"}, {"r", "routes"}, {"x", "captures"}, {"s", "sort"}, {"g/G", "top/bot"}, {"?", "help"}, {"q", "quit"},
 		}) + "\n")
 	}
 

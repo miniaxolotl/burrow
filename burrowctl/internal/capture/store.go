@@ -62,6 +62,7 @@ type Summary struct {
 	CreatedAt  time.Time `json:"created_at"`
 	Replayable bool      `json:"replayable"`
 	Redacted   bool      `json:"redacted"`
+	LastJob    *Job      `json:"last_job,omitempty"`
 }
 
 func Hash(value string) string { h := sha256.Sum256([]byte(value)); return hex.EncodeToString(h[:]) }
@@ -298,6 +299,12 @@ func (s *Store) Read(id, tunnel string) (Record, error) {
 func (s *Store) List(tunnel string) ([]Summary, error) {
 	items := []Summary{}
 	err := s.transaction(func(tx *sql.Tx, n int64) error {
+		if err := invalidateJobs(tx, n); err != nil {
+			return err
+		}
+		if err := expireJobs(tx, n); err != nil {
+			return err
+		}
 		rows, err := tx.Query("SELECT id,payload FROM captures WHERE tunnel=? AND deleted=0 AND expires_ms>? AND payload IS NOT NULL ORDER BY created_ms DESC LIMIT 200", Hash(tunnel), n)
 		if err != nil {
 			return err
@@ -316,7 +323,11 @@ func (s *Store) List(tunnel string) ([]Summary, error) {
 			if r.TunnelID != tunnel {
 				return ErrUnavailable
 			}
-			items = append(items, Summary{r.ID, r.Method, r.Route.Path, len(r.Body), r.CreatedAt, true, r.Redacted})
+			job, err := latestJob(tx, r.ID, Hash(tunnel))
+			if err != nil {
+				return err
+			}
+			items = append(items, Summary{r.ID, r.Method, r.Route.Path, len(r.Body), r.CreatedAt, true, r.Redacted, job})
 		}
 		return rows.Err()
 	})

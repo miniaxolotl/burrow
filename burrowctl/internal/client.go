@@ -14,6 +14,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"burrow/burrowctl/internal/capture"
 	"burrow/burrowctl/internal/routing"
 	"burrow/protocol"
 	"burrow/protocol/telemetry"
@@ -41,6 +42,7 @@ type Client struct {
 	attachment     *Attachment
 	routes         *routing.Table
 	streams        chan struct{}
+	capture        *CaptureSettings
 }
 
 // LifecycleEvent reports observed transport state, never application readiness.
@@ -56,6 +58,7 @@ type LifecycleEvent struct {
 	Code                  string
 	Generation            string
 	RegistrationConfirmed bool
+	CaptureID             string
 }
 
 func (c *Client) SetEventHandler(handler func(LifecycleEvent)) {
@@ -97,6 +100,7 @@ type TunnelConn struct {
 	forwarded  sync.Once
 	status     string
 	generation string
+	dispatcher *routing.Table
 }
 
 func NewClient(server, token, domain string, secure bool, observers ...telemetry.Observer) *Client {
@@ -149,6 +153,23 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 	if c.attachment != nil {
 		tunnelID = c.attachment.TunnelID
 	}
+	dispatcher := c.routes
+	if c.capture != nil {
+		if dispatcher == nil {
+			dispatcher = &routing.Table{Version: 1, Routes: []routing.Route{{Path: "/", Port: port}}}
+		} else {
+			copy := *dispatcher
+			dispatcher = &copy
+		}
+		recorder, err := capture.NewRecorder(c.capture.Store, tunnelID, dispatcher, c.capture.ConfigPath, c.capture.Excludes, func(e capture.CaptureEvent) {
+			c.emit(LifecycleEvent{Type: e.Type, TunnelID: tunnelID, Port: port, CaptureID: e.ID, Code: e.Code})
+		})
+		if err != nil {
+			return "", err
+		}
+		dispatcher.Observe = recorder.Begin
+		c.workers.Go(func() { recorder.Run(tctx) })
+	}
 	c.emit(LifecycleEvent{Type: "connecting", TunnelID: tunnelID, Port: port})
 	startup, stopStartup := context.WithTimeout(tctx, 30*time.Second)
 	var tc *TunnelConn
@@ -175,6 +196,7 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 
 	tc.ctx = tctx
 	tc.cancel = cancel
+	tc.dispatcher = dispatcher
 
 	c.mu.Lock()
 	if c.closed || tctx.Err() != nil {
@@ -206,6 +228,34 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 }
 
 func (c *Client) SetRoutes(routes *routing.Table) { c.routes = routes }
+
+type CaptureSettings struct {
+	Store      *capture.Store
+	ConfigPath string
+	Excludes   []string
+}
+
+func (c *Client) SetCapture(settings *CaptureSettings) { c.capture = settings }
+func (c *Client) CaptureStore() *capture.Store {
+	if c.capture == nil {
+		return nil
+	}
+	return c.capture.Store
+}
+func (c *Client) FixedConfiguration() bool {
+	return c.capture != nil || c.attachment != nil || c.routes != nil
+}
+func (c *Client) RunReplay(id string) (capture.Job, error) {
+	c.mu.Lock()
+	if c.closed || c.capture == nil {
+		c.mu.Unlock()
+		return capture.Job{}, errors.New("capture worker unavailable")
+	}
+	c.workers.Add(1)
+	c.mu.Unlock()
+	defer c.workers.Done()
+	return c.capture.Store.Run(c.ctx, id, nil)
+}
 func (c *Client) Routes() []routing.Route {
 	if c.routes == nil {
 		return nil
@@ -458,10 +508,10 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 
 		reconnectDelay = time.Second
 		attempt = 0
-		if c.routes != nil {
+		if tc.dispatcher != nil {
 			select {
 			case c.streams <- struct{}{}:
-				c.workers.Go(func() { defer func() { <-c.streams }(); c.routes.ServeStream(tc.ctx, stream) })
+				c.workers.Go(func() { defer func() { <-c.streams }(); tc.dispatcher.ServeStream(tc.ctx, stream) })
 			default:
 				stream.SetWriteDeadline(time.Now().Add(time.Second))
 				io.WriteString(stream, "HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nContent-Length: 0\r\n\r\n")

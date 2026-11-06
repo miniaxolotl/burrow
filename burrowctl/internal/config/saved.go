@@ -28,18 +28,19 @@ func ValidateAlias(name string) error {
 }
 
 type SavedAlias struct {
-	Version    int       `json:"version"`
-	Scope      string    `json:"scope"`
-	Name       string    `json:"name"`
-	TunnelID   string    `json:"tunnel_id"`
-	Attachment string    `json:"attachment"`
-	Generation string    `json:"generation"`
-	Nonce      string    `json:"nonce"`
-	Pending    bool      `json:"pending"`
-	URL        string    `json:"url"`
-	State      string    `json:"state"`
-	ObservedAt time.Time `json:"observed_at"`
-	Checksum   string    `json:"checksum"`
+	Version      int       `json:"version"`
+	Scope        string    `json:"scope"`
+	Name         string    `json:"name"`
+	TunnelID     string    `json:"tunnel_id"`
+	Attachment   string    `json:"attachment"`
+	Generation   string    `json:"generation"`
+	Nonce        string    `json:"nonce"`
+	Pending      bool      `json:"pending"`
+	URL          string    `json:"url"`
+	State        string    `json:"state"`
+	ObservedAt   time.Time `json:"observed_at"`
+	Checksum     string    `json:"checksum"`
+	TargetDigest string    `json:"target_digest,omitempty"`
 }
 
 type Alias struct {
@@ -175,6 +176,23 @@ func (a *Alias) Acknowledge(generation, url string) error {
 	})
 }
 func (a *Alias) Close() error { return a.use.Close() }
+
+func (a *Alias) SetTargetDigest(digest string) error {
+	return a.update(func(r *SavedAlias) error { r.TargetDigest = digest; return nil })
+}
+
+func FindSaved(server, owner, name string) (SavedAlias, error) {
+	if err := ValidateAlias(name); err != nil {
+		return SavedAlias{}, err
+	}
+	dir, scope, err := savedScope(server, owner)
+	if err != nil {
+		return SavedAlias{}, err
+	}
+	h := sha256.Sum256([]byte(name))
+	a := &Alias{path: filepath.Join(dir, scope+"-"+hex.EncodeToString(h[:])+".json"), scope: scope, name: name}
+	return a.read()
+}
 
 func (a *Alias) SetState(state string) error {
 	return a.update(func(r *SavedAlias) error { r.State = state; r.ObservedAt = time.Now().UTC(); return nil })

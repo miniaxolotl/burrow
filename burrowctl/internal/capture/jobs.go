@@ -50,6 +50,61 @@ func getJob(tx *sql.Tx, id string) (Job, error) {
 	j.DeadlineAt = time.UnixMilli(deadline).UTC()
 	return j, nil
 }
+
+func latestJob(tx *sql.Tx, captureID, tunnel string) (*Job, error) {
+	var id string
+	err := tx.QueryRow("SELECT id FROM jobs WHERE capture_id=? AND tunnel=? ORDER BY created_ms DESC,rowid DESC LIMIT 1", captureID, tunnel).Scan(&id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	job, err := getJob(tx, id)
+	return &job, err
+}
+func (s *Store) Jobs(tunnel string) ([]Job, error) {
+	items := []Job{}
+	scope := ""
+	if tunnel != "" {
+		scope = Hash(tunnel)
+	}
+	err := s.transaction(func(tx *sql.Tx, n int64) error {
+		if err := invalidateJobs(tx, n); err != nil {
+			return err
+		}
+		if err := expireJobs(tx, n); err != nil {
+			return err
+		}
+		rows, err := tx.Query("SELECT id FROM jobs WHERE (?='' OR tunnel=?) ORDER BY created_ms DESC,rowid DESC LIMIT 2048", scope, scope)
+		if err != nil {
+			return err
+		}
+		ids := []string{}
+		for rows.Next() {
+			var id string
+			if err := rows.Scan(&id); err != nil {
+				rows.Close()
+				return err
+			}
+			ids = append(ids, id)
+		}
+		err = rows.Err()
+		rows.Close()
+		if err != nil {
+			return err
+		}
+		for _, id := range ids {
+			job, err := getJob(tx, id)
+			if err != nil {
+				return err
+			}
+			items = append(items, job)
+		}
+		return nil
+	})
+	return items, err
+}
 func invalidateJobs(tx *sql.Tx, n int64) error {
 	_, err := tx.Exec(`UPDATE jobs SET state=CASE WHEN intent=1 THEN 'uncertain' ELSE 'cancelled' END,code='capture_unavailable',updated_ms=?
 WHERE state IN ('queued','processing','retry_wait','recovering') AND NOT EXISTS(SELECT 1 FROM captures WHERE captures.id=jobs.capture_id AND captures.tunnel=jobs.tunnel AND deleted=0 AND payload IS NOT NULL AND expires_ms>?)`, n, n)
@@ -148,6 +203,15 @@ func (s *Store) Queue(captureID, tunnel, digest, parent string, approved bool) (
 		}
 		if digest == "" || record.ConfigDigest != digest {
 			return errors.New("replay configuration drift")
+		}
+		if parent == "" {
+			var uncertain int
+			if err := tx.QueryRow("SELECT count(*) FROM jobs AS previous WHERE capture_id=? AND tunnel=? AND state IN ('uncertain','recovering') AND NOT EXISTS(SELECT 1 FROM jobs AS linked WHERE linked.parent_id=previous.id)", captureID, Hash(tunnel)).Scan(&uncertain); err != nil {
+				return err
+			}
+			if uncertain > 0 {
+				return errors.New("prior uncertain work requires an explicit linked replay retry")
+			}
 		}
 		if parent != "" {
 			old, err := getJob(tx, parent)

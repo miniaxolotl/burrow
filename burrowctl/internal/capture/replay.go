@@ -50,6 +50,7 @@ func validateReplay(r Record) error {
 }
 
 type Preview struct {
+	PreviousJob                              *Job
 	ID, TunnelID, Method, Path, ConfigDigest string
 	Port                                     uint16
 	Redacted                                 bool
@@ -64,7 +65,22 @@ func (s *Store) Preview(id, tunnel string) (Preview, error) {
 	if err := validateReplay(r); err != nil {
 		return Preview{}, err
 	}
-	return Preview{r.ID, r.TunnelID, r.Method, r.Path, r.ConfigDigest, r.Route.Port, r.Redacted, r.CreatedAt}, nil
+	var previous *Job
+	err = s.transaction(func(tx *sql.Tx, n int64) error {
+		if err := invalidateJobs(tx, n); err != nil {
+			return err
+		}
+		if err := expireJobs(tx, n); err != nil {
+			return err
+		}
+		var err error
+		previous, err = latestJob(tx, r.ID, Hash(tunnel))
+		return err
+	})
+	if err != nil {
+		return Preview{}, err
+	}
+	return Preview{PreviousJob: previous, ID: r.ID, TunnelID: r.TunnelID, Method: r.Method, Path: r.Path, ConfigDigest: r.ConfigDigest, Port: r.Route.Port, Redacted: r.Redacted, CreatedAt: r.CreatedAt}, nil
 }
 
 // Run is the only dispatch path. Status, tunnel startup and cleanup never call

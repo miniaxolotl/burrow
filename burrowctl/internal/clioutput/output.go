@@ -52,7 +52,7 @@ func Prepare(cmd *cobra.Command) error {
 	if format != "text" && format != "json" && format != "jsonl" {
 		return Invalid(errors.New("--output must be text, json or jsonl"))
 	}
-	streaming := cmd.Name() == "tunnel"
+	streaming := cmd.Name() == "tunnel" || cmd.Name() == "replay" || cmd.Name() == "retry" && cmd.Parent() != nil && cmd.Parent().Name() == "replay"
 	if cmd.Name() == "logs" {
 		follow, _ := cmd.Flags().GetBool("follow")
 		streaming = follow
@@ -66,7 +66,7 @@ func Prepare(cmd *cobra.Command) error {
 	}
 	if format != "text" {
 		switch cmd.Name() {
-		case "tunnel", "list", "logs", "close", "saved":
+		case "tunnel", "list", "logs", "close", "saved", "replay", "retry", "status", "delete", "clear", "jobs":
 		default:
 			return Invalid(errors.New("structured output is supported for tunnel, list, logs and close"))
 		}

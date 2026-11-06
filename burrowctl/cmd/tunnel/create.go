@@ -11,9 +11,11 @@ import (
 
 	"burrow/burrowctl/cmd/tui"
 	"burrow/burrowctl/internal"
+	"burrow/burrowctl/internal/capture"
 	"burrow/burrowctl/internal/clioutput"
 	"burrow/burrowctl/internal/config"
 	"burrow/burrowctl/internal/routing"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -60,6 +62,20 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 		ports = []int{int(routes.Routes[0].Port)}
 	}
 	name, _ := cmd.Flags().GetString("name")
+	recording, _ := cmd.Flags().GetBool("capture")
+	excludes, _ := cmd.Flags().GetStringSlice("capture-exclude")
+	if len(excludes) > 32 || len(excludes) > 0 && !recording {
+		return clioutput.Invalid(errors.New("capture exclusions require --capture and at most 32 prefixes"))
+	}
+	for _, prefix := range excludes {
+		table := routing.Table{Version: 1, Routes: []routing.Route{{Path: prefix, Port: 1}}}
+		if err := table.Validate(); err != nil {
+			return clioutput.Invalid(err)
+		}
+	}
+	if recording && len(ports) != 1 {
+		return clioutput.Invalid(errors.New("capture requires one tunnel (optionally routed)"))
+	}
 	replace, _ := cmd.Flags().GetBool("replace")
 	yes, _ := cmd.Flags().GetBool("yes")
 	if cmd.Flags().Changed("name") {
@@ -76,6 +92,25 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	client.SetRoutes(routes)
+	configPath := ""
+	if cmd.Flags().Changed("config") {
+		path, _ := cmd.Flags().GetString("config")
+		configPath, err = filepath.Abs(path)
+		if err != nil {
+			return err
+		}
+	}
+	if recording {
+		store, _, err := captureStore(cmd)
+		if err != nil {
+			return err
+		}
+		defer store.Close()
+		client.SetCapture(&internal.CaptureSettings{Store: store, ConfigPath: configPath, Excludes: excludes})
+		if err := clioutput.FromCommand(cmd).Emit("capture_enabled", "", map[string]string{"warning": "Bodies can contain secrets. Capture is local, encrypted, bounded and opt-in for this process only."}); err != nil {
+			return err
+		}
+	}
 	if routes != nil && !clioutput.FromCommand(cmd).Structured() {
 		for _, route := range routes.Routes {
 			if _, err := fmt.Fprintf(clioutput.FromCommand(cmd), "route %s -> loopback:%d (strip_prefix=%t, host_header=%q)\n", route.Path, route.Port, route.StripPrefix, route.HostHeader); err != nil {
@@ -102,6 +137,13 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		defer alias.Close()
+		target := routes
+		if target == nil {
+			target = &routing.Table{Version: 1, Routes: []routing.Route{{Path: "/", Port: uint16(ports[0])}}}
+		}
+		if err := alias.SetTargetDigest(capture.Digest(target)); err != nil {
+			return err
+		}
 		if alias.Record().State == "uncertain" {
 			state, err := client.Reservation(alias.Record().TunnelID)
 			if err != nil {

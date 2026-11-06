@@ -44,9 +44,12 @@ func AddCommands(root *cobra.Command) {
 		}
 	}
 	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd, savedCmd)
+	addCaptureCommands(root)
 	TunnelCmd.Flags().Bool("headless", false, "Run without the interactive manager")
 	TunnelCmd.Flags().String("name", "", "Private saved alias (not a public subdomain)")
 	TunnelCmd.Flags().String("config", "", "Explicit versioned route configuration file")
+	TunnelCmd.Flags().Bool("capture", false, "Explicitly capture bounded requests in encrypted local storage")
+	TunnelCmd.Flags().StringSlice("capture-exclude", nil, "Do not capture these explicit path prefixes")
 	TunnelCmd.Flags().Bool("replace", false, "Replace a confirmed closed alias with a new URL")
 	TunnelCmd.Flags().Bool("yes", false, "Confirm the selected replacement")
 }
@@ -69,7 +72,7 @@ func resolveToken(cmd *cobra.Command, server string) (string, error) {
 	if token != "" {
 		return token, nil
 	}
-	if cmd.Name() == "saved" {
+	if cmd.Name() == "saved" || cmd.Name() == "replay" || cmd.Parent() != nil && (cmd.Parent().Name() == "requests" || cmd.Parent().Name() == "replay") {
 		return config.ExistingOwnerToken(server)
 	}
 	return config.OwnerToken(server)

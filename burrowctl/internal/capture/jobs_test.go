@@ -41,6 +41,9 @@ func TestReplayIntentIsNeverAutomaticallyRedispatched(t *testing.T) {
 	if _, err := s.Claim(job.ID); err == nil {
 		t.Fatal("uncertain job dispatched again")
 	}
+	if _, err := s.Queue("one", "tunnel", "digest", "", true); err == nil {
+		t.Fatal("uncertain work was resent without a linked retry")
+	}
 	linked, err := s.Queue("one", "tunnel", "digest", job.ID, true)
 	if err != nil || linked.ParentID != job.ID {
 		t.Fatalf("explicit approved linked retry: %+v %v", linked, err)
@@ -194,5 +197,32 @@ func TestExpiredPendingJobsReleaseQuotaWithoutExecution(t *testing.T) {
 	}
 	if _, err := s.Queue("one", "tunnel", "digest", "", true); err != nil {
 		t.Fatalf("expired unsent work blocked scope forever: %v", err)
+	}
+}
+
+func TestLostAcceptanceCanBeRecoveredThroughScopedJobListing(t *testing.T) {
+	s := testStore(t)
+	epoch, _ := s.Epoch("tunnel")
+	if err := s.Put(record("one"), epoch); err != nil {
+		t.Fatal(err)
+	}
+	accepted, err := s.Queue("one", "tunnel", "digest", "", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	items, err := s.List("tunnel")
+	if err != nil || len(items) != 1 || items[0].LastJob == nil || items[0].LastJob.ID != accepted.ID {
+		t.Fatal("lost queued receipt is not recoverable")
+	}
+	if err := s.Delete("one", "tunnel"); err != nil {
+		t.Fatal(err)
+	}
+	jobs, err := s.Jobs("tunnel")
+	if err != nil || len(jobs) != 1 || jobs[0].ID != accepted.ID || jobs[0].State != "cancelled" {
+		t.Fatal("erasure removed content-free job recovery")
+	}
+	other, err := s.Jobs("other")
+	if err != nil || len(other) != 0 {
+		t.Fatal("job selector crossed tunnel scope")
 	}
 }

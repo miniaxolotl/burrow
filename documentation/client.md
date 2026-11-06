@@ -66,8 +66,9 @@ There are no privileged users, global lists, or admin commands. Each command see
 
 **Development branch:** these additions are being implemented in the draft
 [workflow implementation](tunnel-workflows-implementation.md); this is not a
-claim that the published npm release already includes them. Capture/replay remains
-pending.
+claim that the published npm release already includes them. Capture currently
+requires a usable Linux Secret Service backend; macOS capture remains unavailable
+pending a verified non-interactive Keychain adapter.
 
 ```sh
 burrowctl tunnel 3000 --headless
@@ -135,6 +136,98 @@ revoke those IDs. A terminal authorization/ownership/revocation rejection during
 reconnect likewise stops the whole headless invocation nonzero.
 
 ## Automatic ownership
+
+### Encrypted local capture and durable replay (development)
+
+```sh
+burrowctl tunnel 3000 --name webhook --capture --output jsonl
+burrowctl requests list --name webhook --output json
+burrowctl replay REQUEST_ID --name webhook --yes --output jsonl
+burrowctl replay status JOB_ID --output json
+burrowctl replay jobs --name webhook --output json
+burrowctl replay retry JOB_ID --yes --output jsonl
+burrowctl requests delete REQUEST_ID --name webhook --yes --output json
+burrowctl requests clear --name webhook --yes --output json
+```
+
+Capture also works without a name, including with `--config`; select its records
+with `--tunnel ID` instead. Selectors are mutually exclusive. Capture must be
+enabled explicitly for each process and currently supports one tunnel per command.
+It uses the HTTP dispatcher even for a single upstream; the strict path policy
+therefore applies. Historical server logs are not replayable capture records.
+
+**Bodies can contain secrets.** Capture is local-only, encrypted with AES-GCM
+before entering SQLite, never uploaded to Burrow, Redis or telemetry. Supported
+Linux sessions require an existing unlocked Secret Service collection on a local
+session bus. Keys stay in that OS facility. Missing/locked/ambiguous backends fail
+before exposure, without calling Unlock/Prompt or falling back to a key file.
+macOS currently refuses capture; ordinary headless/raw/routed tunneling still
+works without opening this store or consulting a credential facility.
+
+Limits are 1 MiB per request body, 32 KiB request headers, eight in-flight/pending
+copies, 200 live records and a 24-hour access TTL. The reviewed initial payload
+budget is **20 MiB**, not the proposal's 50 MiB live-payload budget: a 24 MiB SQLite
+page limit plus its worst-case rollback journal stays below a 50 MiB physical
+envelope. Pending replay references count toward the same payload budget and are
+protected from eviction. Expired/oldest unreferenced records are evicted first;
+if no safe space exists, the new capture is unavailable rather than blocking
+forwarding or exceeding quota. Content-free job/tombstone rows are bounded too.
+
+Only `capture_saved` means a complete encrypted record committed durably. A
+bounded nonblocking tee queues persistence; incomplete bodies, excessive bodies,
+unsupported encodings, upgrades/SSE, request trailers, excluded paths and writer
+backpressure report `capture_unavailable` with a reason. There is no plaintext
+spool. `--capture-exclude /private,/uploads` skips explicit path prefixes.
+Live forwarding retains application authorization; durable copies strip cookies,
+authorization, proxy/secret/signature headers and redact sensitive query keys.
+This can change meaning or break signatures. Bodies are not automatically scrubbed.
+Default lists expose IDs, route summaries, sizes, timestamps and redaction state,
+not headers, query values or bodies.
+
+With capture enabled, press `x` in the interactive manager for local captures.
+`r` opens a scoped replay confirmation; `y` approves exactly one durable job.
+`d` opens local erasure confirmation. The fixed feedback area displays persisted
+job/HTTP states, including completed HTTP failures and uncertain outcomes. A
+refresh preserves selected record identity and its visible row; confirmation
+cancel/back preserves the selection. This pane does not read or print raw bodies.
+
+Replay always requires approval, including GET. Without an interactive terminal,
+use `--yes`; that approves only the selected record and captured loopback target.
+Review the method/path, age, target, digest and redaction/duplicate-effect warning.
+A port can now belong to another app: Burrow cannot prove application identity.
+Replay never goes through the public URL, restores secrets, regenerates signatures
+or invents idempotency keys. Changed captured config files/current alias target
+digests fail before dispatch; target overrides are not supported.
+
+`queued` is emitted only after the command/work row commits. A foreground worker
+claims a fenced lease, with one active replay per owner/server scope, at most 20
+pending jobs, a 30-second job deadline and at most three preparation attempts.
+Transient pre-send storage errors use persisted `retry_wait`; interrupted
+preparation becomes `recovering` and requires explicit retry. Before any HTTP
+client can write, `dispatch_intent` commits after expiry/tombstone/lease checks.
+Once intent exists, that job is **never automatically sent again**, even if no
+byte was actually sent. A crash/lost response is conservatively `uncertain`.
+
+The worker uses a fresh loopback connection, no environment proxy, redirects,
+cookie jar, credential injection or automatic network retries. Response bodies
+are not archived. `completed` means response headers/status committed, including
+4xx/5xx, not successful application processing. Non-2xx, failed, uncertain and
+cancelled outcomes exit nonzero. `status` reads durable state without executing
+anything. Explicit `retry` approves a linked new job and fences the old one;
+an active old worker is a conflict. Normal tunnel startup never dispatches old jobs.
+Capture summaries include their last job; `replay jobs` recovers lost acceptance
+receipts and retained content-free outcomes even after a capture is erased. Its
+optional selector narrows the current owner/server scope. An uncertain leaf job
+cannot be bypassed with a fresh unlinked replay; use an explicitly approved retry.
+
+Deletion immediately tombstones/fences unsent work; after dispatch, cancellation
+is best-effort and cannot undo effects. Cleanup is durable local work executed
+while a CLI worker runs or at its next startup: the TTL is not guaranteed physical
+deletion while the machine is off. Ciphertext is cleared from active rows, but
+the shared scope key remains in OS credentials. SQLite journals/free pages,
+filesystem snapshots and user-managed backups prevent a forensic/cryptographic
+erasure promise. Capture backups/restore/exports are unsupported; restoring an
+old backup can predate tombstones and must not be used for replay.
 
 ### One hostname, multiple local services (development)
 
