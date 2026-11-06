@@ -28,11 +28,13 @@ func init() {
 	serveCmd.Flags().String("domain", "localhost", "Domain for tunnel URLs")
 	serveCmd.Flags().String("redis-url", "localhost:6379", "Redis connection URL")
 	serveCmd.Flags().Bool("tls", false, "Generate tunnel URLs with https:// (set when server is behind HTTPS)")
+	serveCmd.Flags().Duration("drain-timeout", 15*time.Second, "Wait for admitted requests before interruption (0s–15s; plus up to 5s cleanup)")
 
 	viper.BindPFlag("port", serveCmd.Flags().Lookup("port"))
 	viper.BindPFlag("domain", serveCmd.Flags().Lookup("domain"))
 	viper.BindPFlag("redis-url", serveCmd.Flags().Lookup("redis-url"))
 	viper.BindPFlag("tls", serveCmd.Flags().Lookup("tls"))
+	viper.BindPFlag("drain-timeout", serveCmd.Flags().Lookup("drain-timeout"))
 }
 
 func redactURL(raw string) string {
@@ -52,6 +54,10 @@ func redactURL(raw string) string {
 }
 
 func runServe(cmd *cobra.Command, args []string) error {
+	drainTimeout := viper.GetDuration("drain-timeout")
+	if drainTimeout < 0 || drainTimeout > 15*time.Second {
+		return fmt.Errorf("drain timeout must be between 0s and 15s")
+	}
 	port := viper.GetString("port")
 	if !cmd.Flags().Changed("port") {
 		if _, ok := os.LookupEnv("BURROW_PORT"); !ok {
@@ -97,6 +103,9 @@ func runServe(cmd *cobra.Command, args []string) error {
 	registry := internal.NewTunnelRegistry(redis, domain, secure)
 
 	server := internal.NewServer(registry, domain, secure, telemetry.FromContext(cmd.Context()))
+	if err := server.SetDrainTimeout(drainTimeout); err != nil {
+		return err
+	}
 
 	addr := fmt.Sprintf(":%s", port)
 	fmt.Printf("Starting burrowd on %s\n", addr)
@@ -105,6 +114,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
 
 	startErr := make(chan error, 1)
 	go func() {
@@ -120,7 +130,7 @@ func runServe(cmd *cobra.Command, args []string) error {
 	}
 
 	fmt.Println("\nShutting down...")
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	return server.Shutdown(ctx)
 }

@@ -1,5 +1,22 @@
 # burrowd
 
+## Bounded process shutdown
+
+`burrowd serve --drain-timeout 15s` (`BURROW_DRAIN_TIMEOUT`) stops new public
+requests and registrations atomically, returning 503 with `Retry-After: 1` and
+`Cache-Control: no-store`. Already admitted requests, including SSE and upgrades,
+may finish until the deadline. Zero requests immediate interruption; accepted
+values are 0–15 seconds. Cleanup gets at most five more seconds within a 20-second
+total cap (or the caller's earlier deadline). Concurrent shutdown callers share
+the first shutdown outcome; deadline interruption is reported as an error. Burrow
+never automatically resends an interrupted request.
+
+`GET /health` remains content-free liveness. `GET /ready` returns 200 only while
+admitting traffic and after a bounded successful Redis read (one-second deadline,
+one-second single-flight cache); otherwise it returns content-free 503. Tunnel
+subdomains still forward `/health` and `/ready` to their local apps. Hosted health
+checks remain unchanged pending authorized provider termination-order evidence.
+
 ## Operational telemetry
 
 Official server releases can report content-free connection/forwarding outcomes,

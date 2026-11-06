@@ -58,12 +58,24 @@ type Server struct {
 	closing        bool
 	httpServer     *http.Server
 	closeOnce      sync.Once
+	shutdownErr    error
+	drainTimeout   time.Duration
+	requests       sync.WaitGroup
+	handlers       sync.WaitGroup
+	requestCancels map[*http.Request]context.CancelFunc
+	intake         context.Context
+	stopIntake     context.CancelFunc
+	readyMu        sync.Mutex
+	readyFlight    chan struct{}
+	readyAt        time.Time
+	readyOK        bool
 	logs           map[string][]*protocol.TunnelLog
 	totalSize      map[string]int64
 	observer       telemetry.Observer
 }
 
 func NewServer(registry *TunnelRegistry, domain string, secure bool, observers ...telemetry.Observer) *Server {
+	intake, stopIntake := context.WithCancel(context.Background())
 	var observer telemetry.Observer = (*telemetry.Reporter)(nil)
 	if len(observers) > 0 && observers[0] != nil {
 		observer = observers[0]
@@ -78,6 +90,9 @@ func NewServer(registry *TunnelRegistry, domain string, secure bool, observers .
 		logs:           make(map[string][]*protocol.TunnelLog),
 		totalSize:      make(map[string]int64),
 		observer:       observer,
+		drainTimeout:   15 * time.Second,
+		requestCancels: make(map[*http.Request]context.CancelFunc),
+		intake:         intake, stopIntake: stopIntake,
 	}
 
 	// CheckOrigin is intentionally permissive: clients connect from arbitrary
@@ -91,6 +106,7 @@ func NewServer(registry *TunnelRegistry, domain string, secure bool, observers .
 	s.mux = http.NewServeMux()
 	s.mux.HandleFunc("/", s.handleRoot)
 	s.mux.HandleFunc("GET /health", s.handleHealth)
+	s.mux.HandleFunc("GET /ready", s.handleReady)
 	s.mux.HandleFunc("GET "+protocol.CapabilityPath, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(protocol.Capabilities{Version: 1, Registration: 1, PersistentAttachment: 1})
@@ -296,6 +312,15 @@ func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	if s.closing {
+		s.mu.Unlock()
+		drainRejected(w)
+		return
+	}
+	s.handlers.Add(1)
+	s.mu.Unlock()
+	defer s.handlers.Done()
 	if version := r.Header.Get(protocol.RegistrationHeader); version != "" && version != protocol.RegistrationVersion {
 		jsonError(w, "Unsupported registration version", http.StatusBadRequest)
 		return
@@ -373,10 +398,18 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 	defer func() { s.observer.Operation(telemetry.Connect, started, outcome) }()
 	s.lifecycleMu.Lock()
 	defer s.lifecycleMu.Unlock()
-	if s.closing {
-		jsonError(w, "Server shutting down", http.StatusServiceUnavailable)
+	s.mu.RLock()
+	closing := s.closing
+	s.mu.RUnlock()
+	if closing {
+		drainRejected(w)
 		return nil
 	}
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	stop := context.AfterFunc(s.intake, cancel)
+	defer stop()
+	r = r.WithContext(ctx)
 	session := &tunnelSession{ownerHash: ownerHash, id: rand.Text(), port: port}
 	persistent := r.Header.Get(protocol.AttachmentHeader) != ""
 	if persistent {
@@ -438,6 +471,8 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 	if err != nil {
 		return nil
 	}
+	stopHandshake := context.AfterFunc(ctx, func() { conn.Close() })
+	defer stopHandshake()
 	conn.SetReadLimit(protocol.MaxMessageSize)
 	cfg := yamux.DefaultConfig()
 	cfg.KeepAliveInterval = 30 * time.Second
@@ -473,6 +508,11 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		return nil
 	}
 	s.mu.Lock()
+	if s.closing {
+		s.mu.Unlock()
+		session.conn.Close()
+		return nil
+	}
 	previous := s.connections[tunnelID]
 	s.connections[tunnelID] = session
 	if pending := s.pendingRemoves[tunnelID]; pending != nil {
@@ -538,14 +578,33 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	s.mu.RLock()
+	s.mu.Lock()
+	if s.closing {
+		s.mu.Unlock()
+		drainRejected(w)
+		return
+	}
 	session, ok := s.connections[tunnelID]
-	s.mu.RUnlock()
+	if ok {
+		ctx, cancel := context.WithCancel(r.Context())
+		r = r.WithContext(ctx)
+		s.requestCancels[r] = cancel
+		s.requests.Add(1)
+	}
+	s.mu.Unlock()
 
 	if !ok {
 		jsonError(w, "Tunnel not connected", http.StatusServiceUnavailable)
 		return
 	}
+	defer func() {
+		s.mu.Lock()
+		cancel := s.requestCancels[r]
+		delete(s.requestCancels, r)
+		s.mu.Unlock()
+		cancel()
+		s.requests.Done()
+	}()
 
 	stream, err := session.conn.Open()
 	if err != nil {
@@ -627,25 +686,8 @@ func (s *Server) Start(addr string) error {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
-	var err error
 	s.closeOnce.Do(func() {
-		s.lifecycleMu.Lock()
-		s.closing = true
-		s.mu.Lock()
-		for id, session := range s.connections {
-			session.conn.Close()
-			delete(s.connections, id)
-		}
-		for _, pending := range s.pendingRemoves {
-			pending.timer.Stop()
-		}
-		s.pendingRemoves = make(map[string]*pendingRemoval)
-		srv := s.httpServer
-		s.mu.Unlock()
-		s.lifecycleMu.Unlock()
-		if srv != nil {
-			err = srv.Shutdown(ctx)
-		}
+		s.shutdownErr = s.shutdown(ctx)
 	})
-	return err
+	return s.shutdownErr
 }

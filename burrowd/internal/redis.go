@@ -34,6 +34,7 @@ func NewRedisClient(addr string) (*RedisClient, error) {
 		}
 	}
 
+	opt.ContextTimeoutEnabled = true
 	client := redis.NewClient(opt)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
