@@ -8,6 +8,7 @@ import (
 
 	"burrow/burrowctl/internal"
 	"burrow/burrowctl/internal/clioutput"
+	"burrow/burrowctl/internal/routing"
 
 	"github.com/charmbracelet/x/term"
 	"github.com/spf13/cobra"
@@ -55,23 +56,39 @@ func runHeadless(cmd *cobra.Command, client *internal.Client, ports []int) (err 
 	startup := time.NewTimer(30 * time.Second)
 	defer startup.Stop()
 	startupDeadline := startup.C
+	readiness := newReadiness(len(ports))
 	for {
 		select {
 		case event := <-events:
+			transition, acknowledged := readiness.observe(event)
+			// Invalidate the previous barrier before reporting reconnect details.
+			if transition == "not_ready" {
+				if err := output.Emit(transition, "", map[string]any{"observed_at": event.ObservedAt, "reason": event.Code}); err != nil {
+					return err
+				}
+			}
 			data := struct {
-				ObservedAt            time.Time `json:"observed_at"`
-				Port                  uint16    `json:"port"`
-				URL                   string    `json:"url,omitempty"`
-				Attempt               int       `json:"attempt,omitempty"`
-				RetryDelayMS          int64     `json:"retry_delay_ms,omitempty"`
-				Code                  string    `json:"code,omitempty"`
-				RegistrationConfirmed bool      `json:"registration_confirmed"`
-			}{ObservedAt: event.ObservedAt, Port: event.Port, URL: event.URL, Attempt: event.Attempt, RetryDelayMS: event.RetryDelayMS, Code: event.Code}
+				ObservedAt            time.Time       `json:"observed_at"`
+				Port                  uint16          `json:"port"`
+				URL                   string          `json:"url,omitempty"`
+				Attempt               int             `json:"attempt,omitempty"`
+				RetryDelayMS          int64           `json:"retry_delay_ms,omitempty"`
+				Code                  string          `json:"code,omitempty"`
+				RegistrationConfirmed bool            `json:"registration_confirmed"`
+				Generation            string          `json:"generation,omitempty"`
+				Routes                []routing.Route `json:"routes,omitempty"`
+				CaptureID             string          `json:"capture_id,omitempty"`
+			}{ObservedAt: event.ObservedAt, Port: event.Port, URL: event.URL, Attempt: event.Attempt, RetryDelayMS: event.RetryDelayMS, Code: event.Code, RegistrationConfirmed: event.RegistrationConfirmed, Generation: event.Generation, Routes: client.Routes(), CaptureID: event.CaptureID}
 			if err := output.Emit(event.Type, event.TunnelID, data); err != nil {
 				return err
 			}
 			if event.Type == "failed" {
 				return errors.New("tunnel connection failed")
+			}
+			if transition == "ready" {
+				if err := output.Emit(transition, "", map[string]any{"observed_at": event.ObservedAt, "tunnels": acknowledged, "routes": client.Routes()}); err != nil {
+					return err
+				}
 			}
 		case err := <-started:
 			if err != nil {

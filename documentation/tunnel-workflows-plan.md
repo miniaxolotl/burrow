@@ -5,6 +5,13 @@ See [implemented checkpoints](tunnel-workflows-implementation.md). Prepared agai
 `552ee32` (0.3.19), refined after source review on 5 November 2026. Commands,
 schemas and limits below are proposed contracts, not current CLI instructions.
 
+**Owner-approved platform split:** #90 delivers these workflows with Linux-only
+capture/replay. macOS secure capture implementation and native Keychain/package
+acceptance are deferred to [draft PR #91](https://github.com/miniaxolotl/burrow/pull/91)
+until a macOS environment is available. The macOS gates below are that follow-up's
+requirements, not blockers for #90. Ordinary macOS tunneling, aliases, routing,
+headless mode and shipped Darwin binaries remain in scope and unchanged.
+
 ## Goal and scope
 
 Make Burrow useful in repeatable development and automation workflows without
@@ -41,7 +48,8 @@ do not replace them with proposed commands before implementation passes its gate
 
 ## Delivery order and dependencies
 
-**Delivery: one implementation PR containing all four features.** Use atomic,
+**Delivery updated by owner: preserve initial implementation PR #88; #90 contains
+the remaining slices with Linux capture, and #91 separately tracks macOS capture.** Use atomic,
 incremental commits grouped by related behavior, with M1 → M2 → M3 → M4 as the
 recommended development order. Milestones are checkpoints inside that PR, not
 separate PRs, branches or partial feature releases. Hard dependencies are narrower:
@@ -70,10 +78,11 @@ Size each spike before scheduling it; there is no calendar estimate here.
 
 ### Commit organization within the single implementation PR
 
-Use one task branch/worktree and one implementation PR. The owner's subsequent
-instruction is to stack it on planning PR #84 until that parent merges, then
-retarget the same PR to `development` and revalidate. Do not create per-feature
-implementation PRs or a stack of feature PRs. Suggested focused commit subjects:
+The owner's latest instruction supersedes the earlier single-implementation-PR
+arrangement: #88 retains the initial checkpoint; #90 targets #88's branch and
+contains the remaining Linux capture scope. The owner then separated macOS
+capture into draft #91 stacked on #90. Preserve all task worktrees and
+retarget/revalidate as parents merge. Suggested focused commits:
 
 1. `test(tunnels): add isolated workflow fixtures`
 2. `feat(cli): add cancellable headless output` — lifecycle and versioned encoders.
@@ -520,9 +529,10 @@ is not required and a public URL alone never grants access to captures.
   first-run tunneling. Encrypt temporary spools, sensitive metadata, queued payloads
   and result/error content too; raw values must not leak into SQLite WAL/journals,
   paths or crash reports. Authenticate scope/schema/record identity with ciphertext
-  to reject cross-record swaps. Test the packaged binary on macOS and Linux with
-  available, locked and absent credential facilities; capture support is a separate
-  compatibility row from ordinary headless tunneling.
+  to reject cross-record swaps. Test the packaged binary on Linux with available,
+  locked and absent credential facilities in #90; the equivalent macOS native
+  gates belong to #91. Capture support is a separate compatibility row from
+  ordinary headless tunneling.
 - Supply scoped list/delete/clear controls and run expiry/cleanup through durable
   local work. Deletion immediately tombstones records, prevents future use and
   removes encrypted payloads/key material according to a documented retention
@@ -631,15 +641,16 @@ not return. Test content/credentials cannot enter telemetry or default JSON outp
 
 ### Compatibility and rollback gates
 
-| Client/server or storage combination                         | Required result                                                                                                  |
-| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| Old CLI + new server, ordinary unnamed ID                    | Existing raw tunneling and owner-only management continue to work.                                               |
-| Old CLI + new server, persistent-mode ID                     | Reject without replacing the active session, even for the same owner.                                            |
-| New CLI + old server, unnamed/headless/routed                | Existing wire path works; report registration acknowledgement unavailable, never invent `ready`.                 |
-| New CLI + old server, `--name`                               | Capability preflight fails before creating/resuming a persistent reservation; no random-URL fallback.            |
-| New CLI + new server                                         | Test registration ack, saved aliases, fencing and route/capture combinations with feature flags both on and off. |
-| Capture on macOS/Linux, usable/locked/missing secure backend | Encrypted capture succeeds only with a supported usable backend; ordinary tunneling remains available otherwise. |
-| Older CLI opens a newer saved/capture schema                 | Refuse that feature without rewriting the file; ordinary unrelated tunneling remains usable.                     |
+| Client/server or storage combination                   | Required result                                                                                                                        |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Old CLI + new server, ordinary unnamed ID              | Existing raw tunneling and owner-only management continue to work.                                                                     |
+| Old CLI + new server, persistent-mode ID               | Reject without replacing the active session, even for the same owner.                                                                  |
+| New CLI + old server, unnamed/headless/routed          | Existing wire path works; report registration acknowledgement unavailable, never invent `ready`.                                       |
+| New CLI + old server, `--name`                         | Capability preflight fails before creating/resuming a persistent reservation; no random-URL fallback.                                  |
+| New CLI + new server                                   | Test registration ack, saved aliases, fencing and route/capture combinations with feature flags both on and off.                       |
+| Capture on Linux, usable/locked/missing secure backend | #90: encrypted capture succeeds only with a supported usable backend; ordinary tunneling remains available otherwise.                  |
+| Capture on macOS, usable/locked/missing secure backend | Deferred to #91: native adapter/acceptance required before enabling support; #90 rejects capture without affecting ordinary tunneling. |
+| Older CLI opens a newer saved/capture schema           | Refuse that feature without rewriting the file; ordinary unrelated tunneling remains usable.                                           |
 
 Once an ID has persistent-mode state, **do not roll back to a pre-fencing server**:
 that binary ignores the new mode and could reintroduce takeover. The implementation PR
@@ -729,20 +740,21 @@ The defaults above are concrete proposal decisions, not shipped contracts. Chang
 them with a recorded reason and corresponding fixtures, rather than leaving basic
 behavior to individual implementers. Only these implementation spikes remain:
 
-| Before slice | Required review artifact / stop condition                                                                                                                                                       |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| M1b          | Bounded negotiated control framing and registration-failure trace. Stop if old peers could interpret control data as HTTP.                                                                      |
-| M2a          | Attachment CAS/nonce/transport-liveness state table, crash traces and downgrade guard design. Stop if a legacy/stale connection can bypass fencing or an uncertain handshake can replace twice. |
-| M3a          | Per-request stream-backed adapter spike with WebSocket/SSE, isolation and bounded-resource evidence. Do not replace the raw default based on unit parsing tests alone.                          |
-| M4a          | Supported macOS/Linux store/driver/key-backend matrix, license/build/package review, encrypted WAL/spool inspection and deletion policy. No plaintext fallback when the backend is unavailable. |
-| M4b          | Crash and duplicate-effect matrix proving no post-intent automatic redispatch, including transport retries. Leases and a mocked happy path are insufficient evidence.                           |
+| Before slice | Required review artifact / stop condition                                                                                                                                                                   |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M1b          | Bounded negotiated control framing and registration-failure trace. Stop if old peers could interpret control data as HTTP.                                                                                  |
+| M2a          | Attachment CAS/nonce/transport-liveness state table, crash traces and downgrade guard design. Stop if a legacy/stale connection can bypass fencing or an uncertain handshake can replace twice.             |
+| M3a          | Per-request stream-backed adapter spike with WebSocket/SSE, isolation and bounded-resource evidence. Do not replace the raw default based on unit parsing tests alone.                                      |
+| M4a          | #90: Linux store/driver/key-backend matrix, license/build/package review, encrypted WAL/spool inspection and deletion policy. #91: equivalent macOS adapter and native verification. No plaintext fallback. |
+| M4b          | Crash and duplicate-effect matrix proving no post-intent automatic redispatch, including transport retries. Leases and a mocked happy path are insufficient evidence.                                       |
 
 Record measured setup time and forwarding overhead against the same disposable
 baseline with capture off/on, including oversized/slow bodies and a stalled disk.
 Choose a regression budget after that baseline exists, before enabling the new
 adapter by default; do not invent an unmeasured speed claim. Headless mode and
 stable URLs must remain usable when optional capture lacks a secure key backend;
-that does not waive the single PR's capture compatibility and failure-state gates.
+that does not waive #90's Linux capture compatibility/failure gates or #91's
+separate native macOS requirements.
 
 Public vanity domains, remote upstreams, live-session takeover, capture backups,
 plaintext capture and automatically repeating uncertain requests stay out of

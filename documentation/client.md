@@ -64,10 +64,12 @@ There are no privileged users, global lists, or admin commands. Each command see
 
 ## Headless mode and structured output
 
-**Development branch:** these additions are being implemented in the draft
+**Development branch:** these additions are described in the
 [workflow implementation](tunnel-workflows-implementation.md); this is not a
-claim that the published npm release already includes them. Stable aliases,
-one-hostname routing and capture/replay remain pending.
+claim that the published npm release already includes them. Capture currently
+requires a usable Linux Secret Service backend. macOS capture is excluded from
+workflow PR #90 and deferred to [draft PR #91](https://github.com/miniaxolotl/burrow/pull/91);
+ordinary macOS tunneling, aliases, routing and headless mode remain available.
 
 ```sh
 burrowctl tunnel 3000 --headless
@@ -106,9 +108,12 @@ additive fields/event types; incompatible meanings require a schema-version chan
 - Transport events: `connecting`, `connected`, `disconnected`, `reconnecting`,
   `failed`; clean process cancellation emits `stopped`. Reconnect events include
   consecutive `attempt` and actual `retry_delay_ms`, with capped jittered backoff.
-- **No `ready` event yet.** `registration_confirmed` is currently false even on
-  `connected`: WebSocket/yamux establishment is not a server-registration
-  acknowledgement, successful local request or successful application processing.
+- `connected` means transport only. On a compatible server, `registered` carries
+  its acknowledged generation and `registration_confirmed: true`; aggregate
+  `ready` follows only after every requested tunnel is registered. `not_ready`
+  invalidates that barrier on connection loss. Old servers have no registration
+  barrier and never produce `ready`. None of these proves application health or
+  successful application processing.
 - List results contain `tunnels` and `count`; unknown `latency_ms` is null, and
   response usage is `total_size_bytes`. Log results are arrays; follow emits `log`
   entries without repeating a snapshot. `--tail` applies only to the first
@@ -132,6 +137,181 @@ revoke those IDs. A terminal authorization/ownership/revocation rejection during
 reconnect likewise stops the whole headless invocation nonzero.
 
 ## Automatic ownership
+
+### Encrypted local capture and durable replay (development)
+
+```sh
+burrowctl tunnel 3000 --name webhook --capture --output jsonl
+burrowctl requests list --name webhook --output json
+burrowctl replay REQUEST_ID --name webhook --yes --output jsonl
+burrowctl replay status JOB_ID --output json
+burrowctl replay jobs --name webhook --output json
+burrowctl replay retry JOB_ID --yes --output jsonl
+burrowctl requests delete REQUEST_ID --name webhook --yes --output json
+burrowctl requests clear --name webhook --yes --output json
+```
+
+Capture also works without a name, including with `--config`; select its records
+with `--tunnel ID` instead. Selectors are mutually exclusive. Capture must be
+enabled explicitly for each process and currently supports one tunnel per command.
+It uses the HTTP dispatcher even for a single upstream; the strict path policy
+therefore applies. Historical server logs are not replayable capture records.
+
+**Bodies can contain secrets.** Capture is local-only, encrypted with AES-GCM
+before entering SQLite, never uploaded to Burrow, Redis or telemetry. Supported
+Linux sessions require an existing unlocked Secret Service collection on a local
+session bus. Keys stay in that OS facility. Missing/locked/ambiguous backends fail
+before exposure, without calling Unlock/Prompt or falling back to a key file.
+macOS capture is separately deferred in #91 and currently refused; ordinary headless/raw/routed tunneling still
+works without opening this store or consulting a credential facility.
+
+Limits are 1 MiB per request body, 32 KiB request headers, eight in-flight/pending
+copies, 200 live records and a 24-hour access TTL. The reviewed initial payload
+budget is **20 MiB**, not the proposal's 50 MiB live-payload budget: a 24 MiB SQLite
+page limit plus its worst-case rollback journal stays below a 50 MiB physical
+envelope. Pending replay references count toward the same payload budget and are
+protected from eviction. Expired/oldest unreferenced records are evicted first;
+if no safe space exists, the new capture is unavailable rather than blocking
+forwarding or exceeding quota. Content-free job/tombstone rows are bounded too.
+
+Only `capture_saved` means a complete encrypted record committed durably. A
+bounded nonblocking tee queues persistence; incomplete bodies, excessive bodies,
+unsupported encodings, upgrades/SSE, request trailers, excluded paths and writer
+backpressure report `capture_unavailable` with a reason. There is no plaintext
+spool. `--capture-exclude /private,/uploads` skips explicit path prefixes.
+Live forwarding retains application authorization; durable copies strip cookies,
+authorization, proxy/secret/signature headers and redact sensitive query keys.
+This can change meaning or break signatures. Bodies are not automatically scrubbed.
+Default lists expose IDs, route summaries, sizes, timestamps and redaction state,
+not headers, query values or bodies.
+
+With capture enabled, press `x` in the interactive manager for local captures.
+`r` opens a scoped replay confirmation; `y` approves exactly one durable job.
+`d` opens local erasure confirmation. The fixed feedback area displays persisted
+job/HTTP states, including completed HTTP failures and uncertain outcomes. A
+refresh preserves selected record identity and its visible row; confirmation
+cancel/back preserves the selection. This pane does not read or print raw bodies.
+
+Replay always requires approval, including GET. Without an interactive terminal,
+use `--yes`; that approves only the selected record and captured loopback target.
+Review the method/path, age, target, digest and redaction/duplicate-effect warning.
+A port can now belong to another app: Burrow cannot prove application identity.
+Replay never goes through the public URL, restores secrets, regenerates signatures
+or invents idempotency keys. Changed captured config files/current alias target
+digests fail before dispatch; target overrides are not supported.
+
+`queued` is emitted only after the command/work row commits. A foreground worker
+claims a fenced lease, with one active replay per owner/server scope, at most 20
+pending jobs, a 30-second job deadline and at most three preparation attempts.
+Transient pre-send storage errors use persisted `retry_wait`; interrupted
+preparation becomes `recovering` and requires explicit retry. Before any HTTP
+client can write, `dispatch_intent` commits after expiry/tombstone/lease checks.
+Once intent exists, that job is **never automatically sent again**, even if no
+byte was actually sent. A crash/lost response is conservatively `uncertain`.
+
+The worker uses a fresh loopback connection, no environment proxy, redirects,
+cookie jar, credential injection or automatic network retries. Response bodies
+are not archived. `completed` means response headers/status committed, including
+4xx/5xx, not successful application processing. Non-2xx, failed, uncertain and
+cancelled outcomes exit nonzero. `status` reads durable state without executing
+anything. Explicit `retry` approves a linked new job and fences the old one;
+an active old worker is a conflict. Normal tunnel startup never dispatches old jobs.
+Capture summaries include their last job; `replay jobs` recovers lost acceptance
+receipts and retained content-free outcomes even after a capture is erased. Its
+optional selector narrows the current owner/server scope. An uncertain leaf job
+cannot be bypassed with a fresh unlinked replay; use an explicitly approved retry.
+
+Deletion immediately tombstones/fences unsent work; after dispatch, cancellation
+is best-effort and cannot undo effects. Cleanup is durable local work executed
+while a CLI worker runs or at its next startup: the TTL is not guaranteed physical
+deletion while the machine is off. Ciphertext is cleared from active rows, but
+the shared scope key remains in OS credentials. SQLite journals/free pages,
+filesystem snapshots and user-managed backups prevent a forensic/cryptographic
+erasure promise. Capture backups/restore/exports are unsupported; restoring an
+old backup can predate tombstones and must not be used for replay.
+
+### One hostname, multiple local services (development)
+
+Create an explicit route file, then run `burrowctl tunnel --config ./burrow.json`
+(optionally with `--name shop` and/or `--output jsonl`):
+
+```json
+{
+  "version": 1,
+  "routes": [
+    { "path": "/api", "port": 8080, "strip_prefix": true },
+    { "path": "/", "port": 3000 }
+  ]
+}
+```
+
+The longest escaped path-segment prefix wins, case-sensitively: `/api` matches
+`/api/x`, not `/apiculture` or `/%61pi/x`. Prefix stripping is explicit; `/api`
+and `/api/` become `/`, and `/api/x` becomes `/x`. Query/body and public Host are
+preserved; `host_header` optionally sets a bounded authority for that route.
+Unmatched paths return 404 unless `/` exists. An unavailable target returns 502
+without falling through. Targets are fixed loopback ports only, with IPv4/IPv6
+fallback, no environment proxy and no caller-selected destination.
+
+No file is auto-loaded or hot-reloaded. Reject positional ports plus `--config`,
+unknown/duplicate fields, unsupported versions, files over 64 KiB and more than
+32 routes before exposure. Prefixes cannot contain escapes, queries, fragments,
+dot segments, backslashes, repeated/trailing slashes (except `/`) or non-ASCII.
+Routed requests containing encoded separators, dot segments (including encoded
+dots), NUL, backslashes, repeated slashes or invalid escapes return 400, not a
+cleaned/redirected path. Plain single-port raw mode retains existing behavior.
+Configuration field names are exact and case-sensitive; `Port` cannot shadow `port`.
+
+The private HTTP dispatcher admits one request/upgrade lifetime per yamux stream,
+with 32 KiB headers, at most 128 concurrent streams, bounded dial/header deadlines
+and explicit overload failure. It streams bodies, trailers, SSE and WebSocket
+upgrades without an overall short streaming deadline. It rejects CONNECT and
+absolute-form targets and does not forward a second pipelined request. It strips
+untrusted Forwarded/X-Forwarded/X-Real-IP and Burrow-management/proxy credential
+headers; no trusted client identity is asserted on this path.
+
+The route table appears in text and typed lifecycle/readiness data. Press `r` in
+the manager for the full scrollable startup table. Routed configuration is fixed
+for that invocation; the manager cannot add an inferred upstream. A routed tunnel
+counts as one server connection; the first port is informational metadata, not
+the complete route table. A shared public origin also shares cookie/security
+trust: configure application cookie paths, base paths and CORS appropriately.
+
+### Saved URLs (development)
+
+```sh
+burrowctl tunnel 3000 --name webhook --output jsonl
+burrowctl saved --output json
+burrowctl close TUNNEL_ID --output json
+burrowctl tunnel 3000 --name webhook --replace --yes --output jsonl
+```
+
+Names are private local aliases, not vanity subdomains. A saved alias reuses its
+random URL across CLI/server restarts for the same canonical server and owner.
+Unnamed commands still create fresh URLs. One named tunnel is allowed per command;
+ports are explicit. `saved` reports local saved/closed/uncertain/conflict state and
+observation time, not a live server snapshot, and never generates an owner token.
+
+Persistent mode requires capability discovery and registration support; old or
+unreachable servers fail before a persistent claim, with no random-URL fallback.
+Private candidate IDs, logical attachments and attempt nonces are atomically
+persisted before admission. Kernel-held locks prevent simultaneous local use.
+After uncertain admission, the same nonce reconciles the committed generation;
+a stale generation is terminal, never an automatic takeover. Copying private owner
+and alias files gives their holder equivalent authority, not a new trust boundary.
+
+Normal exit disconnects without revoking the URL. Explicit `close` is permanent;
+uncertain closes are reconciled via an owner-only reservation read before reuse.
+Replacement requires a confirmed closed alias and `--yes` and chooses a new random
+ID; it never clears a tombstone. Replacement text warns about the old URL and target.
+Missing/corrupt/newer local state fails without discarding it. Preserve files and
+owner credentials for recovery; a URL alone cannot recover ownership.
+
+Only one server instance is supported. Persistent sessions heartbeat every ten
+seconds; an unresponsive transport is closed after a twenty-second ping timeout
+(at most thirty seconds from an idle failure). Busy admission may wait within the
+30-second startup deadline. Connection metadata expiry does not expire ownership
+or fencing. Legacy clients cannot attach to persistent IDs, even as the same owner.
 
 The first tunnel command generates a random 256-bit owner credential for that server. It is stored under `~/.config/burrow/owners/<server-hash>.token`, with directory permissions 0700 and file permissions 0600. Concurrent first launches share one identity. Different servers receive different credentials; returning to a server reuses its identity.
 

@@ -78,7 +78,13 @@ func TestLiveTunnel(t *testing.T) {
 	// Drop the transport to exercise the same reconnect path used during a
 	// deployment. The existing public URL must keep working after reconnection.
 	client.mu.RLock()
-	connection := client.tunnels[uint16(port)].wsConn
+	var connection io.Closer
+	for _, tc := range client.tunnels {
+		if tc.Port == uint16(port) {
+			connection = tc.wsConn
+			break
+		}
+	}
 	client.mu.RUnlock()
 	connection.Close()
 	deadline := time.Now().Add(30 * time.Second)

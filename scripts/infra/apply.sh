@@ -16,6 +16,7 @@ if [[ -z "${TF_VAR_image_digest:-}" ]]; then
   TF_VAR_image_digest="$(tofu -chdir="$root" output -raw image_digest)"
   export TF_VAR_image_digest
 fi
+node scripts/infra/image-compatibility.mjs "$TF_VAR_image_digest"
 python3 scripts/infra/domain-records.py "$root"
 tofu -chdir="$root" plan -input=false -lock-timeout=120s -out=tfplan
 fence

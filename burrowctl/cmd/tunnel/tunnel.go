@@ -14,9 +14,14 @@ import (
 )
 
 var TunnelCmd = &cobra.Command{
-	Use:     "tunnel <port> [port...]",
-	Short:   "Share local ports and open the tunnel manager",
-	Args:    cobra.MinimumNArgs(1),
+	Use:   "tunnel <port> [port...]",
+	Short: "Share local ports and open the tunnel manager",
+	Args: func(cmd *cobra.Command, args []string) error {
+		if len(args) == 0 && !cmd.Flags().Changed("config") {
+			return fmt.Errorf("a port or --config is required")
+		}
+		return nil
+	},
 	Example: "  burrowctl tunnel 3000\n  burrowctl tunnel 3000 8080",
 	RunE:    runTunnelCreate,
 }
@@ -38,8 +43,15 @@ func AddCommands(root *cobra.Command) {
 			return nil
 		}
 	}
-	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd)
+	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd, savedCmd)
+	addCaptureCommands(root)
 	TunnelCmd.Flags().Bool("headless", false, "Run without the interactive manager")
+	TunnelCmd.Flags().String("name", "", "Private saved alias (not a public subdomain)")
+	TunnelCmd.Flags().String("config", "", "Explicit versioned route configuration file")
+	TunnelCmd.Flags().Bool("capture", false, "Explicitly capture bounded requests in encrypted local storage")
+	TunnelCmd.Flags().StringSlice("capture-exclude", nil, "Do not capture these explicit path prefixes")
+	TunnelCmd.Flags().Bool("replace", false, "Replace a confirmed closed alias with a new URL")
+	TunnelCmd.Flags().Bool("yes", false, "Confirm the selected replacement")
 }
 
 // resolveToken returns the best available auth token.
@@ -59,6 +71,9 @@ func resolveToken(cmd *cobra.Command, server string) (string, error) {
 	}
 	if token != "" {
 		return token, nil
+	}
+	if cmd.Name() == "saved" || cmd.Name() == "replay" || cmd.Parent() != nil && (cmd.Parent().Name() == "requests" || cmd.Parent().Name() == "replay") {
+		return config.ExistingOwnerToken(server)
 	}
 	return config.OwnerToken(server)
 }
