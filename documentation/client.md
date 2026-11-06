@@ -64,11 +64,12 @@ There are no privileged users, global lists, or admin commands. Each command see
 
 ## Headless mode and structured output
 
-**Development branch:** these additions are being implemented in the draft
+**Development branch:** these additions are described in the
 [workflow implementation](tunnel-workflows-implementation.md); this is not a
 claim that the published npm release already includes them. Capture currently
-requires a usable Linux Secret Service backend; macOS capture remains unavailable
-pending a verified non-interactive Keychain adapter.
+requires a usable Linux Secret Service backend. macOS capture is excluded from
+workflow PR #90 and deferred to [draft PR #91](https://github.com/miniaxolotl/burrow/pull/91);
+ordinary macOS tunneling, aliases, routing and headless mode remain available.
 
 ```sh
 burrowctl tunnel 3000 --headless
@@ -161,7 +162,7 @@ before entering SQLite, never uploaded to Burrow, Redis or telemetry. Supported
 Linux sessions require an existing unlocked Secret Service collection on a local
 session bus. Keys stay in that OS facility. Missing/locked/ambiguous backends fail
 before exposure, without calling Unlock/Prompt or falling back to a key file.
-macOS currently refuses capture; ordinary headless/raw/routed tunneling still
+macOS capture is separately deferred in #91 and currently refused; ordinary headless/raw/routed tunneling still
 works without opening this store or consulting a credential facility.
 
 Limits are 1 MiB per request body, 32 KiB request headers, eight in-flight/pending

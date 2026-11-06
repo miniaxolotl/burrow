@@ -2,24 +2,27 @@
 
 This is an in-progress implementation of the
 [workflow development plan](tunnel-workflows-plan.md), not a release announcement.
-The owner subsequently requested a second implementation PR stacked on #88 for
-all remaining features. #88 preserves the verified initial headless checkpoint;
-`feat/tunnel-workflows-complete` contains the remaining work. Keep the child draft
-until combined acceptance passes. Retarget and revalidate as parents merge.
+The owner requested implementation PR #90 stacked on #88, then explicitly split
+macOS secure capture into [draft follow-up #91](https://github.com/miniaxolotl/burrow/pull/91)
+because native macOS hardware is currently unavailable. #88 preserves the initial
+headless checkpoint; #90 delivers the remaining workflows with **Linux-only capture
+and replay**. Ordinary macOS tunneling, aliases, routing and headless mode remain
+available; they do not enable capture. Retarget and revalidate as parents merge.
 
 ## Checkpoints
 
-| Checkpoint                                     | Status                                                                                                                                                                                                 |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Isolated CLI subprocess fixtures               | Implemented: temporary HOME, no inherited owner/server configuration, private-owner and help/validation baselines.                                                                                     |
-| Headless lifecycle and structured output       | Initial M1a implementation: headless/TTY detection, JSON/JSONL, numeric units, truthful transport events, signals/cancellation and bounded output/drain. Final combined acceptance remains pending.    |
-| Registration acknowledgement and saved aliases | Implemented in child: negotiated acknowledgement, aggregate readiness, durable attachment CAS/nonce reconciliation, private locked aliases and close/replacement state. More fault acceptance pending. |
-| One-hostname local routing                     | Implemented in child: strict config, bounded private HTTP adapter, loopback routing, upgrade/SSE/trailer compatibility and scrollable TUI route table. Final acceptance pending.                       |
-| Encrypted capture and durable local replay     | Linux CLI, native TUI and real-service combination pass focused acceptance; macOS secure adapter and remaining fault/platform gates stay blocked/pending.                                              |
-| Combined acceptance and full exact-head gates  | Pending.                                                                                                                                                                                               |
+| Checkpoint                                     | Status                                                                                                                                                                                           |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Isolated CLI subprocess fixtures               | Implemented: temporary HOME, no inherited owner/server configuration, private-owner and help/validation baselines.                                                                               |
+| Headless lifecycle and structured output       | Implemented: headless/TTY detection, JSON/JSONL, numeric units, truthful transport events, signals/cancellation and bounded output/drain; exercised in the Linux combined scenario.              |
+| Registration acknowledgement and saved aliases | Implemented: negotiated acknowledgement, aggregate readiness, durable attachment CAS/nonce reconciliation, private locked aliases and close/replacement state; restart and partition tests pass. |
+| One-hostname local routing                     | Implemented: strict config, bounded private HTTP adapter, loopback routing, upgrade/SSE/trailer compatibility and scrollable TUI route table; exercised in the combined scenario.                |
+| Encrypted capture and durable local replay     | Linux CLI, native TUI, real-service combination and storage/crash tests pass. macOS adapter and native acceptance are separately deferred in #91, not a #90 blocker.                             |
+| Combined acceptance and full exact-head gates  | Linux combined acceptance and full source CI passed at a42a6c9; scope-only documentation changes require current-head CI recorded in #90.                                                        |
 
 Each checkpoint uses focused passing commits with matching tests and documentation.
-Keep the PR draft until the whole plan's acceptance gates pass. No production
+Readiness for #90 uses the Linux capture scope above; #91 stays draft until its
+macOS implementation and native acceptance pass. No production
 deployment or public tunnel is part of these tests. Capture fixtures use only
 synthetic application content and isolated credential facilities.
 
@@ -38,7 +41,8 @@ synthetic application content and isolated credential facilities.
   rerun it on each published checkpoint. The host itself has no C compiler.
 - #88 has no registration acknowledgement. The child adds negotiated registration
   and aggregate `ready` / `not_ready`; stable aliases, routing and capture/replay
-  are not implied by that barrier. Combined acceptance remains pending.
+  are not implied by that barrier. The Linux combined scenario below separately
+  verifies the implemented feature combination.
 
 ### Registration protocol
 
@@ -87,9 +91,9 @@ automatic unlock/prompt behavior. The Linux adapter instead uses maintained
 `godbus/dbus` with bounded calls and never calls Unlock/Prompt. Linux tests cover
 a real isolated unlocked Secret Service, a locked collection (existing/new key),
 and an absent backend. A real CLI capture → restart → list → local replay → delete
-passed with that disposable backend. macOS deliberately fails capture closed
-until a no-prompt Keychain adapter is implemented and tested; cross-compilation
-is not evidence of secure-backend support.
+passed with that disposable backend. macOS deliberately fails capture closed;
+the no-prompt Keychain adapter and native acceptance belong to #91, not #90.
+Cross-compilation is not evidence of secure-backend support.
 
 SQLite receives ciphertext only, including sensitive request metadata. Each
 ciphertext authenticates schema, scope and record ID. Tests inspect files for
@@ -102,8 +106,9 @@ Replay work and leases live in the same transactional store. Tests cover durable
 intent, linked approval, no automatic resends after disconnect, explicit erasure
 during dispatch, distinct HTTP 500/completed outcome and actual test-worker crashes
 after claim, after intent, after upstream receipt and after result commit. Recovery
-uses that durable evidence and never redispatches the old job. These are focused
-tests, not yet the complete combined compatibility/fault acceptance gate.
+uses that durable evidence and never redispatches the old job. The real-service
+Linux combination is verified separately below; neither set proves macOS support
+or every possible filesystem outage.
 
 ### Real-service and native terminal acceptance
 
@@ -151,9 +156,9 @@ not replayable, failed job commits leave no accepted work, competing workers can
 claim the same scope and stale workers cannot overwrite uncertain outcomes. These
 controlled SQLite failures are not proof of every OS/filesystem outage mode.
 
-The PR remains draft because macOS secure capture support is still blocked.
-Record exact-current-head source CI in the PR; these local passes do not imply
-the full target platform acceptance matrix is complete.
+The owner moved macOS capture implementation/native acceptance to #91; it no
+longer blocks #90. The non-Linux rejection guard stays in place, and no native
+macOS capture test is claimed. Record exact-current-head source CI in #90.
 
 The final uncached parallel pass found a test-only fixed-sleep assumption after
 CLI exit. The server may observe that disconnect later under load. Restart

@@ -14,8 +14,10 @@ announcement. See [workflow status](tunnel-workflows-implementation.md) and
 - Linux uses an existing local Secret Service session through `godbus/dbus`.
   Locked/missing/ambiguous facilities fail closed. The adapter never calls Unlock
   or Prompt and does not auto-launch a session bus. The scope master key remains
-  in OS credentials. macOS capture remains unavailable until a non-interactive
-  Keychain adapter is implemented and verified.
+  in OS credentials. This delivery supports capture/replay on Linux only.
+  macOS capture is deferred to [draft PR #91](https://github.com/miniaxolotl/burrow/pull/91)
+  for a non-interactive Keychain adapter and native verification; it does not
+  block workflow PR #90. The safe unsupported-platform guard remains in #90.
 - Limits: 1 MiB request body, eight bounded capture slots, 200 live records,
   20 MiB encrypted payload accounting and a 24-hour access TTL. SQLite is bounded
   to 24 MiB of pages, reserving space for its rollback journal below a 50 MiB
