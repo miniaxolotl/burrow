@@ -56,7 +56,9 @@ func (s *Server) shutdown(parent context.Context) error {
 	}
 	// A fixed-size worker set, not one goroutine or serial timeout per tunnel.
 	notified := make(chan struct{})
-	go func() { s.notifyDraining(notices, deadline); close(notified) }()
+	noticeCtx, cancelNotices := context.WithDeadline(ctx, deadline)
+	defer cancelNotices()
+	go func() { s.notifyDraining(noticeCtx, notices, deadline); close(notified) }()
 
 	drained := make(chan struct{})
 	go func() { s.requests.Wait(); close(drained) }()
@@ -112,24 +114,24 @@ func (s *Server) shutdown(parent context.Context) error {
 	return result
 }
 
-func (s *Server) notifyDraining(sessions []*tunnelSession, deadline time.Time) {
+func (s *Server) notifyDraining(ctx context.Context, sessions []*tunnelSession, deadline time.Time) {
 	var workers sync.WaitGroup
 	work := make(chan *tunnelSession)
 	for range min(8, len(sessions)) {
 		workers.Go(func() {
 			for session := range work {
-				wait := time.NewTimer(max(0, time.Until(deadline)))
 				select {
 				case <-session.lifecycleReady:
-				case <-wait.C:
+				case <-ctx.Done():
 				}
-				wait.Stop()
-				if !time.Now().Before(deadline) {
+				if ctx.Err() != nil || !time.Now().Before(deadline) {
 					continue
 				}
 				end := minTime(deadline, time.Now().Add(time.Second))
 				session.lifecycle.SetWriteDeadline(end)
+				stop := context.AfterFunc(ctx, func() { session.lifecycle.SetWriteDeadline(time.Now()) })
 				json.NewEncoder(session.lifecycle).Encode(protocol.Lifecycle{Version: 1, Type: "draining", TunnelID: session.tunnelID, Generation: session.id, Reason: "server_shutdown", RemainingMS: max(0, time.Until(deadline).Milliseconds()), NoticeID: rand.Text()})
+				stop()
 			}
 		})
 	}

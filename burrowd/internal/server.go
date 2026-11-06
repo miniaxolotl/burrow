@@ -27,7 +27,6 @@ import (
 )
 
 const tunnelGracePeriod = 20 * time.Second
-const maxLogsPerTunnel = 200
 
 var validTunnelID = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$`)
 
@@ -52,9 +51,9 @@ type Server struct {
 	domain   string
 	secure   bool
 	mu       sync.RWMutex
-	// Serialize registry changes with connection replacement and cleanup. Proxy
-	// traffic uses mu only and never waits on Redis while holding that lock.
-	lifecycleMu    sync.Mutex
+	// Bounded, cancellable per-key registry sequencing; unrelated keys do not
+	// wait on one global network lock. Admission/map locks never cover I/O.
+	operations     [64]chan struct{}
 	connections    map[string]*tunnelSession
 	pendingRemoves map[string]*pendingRemoval
 	gracePeriod    time.Duration
@@ -96,6 +95,9 @@ func NewServer(registry *TunnelRegistry, domain string, secure bool, observers .
 		drainTimeout:   15 * time.Second,
 		requestCancels: make(map[*http.Request]context.CancelFunc),
 		intake:         intake, stopIntake: stopIntake,
+	}
+	for i := range s.operations {
+		s.operations[i] = make(chan struct{}, 1)
 	}
 
 	// CheckOrigin is intentionally permissive: clients connect from arbitrary
@@ -200,11 +202,7 @@ func (s *Server) addLog(tunnelID string, session *tunnelSession, entry *protocol
 	// Request start times can arrive out of order when forwarding completes.
 	// Opaque entry IDs allow bounded deduplication without exposing global counts.
 	entry.ID = rand.Text()
-	entries := s.logs[tunnelID]
-	if len(entries) >= maxLogsPerTunnel {
-		entries = entries[1:]
-	}
-	s.logs[tunnelID] = append(entries, entry)
+	s.logs[tunnelID], _ = protocol.AppendMetadata(s.logs[tunnelID], entry)
 	s.totalSize[tunnelID] += entry.Size
 }
 
@@ -287,9 +285,15 @@ func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tunnelID := r.PathValue("id")
-	s.lifecycleMu.Lock()
-	defer s.lifecycleMu.Unlock()
-	if err := s.registry.Revoke(r.Context(), tunnelID, ownerHash); err != nil {
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	unlock, err := s.operation(ctx, tunnelID)
+	if err != nil {
+		jsonError(w, "Tunnel operation unavailable", 503)
+		return
+	}
+	defer unlock()
+	if err := s.registry.Revoke(ctx, tunnelID, ownerHash); err != nil {
 		if errors.Is(err, ErrTunnelOwnership) {
 			jsonError(w, "Unauthorized", http.StatusUnauthorized)
 			return
@@ -300,9 +304,10 @@ func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
 
 	// Close the live yamux session so the client is notified immediately.
 	s.mu.Lock()
+	var revoked *tunnelSession
 	if session, ok := s.connections[tunnelID]; ok {
 		delete(s.connections, tunnelID)
-		session.conn.Close()
+		revoked = session
 	}
 	if pending := s.pendingRemoves[tunnelID]; pending != nil {
 		pending.timer.Stop()
@@ -310,6 +315,9 @@ func (s *Server) handleTunnelDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	s.cleanupTunnel(tunnelID)
 	s.mu.Unlock()
+	if revoked != nil {
+		revoked.conn.Close()
+	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -403,8 +411,16 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 	started := time.Now()
 	outcome := telemetry.Unavailable
 	defer func() { s.observer.Operation(telemetry.Connect, started, outcome) }()
-	s.lifecycleMu.Lock()
-	defer s.lifecycleMu.Unlock()
+	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+	defer cancel()
+	stop := context.AfterFunc(s.intake, cancel)
+	defer stop()
+	unlock, err := s.operation(ctx, tunnelID)
+	if err != nil {
+		drainRejected(w)
+		return nil
+	}
+	defer unlock()
 	s.mu.RLock()
 	closing := s.closing
 	s.mu.RUnlock()
@@ -412,10 +428,6 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		drainRejected(w)
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-	defer cancel()
-	stop := context.AfterFunc(s.intake, cancel)
-	defer stop()
 	r = r.WithContext(ctx)
 	session := &tunnelSession{ownerHash: ownerHash, id: rand.Text(), port: port, tunnelID: tunnelID, lifecycleReady: make(chan struct{})}
 	defer close(session.lifecycleReady)
@@ -438,7 +450,7 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 		}
 	}
 	var tunnelURL string
-	var err error
+	err = nil
 	if persistent {
 		err = s.registry.redis.ReservePersistent(r.Context(), tunnelID, ownerHash)
 		tunnelURL = s.registry.tunnelURL(tunnelID)
@@ -561,8 +573,11 @@ func (s *Server) acceptTunnel(w http.ResponseWriter, r *http.Request, tunnelID s
 }
 
 func (s *Server) disconnectTunnel(tunnelID string, session *tunnelSession) {
-	s.lifecycleMu.Lock()
-	defer s.lifecycleMu.Unlock()
+	unlock, err := s.operation(s.intake, tunnelID)
+	if err != nil {
+		return
+	}
+	defer unlock()
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closing || s.connections[tunnelID] != session {
@@ -577,8 +592,13 @@ func (s *Server) disconnectTunnel(tunnelID string, session *tunnelSession) {
 }
 
 func (s *Server) expireTunnel(tunnelID, sessionID string, pending *pendingRemoval) {
-	s.lifecycleMu.Lock()
-	defer s.lifecycleMu.Unlock()
+	ctx, cancel := context.WithTimeout(s.intake, 5*time.Second)
+	defer cancel()
+	unlock, err := s.operation(ctx, tunnelID)
+	if err != nil {
+		return
+	}
+	defer unlock()
 	s.mu.Lock()
 	if s.pendingRemoves[tunnelID] != pending {
 		s.mu.Unlock()
@@ -587,9 +607,22 @@ func (s *Server) expireTunnel(tunnelID, sessionID string, pending *pendingRemova
 	delete(s.pendingRemoves, tunnelID)
 	s.cleanupTunnel(tunnelID)
 	s.mu.Unlock()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 	s.registry.Remove(ctx, tunnelID, sessionID)
+}
+
+func (s *Server) operation(ctx context.Context, id string) (func(), error) {
+	key := sha256.Sum256([]byte(id))
+	gate := s.operations[int(key[0])%len(s.operations)]
+	select {
+	case gate <- struct{}{}:
+		if ctx.Err() != nil {
+			<-gate
+			return nil, ctx.Err()
+		}
+		return func() { <-gate }, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 // handleTCP opens one yamux stream for each HTTP request. An ingress connection
@@ -632,29 +665,35 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 		s.requests.Done()
 	}()
 
+	entry := &protocol.TunnelLog{Timestamp: time.Now().UTC(), Method: r.Method, Path: r.URL.EscapedPath(), IP: clientIP(r), Generation: session.id, Outcome: "interrupted", Reason: "stream_interrupted"}
+	if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
+		entry.Method = "WS"
+	}
+	defer func() {
+		entry.CompletedAt = time.Now().UTC()
+		ns := time.Since(entry.Timestamp).Nanoseconds()
+		entry.DurationNS = &ns
+		entry.Duration = time.Duration(ns).Round(time.Millisecond).String()
+		s.addLog(tunnelID, session, entry)
+	}()
 	stream, err := session.conn.Open()
 	if err != nil {
+		entry.StatusCode = 502
+		entry.StatusOrigin = "server_proxy"
+		entry.Outcome = "failed"
+		entry.Reason = "stream_unavailable"
 		jsonError(w, "Failed to open tunnel stream", http.StatusBadGateway)
 		return
 	}
 	defer stream.Close()
 
-	start := time.Now()
-	size, ok := s.proxyStream(w, r, stream)
+	size, ok := s.proxyStream(w, r, stream, entry)
 	if !ok {
 		return
 	}
 	if size > 0 {
 		outcome = telemetry.Success
 	}
-	method := r.Method
-	if strings.EqualFold(r.Header.Get("Upgrade"), "websocket") {
-		method = "WS"
-	}
-	s.addLog(tunnelID, session, &protocol.TunnelLog{
-		Timestamp: start, Method: method, Path: r.URL.Path, Size: size,
-		Duration: time.Since(start).Round(time.Millisecond).String(), IP: clientIP(r),
-	})
 }
 
 // responseConn counts response-stream bytes, including HTTP headers, as before.
@@ -673,8 +712,9 @@ func (c *responseConn) Read(p []byte) (int, error) {
 // Keep normal HTTP under net/http's request dispatcher. Relaying a hijacked
 // connection would send subsequent requests (even other hosts or owner APIs) to
 // the first local service. ReverseProxy hijacks only a negotiated 101 upgrade.
-func (s *Server) proxyStream(w http.ResponseWriter, r *http.Request, stream net.Conn) (int64, bool) {
+func (s *Server) proxyStream(w http.ResponseWriter, r *http.Request, stream net.Conn, entry *protocol.TunnelLog) (int64, bool) {
 	response := &responseConn{Conn: stream}
+	defer func() { entry.Size = response.bytes.Load() }()
 	transport := &http.Transport{
 		DialContext: func(context.Context, string, string) (net.Conn, error) {
 			return response, nil
@@ -690,12 +730,29 @@ func (s *Server) proxyStream(w http.ResponseWriter, r *http.Request, stream net.
 			out.URL.Host = r.Host
 		},
 		Transport: transport,
+		ModifyResponse: func(response *http.Response) error {
+			entry.StatusCode = response.StatusCode
+			entry.StatusOrigin = "tunnel_peer"
+			return nil
+		},
 		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, _ error) {
 			ok = false
+			entry.StatusCode = 502
+			entry.StatusOrigin = "server_proxy"
+			entry.Outcome = "failed"
+			entry.Reason = "proxy_failure"
 			jsonError(w, "Failed to forward request", http.StatusBadGateway)
 		},
 	}
 	proxy.ServeHTTP(w, r)
+	if ok {
+		entry.Outcome = "completed"
+		entry.Reason = "response_complete"
+		if entry.StatusCode == 101 {
+			entry.Outcome = "upgraded"
+			entry.Reason = "upgrade_closed_unknown"
+		}
+	}
 	return response.bytes.Load(), ok
 }
 
@@ -706,6 +763,10 @@ func (s *Server) Start(addr string) error {
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	s.mu.Lock()
+	if s.closing {
+		s.mu.Unlock()
+		return http.ErrServerClosed
+	}
 	s.httpServer = srv
 	s.mu.Unlock()
 	return srv.ListenAndServe()
