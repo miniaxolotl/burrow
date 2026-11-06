@@ -2,6 +2,7 @@ package routing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -16,6 +17,27 @@ import (
 )
 
 const MaxHeaders = 32 * 1024
+
+// Exchange carries metadata only, never headers, bodies, query values or IPs.
+type Exchange struct {
+	Method, Path, Route     string
+	StartedAt, CompletedAt  time.Time
+	Status                  int
+	Origin, Outcome, Reason string
+}
+
+type responseBody struct {
+	io.ReadCloser
+	failed bool
+}
+
+func (b *responseBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	if err != nil && err != io.EOF {
+		b.failed = true
+	}
+	return n, err
+}
 
 type Observation interface {
 	Wrap(io.ReadCloser) io.ReadCloser
@@ -40,11 +62,31 @@ func DialLoopback(ctx context.Context, port uint16) (net.Conn, error) {
 }
 
 func (t *Table) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	e := Exchange{Method: r.Method, Path: r.URL.EscapedPath(), StartedAt: time.Now().UTC(), Origin: "client_proxy", Outcome: "rejected", Reason: "route_rejected"}
+	var body *responseBody
+	finished := false
+	defer func() {
+		e.CompletedAt = time.Now().UTC()
+		if !finished || body != nil && body.failed {
+			e.Outcome = "interrupted"
+			e.Reason = "stream_interrupted"
+		}
+		if r.Context().Err() != nil {
+			e.Outcome = "interrupted"
+			e.Reason = "cancelled"
+		}
+		if t.Report != nil {
+			t.Report(e)
+		}
+	}()
+	reject := func(code int) { e.Status = code; finished = true }
 	if r.Method == http.MethodConnect {
+		reject(405)
 		http.Error(w, "CONNECT is not supported", 405)
 		return
 	}
 	if r.URL.IsAbs() || r.RequestURI == "*" {
+		reject(400)
 		http.Error(w, "Absolute request targets are not supported", 400)
 		return
 	}
@@ -55,18 +97,22 @@ func (t *Table) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if headerBytes > MaxHeaders {
+		reject(431)
 		http.Error(w, "Headers exceed limit", 431)
 		return
 	}
 	route, path, err := t.Match(r.URL.EscapedPath())
 	if err != nil {
+		reject(400)
 		http.Error(w, "Unsafe route path", 400)
 		return
 	}
 	if route.Path == "" {
+		reject(404)
 		http.NotFound(w, r)
 		return
 	}
+	e.Route = route.Path
 	var observation Observation
 	if t.Observe != nil {
 		observation = t.Observe(r, route, path)
@@ -101,16 +147,39 @@ func (t *Table) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}, Transport: transport, ErrorLog: log.New(io.Discard, "", 0),
 		ModifyResponse: func(response *http.Response) error {
+			e.Status = response.StatusCode
+			e.Origin = "application"
+			e.Outcome = "completed"
+			e.Reason = "response_complete"
+			if t.Headers != nil {
+				t.Headers(route, response.StatusCode, time.Now().UTC())
+			}
+			if response.StatusCode != 101 {
+				body = &responseBody{ReadCloser: response.Body}
+				response.Body = body
+			} else {
+				e.Outcome = "upgraded"
+				e.Reason = "upgrade_closed_unknown"
+			}
 			if observation != nil && (response.StatusCode == 101 || strings.HasPrefix(strings.ToLower(response.Header.Get("Content-Type")), "text/event-stream")) {
 				observation.Unavailable("streaming_or_upgrade")
 			}
 			return nil
 		},
-		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, _ error) {
+		ErrorHandler: func(w http.ResponseWriter, _ *http.Request, err error) {
+			e.Status = 502
+			e.Origin = "client_proxy"
+			e.Outcome = "failed"
+			e.Reason = "proxy_failure"
+			var operation *net.OpError
+			if errors.As(err, &operation) && operation.Op == "dial" {
+				e.Reason = "local_dial_failed"
+			}
 			http.Error(w, fmt.Sprintf("Local upstream unavailable for route %s", route.Path), 502)
 		},
 	}
 	proxy.ServeHTTP(w, r)
+	finished = true
 }
 
 // Each accepted yamux stream owns exactly one HTTP request (or one negotiated

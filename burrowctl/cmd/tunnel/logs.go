@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"burrow/burrowctl/internal/clioutput"
+	"burrow/burrowctl/internal/inspection"
 	"burrow/protocol"
 
 	"github.com/spf13/cobra"
@@ -14,19 +15,30 @@ import (
 var logsCmd = &cobra.Command{
 	Use:   "logs <id>",
 	Short: "View your tunnel's request logs",
-	Args:  cobra.ExactArgs(1),
-	RunE:  runLogs,
+	Args: func(cmd *cobra.Command, args []string) error {
+		if err := cobra.ExactArgs(1)(cmd, args); err != nil {
+			return err
+		}
+		_, err := readFilters(cmd, "server")
+		return err
+	},
+	RunE: runLogs,
 }
 
 func init() {
 	logsCmd.Flags().Int("tail", 0, "Show only the last N entries (0 = all)")
 	logsCmd.Flags().Bool("follow", false, "Follow new requests")
+	addFilters(logsCmd)
 }
 
 func runLogs(cmd *cobra.Command, args []string) error {
 	tail, _ := cmd.Flags().GetInt("tail")
 	if tail < 0 {
-		return fmt.Errorf("tail must not be negative")
+		return clioutput.Invalid(fmt.Errorf("tail must not be negative"))
+	}
+	query, err := readFilters(cmd, "server")
+	if err != nil {
+		return clioutput.Invalid(err)
 	}
 	follow, _ := cmd.Flags().GetBool("follow")
 	client, err := configuredClient(cmd)
@@ -40,6 +52,8 @@ func runLogs(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
+		retained := logs
+		logs = query.Apply(retained)
 		if output.Structured() && !follow {
 			if tail > 0 && tail < len(logs) {
 				logs = logs[len(logs)-tail:]
@@ -50,7 +64,11 @@ func runLogs(cmd *cobra.Command, args []string) error {
 			return output.Emit("result", args[0], requestsData(logs))
 		}
 		if output.Structured() {
-			batch, current := selectLogBatch(logs, seen, tail)
+			batch, _ := selectLogBatch(logs, seen, tail)
+			_, current := selectLogBatch(retained, seen, 0)
+			if err := output.Emit("snapshot", args[0], map[string]any{"source": "server_logs", "matching": len(logs), "retained": len(retained), "observed_at": time.Now().UTC(), "continuity": "bounded_polling_possible_gaps"}); err != nil {
+				return err
+			}
 			for _, entry := range batch {
 				if err := output.Emit("log", args[0], requestData(entry)); err != nil {
 					return err
@@ -58,12 +76,16 @@ func runLogs(cmd *cobra.Command, args []string) error {
 			}
 			seen = current
 		} else {
-			seen, err = printLogBatch(output, logs, seen, tail)
+			_, err = printLogBatch(output, logs, seen, tail)
+			_, seen = selectLogBatch(retained, seen, 0)
 			if err != nil {
 				return err
 			}
 		}
 		if !follow {
+			if _, err := fmt.Fprintf(output, "%d matching / %d retained · server logs · bounded window\n", len(logs), len(retained)); err != nil {
+				return err
+			}
 			if len(logs) == 0 {
 				_, err := fmt.Fprintln(output, "No log entries")
 				return err
@@ -84,7 +106,7 @@ func runLogs(cmd *cobra.Command, args []string) error {
 func printLogBatch(out io.Writer, logs []*protocol.TunnelLog, seen map[string]struct{}, tail int) (map[string]struct{}, error) {
 	batch, current := selectLogBatch(logs, seen, tail)
 	for _, entry := range batch {
-		if _, err := fmt.Fprintf(out, "%s  %-15s  %-6s  %-40s  %s\n", entry.Timestamp.Format("15:04:05.000"), entry.IP, entry.Method, entry.Path, entry.Duration); err != nil {
+		if _, err := fmt.Fprintf(out, "%s  %-15s  %-6s  %-40s  %s\n", entry.Timestamp.Format("15:04:05.000"), inspection.Safe(entry.IP), inspection.Safe(entry.Method), inspection.Safe(entry.Path), inspection.Safe(entry.Duration)); err != nil {
 			return current, err
 		}
 	}
@@ -101,8 +123,9 @@ func selectLogBatch(logs []*protocol.TunnelLog, seen map[string]struct{}, tail i
 	for i, entry := range logs {
 		// Remember the entire snapshot, including entries omitted by --tail.
 		// Retaining only this rolling buffer bounds memory during long follows.
-		current[entry.ID] = struct{}{}
-		if _, printed := seen[entry.ID]; printed || i < start {
+		key := entry.Generation + "\x00" + entry.ID
+		current[key] = struct{}{}
+		if _, printed := seen[key]; printed || i < start {
 			continue
 		}
 		batch = append(batch, entry)

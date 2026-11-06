@@ -46,6 +46,7 @@ type Client struct {
 	capture        *CaptureSettings
 	reachability   HealthObservation
 	reachOnce      sync.Once
+	inspect        bool
 }
 
 // LifecycleEvent reports observed transport state, never application readiness.
@@ -92,23 +93,26 @@ type connectionRejected struct {
 func (e *connectionRejected) Error() string { return e.message }
 
 type TunnelConn struct {
-	ID              string
-	Port            uint16
-	URL             string
-	wsConn          *websocket.Conn
-	session         *yamux.Session
-	ctx             context.Context
-	cancel          context.CancelFunc
-	latency         time.Duration
-	reconnects      int
-	totalSize       int64
-	forwarded       sync.Once
-	status          string
-	generation      string
-	dispatcher      *routing.Table
-	lifecycle       *yamux.Stream
-	lifecycleReader *bufio.Reader
-	localHealth     map[uint16]HealthObservation
+	ID                string
+	Port              uint16
+	URL               string
+	wsConn            *websocket.Conn
+	session           *yamux.Session
+	ctx               context.Context
+	cancel            context.CancelFunc
+	latency           time.Duration
+	reconnects        int
+	totalSize         int64
+	forwarded         sync.Once
+	status            string
+	generation        string
+	epoch             string
+	dispatcher        *routing.Table
+	lifecycle         *yamux.Stream
+	lifecycleReader   *bufio.Reader
+	localHealth       map[uint16]HealthObservation
+	applicationHealth map[string]HealthObservation
+	history           *liveHistory
 }
 
 func NewClient(server, token, domain string, secure bool, observers ...telemetry.Observer) *Client {
@@ -162,6 +166,9 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 		tunnelID = c.attachment.TunnelID
 	}
 	dispatcher := c.routes
+	if c.inspect && dispatcher == nil {
+		dispatcher = &routing.Table{Version: 1, Routes: []routing.Route{{Path: "/", Port: port}}}
+	}
 	if c.capture != nil {
 		if dispatcher == nil {
 			dispatcher = &routing.Table{Version: 1, Routes: []routing.Route{{Path: "/", Port: port}}}
@@ -423,16 +430,24 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 	}
 
 	return &TunnelConn{
-		ID:          tunnelID,
-		Port:        port,
-		URL:         tunnelURL,
-		wsConn:      conn,
-		session:     session,
-		latency:     latency,
-		status:      "active",
-		generation:  generation,
-		localHealth: make(map[uint16]HealthObservation),
-		lifecycle:   lifecycle, lifecycleReader: lifecycleReader,
+		ID:                tunnelID,
+		Port:              port,
+		URL:               tunnelURL,
+		wsConn:            conn,
+		session:           session,
+		latency:           latency,
+		status:            "active",
+		generation:        generation,
+		epoch:             protocol.RandomTunnelID(),
+		localHealth:       make(map[uint16]HealthObservation),
+		applicationHealth: make(map[string]HealthObservation),
+		history: func() *liveHistory {
+			if c.inspect {
+				return &liveHistory{}
+			}
+			return nil
+		}(),
+		lifecycle: lifecycle, lifecycleReader: lifecycleReader,
 	}, nil
 }
 
@@ -510,7 +525,10 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			tc.URL = newTC.URL
 			tc.status = "active"
 			tc.generation = newTC.generation
+			tc.epoch = newTC.epoch
 			tc.localHealth = newTC.localHealth
+			tc.applicationHealth = newTC.applicationHealth
+			tc.history = newTC.history
 			tc.lifecycle, tc.lifecycleReader = newTC.lifecycle, newTC.lifecycleReader
 			c.mu.Unlock()
 			c.watchLifecycle(tc)
@@ -526,8 +544,12 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 		if tc.dispatcher != nil {
 			select {
 			case c.streams <- struct{}{}:
-				generation := tc.generation
+				generation := tc.sessionKey()
 				table := *tc.dispatcher
+				table.Report = func(e routing.Exchange) { c.recordExchange(tc.ID, generation, e) }
+				table.Headers = func(route routing.Route, status int, at time.Time) {
+					c.recordApplication(tc.ID, generation, route, status, at)
+				}
 				table.Dial = func(ctx context.Context, port uint16) (net.Conn, error) {
 					start := time.Now()
 					conn, err := routing.DialLoopback(ctx, port)
@@ -536,13 +558,15 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 				}
 				c.workers.Go(func() { defer func() { <-c.streams }(); table.ServeStream(tc.ctx, stream) })
 			default:
+				at := time.Now().UTC()
+				c.recordExchange(tc.ID, tc.sessionKey(), routing.Exchange{StartedAt: at, CompletedAt: at, Status: 503, Origin: "client_proxy", Outcome: "rejected", Reason: "overloaded"})
 				stream.SetWriteDeadline(time.Now().Add(time.Second))
 				io.WriteString(stream, "HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nContent-Length: 0\r\n\r\n")
 				stream.Close()
 			}
 			continue
 		}
-		generation := tc.generation
+		generation := tc.sessionKey()
 		c.workers.Go(func() {
 			s := stream
 			defer s.Close()
@@ -651,14 +675,19 @@ func (c *Client) ListTunnels() []*protocol.TunnelInfo {
 
 	tunnels := make([]*protocol.TunnelInfo, 0, len(c.tunnels))
 	for _, tc := range c.tunnels {
+		latency := ""
+		if c.reachability.Outcome == "succeeded" && c.reachability.fresh(time.Now()).Freshness == "fresh" {
+			latency = tc.latency.Round(time.Millisecond).String()
+		}
 		tunnels = append(tunnels, &protocol.TunnelInfo{
 			TunnelID:   tc.ID,
 			Port:       tc.Port,
 			URL:        tc.URL,
 			Status:     tc.status,
-			Latency:    tc.latency.Round(time.Millisecond).String(),
+			Latency:    latency,
 			Reconnects: tc.reconnects,
 			TotalSize:  atomic.LoadInt64(&tc.totalSize),
+			Generation: tc.generation, RegistrationConfirmed: tc.generation != "", LifecycleConfirmed: tc.lifecycle != nil,
 		})
 	}
 	sort.Slice(tunnels, func(i, j int) bool {

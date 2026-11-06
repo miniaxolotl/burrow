@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"sort"
 	"sync"
 	"time"
 
@@ -15,6 +16,7 @@ type HealthObservation struct {
 	LastSuccess time.Time `json:"last_success,omitempty"`
 	Source      string    `json:"source"`
 	Port        uint16    `json:"port,omitempty"`
+	Route       string    `json:"route,omitempty"`
 	Generation  string    `json:"generation,omitempty"`
 	Outcome     string    `json:"outcome"`
 	Reason      string    `json:"reason"`
@@ -173,11 +175,11 @@ func (c *Client) recordTCP(id, generation string, port uint16, start time.Time, 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	tc := c.tunnels[id]
-	if tc == nil || tc.generation != generation || tc.ctx.Err() != nil {
+	if tc == nil || tc.sessionKey() != generation || tc.ctx.Err() != nil {
 		return
 	}
 	previous := tc.localHealth[port]
-	o := HealthObservation{ObservedAt: time.Now().UTC(), LastSuccess: previous.LastSuccess, Source: "passive_tcp", Generation: generation, Port: port, ElapsedMS: time.Since(start).Milliseconds(), Outcome: "failed", Reason: "tcp_unavailable"}
+	o := HealthObservation{ObservedAt: time.Now().UTC(), LastSuccess: previous.LastSuccess, Source: "passive_tcp", Generation: tc.generation, Port: port, ElapsedMS: time.Since(start).Milliseconds(), Outcome: "failed", Reason: "tcp_unavailable"}
 	if err == nil {
 		o.Outcome = "succeeded"
 		o.Reason = "tcp_connected"
@@ -194,6 +196,52 @@ func (c *Client) Health(id string) (HealthObservation, []HealthObservation) {
 		for _, o := range tc.localHealth {
 			local = append(local, o.fresh(time.Now()))
 		}
+		for _, o := range tc.applicationHealth {
+			local = append(local, o.fresh(time.Now()))
+		}
 	}
+	sort.Slice(local, func(i, j int) bool {
+		a, b := local[i], local[j]
+		if a.Source != b.Source {
+			return a.Source < b.Source
+		}
+		if a.Port != b.Port {
+			return a.Port < b.Port
+		}
+		return a.Route < b.Route
+	})
 	return c.reachability.fresh(time.Now()), local
+}
+
+// RecheckTCP accepts only the selected tunnel's existing local configuration.
+func (c *Client) RecheckTCP(ctx context.Context, id string, port uint16) HealthObservation {
+	c.mu.RLock()
+	tc := c.tunnels[id]
+	if tc == nil {
+		c.mu.RUnlock()
+		return HealthObservation{Outcome: "not_checked", Reason: "tunnel_unavailable", Freshness: "unknown"}
+	}
+	generation := tc.sessionKey()
+	allowed := port == tc.Port
+	if c.routes != nil {
+		allowed = false
+		for _, route := range c.routes.Routes {
+			allowed = allowed || route.Port == port
+		}
+	}
+	c.mu.RUnlock()
+	if !allowed {
+		return HealthObservation{Outcome: "not_checked", Reason: "target_not_configured", Freshness: "unknown"}
+	}
+	o := CheckTCP(ctx, port)
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.tunnels[id] == tc && tc.sessionKey() == generation && tc.ctx.Err() == nil && ctx.Err() == nil {
+		o.Generation = tc.generation
+		if o.LastSuccess.IsZero() {
+			o.LastSuccess = tc.localHealth[port].LastSuccess
+		}
+		tc.localHealth[port] = o
+	}
+	return o
 }

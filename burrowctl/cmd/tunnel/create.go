@@ -92,6 +92,8 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	client.SetRoutes(routes)
+	inspect, _ := cmd.Flags().GetBool("inspect")
+	client.SetInspect(inspect)
 	configPath := ""
 	if cmd.Flags().Changed("config") {
 		path, _ := cmd.Flags().GetString("config")

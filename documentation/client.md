@@ -1,5 +1,49 @@
 # burrowctl
 
+## Live metadata inspection
+
+`burrowctl tunnel 3000 --inspect` keeps up to 200 completed records / 512 KiB in
+memory per tunnel generation. It uses the private HTTP dispatcher even for a
+single port: strict paths, no CONNECT or absolute request targets, one request per
+stream and a 128-stream admission bound. Without routes, capture or inspection,
+the raw forwarding policy remains unchanged. Inspection opens no capture store or
+keyring and enables neither persistence nor replay. Paths exclude query values
+and are capped at 2 KiB with truncation; headers, bodies and IPs are not retained.
+
+Server logs, local metadata and encrypted captures are separate sources with
+separate opaque IDs. Do not correlate them by path/time. A metadata row without a
+saved capture is not replayable. Status origin distinguishes an actual local
+application response from a generated client/server proxy error or tunnel peer.
+
+```sh
+burrowctl logs ID --method POST --status 5xx --min-duration 250ms --path /api
+burrowctl logs ID --search hook --sort duration --descending --output json
+burrowctl logs ID --follow --output jsonl
+burrowctl requests list --name webhook --route /api --method POST --output json
+```
+
+Filters combine with AND; repeated methods/statuses use OR (maximum 16 each).
+Status accepts 101, 200–599, 2xx–5xx or `unknown`. Duration thresholds are inclusive;
+unknown measurements do not match numeric filters. Paths match case-sensitive
+escaped path-segment prefixes; search is a case-insensitive literal displayed
+metadata substring. Path/search input is bounded to 256 bytes. Filter/sort applies
+to the full authorized retained snapshot before tail/viewport. Finite sort is
+ascending unless `--descending`; unknowns stay last. Follow rejects sorting, tracks
+the full retained set and emits additive JSONL `snapshot` events. Polling can miss
+evictions; counts describe a retained window, never all-time traffic. Finite logs
+JSON retains its array shape. Server route filters and capture response-status/
+duration/path filters fail explicitly rather than inventing unavailable data.
+
+TUI: `l` opens logs, `v` switches server/local source, `/` edits search; `m/s/p/a/t`
+edit method/status/path/route/duration. Enter applies a filter (empty clears it);
+Escape leaves editing. `o` cycles finite ordering, `D` reverses, Enter opens row
+details, and `f` explicitly resumes append-order follow. Manual navigation pauses
+follow. Refresh retains selected identity, visible offset and drafts; failed
+refreshes keep rows labelled stale. `h` on a tunnel/route opens scoped health; `r`
+there explicitly TCP-connects/closes the configured target. Controls do not send
+application HTTP probes. Native macOS and hosted termination acceptance remain
+separate from source/cross-build verification.
+
 ## Health and explicit diagnostics
 
 `burrowctl doctor 3000 8080 --output json` (or `doctor --config ./burrow.json`)
@@ -171,13 +215,12 @@ exposure**: a connection may have been briefly reachable. It does not permanentl
 revoke those IDs. A terminal authorization/ownership/revocation rejection during
 reconnect likewise stops the whole headless invocation nonzero.
 
-## Planned operational improvements
+## Operational boundaries
 
-The [tunnel operations plan](tunnel-operations-plan.md) proposes deployment-aware
-draining, local health diagnostics and richer metadata inspection. These are not
-current commands or health guarantees. Registration readiness does not prove
-local application health; the current log status may be unknown. Capture/replay
-remains a separate explicit opt-in.
+The [implementation](tunnel-operations-implementation.md) follows the historical
+[operations plan](tunnel-operations-plan.md). Registration readiness does not prove
+local application health; legacy log status may remain unknown. Capture/replay is
+a separate explicit opt-in. Source support is not proof of hosted drain continuity.
 
 ## Automatic ownership
 

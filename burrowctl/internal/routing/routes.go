@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"burrow/burrowctl/internal/strictjson"
 )
@@ -26,6 +27,8 @@ type Table struct {
 	Routes  []Route                                         `json:"routes"`
 	Observe func(*http.Request, Route, string) Observation  `json:"-"`
 	Dial    func(context.Context, uint16) (net.Conn, error) `json:"-"`
+	Report  func(Exchange)                                  `json:"-"`
+	Headers func(Route, int, time.Time)                     `json:"-"`
 }
 
 func Parse(data []byte) (*Table, error) {
