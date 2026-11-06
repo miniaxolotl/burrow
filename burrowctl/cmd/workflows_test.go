@@ -429,6 +429,12 @@ func TestWorkflowFollowJSONLDoesNotRepeatEntries(t *testing.T) {
 		t.Fatalf("no log event: %v", scanner.Err())
 	}
 	var event workflowEnvelope
+	if err := json.Unmarshal(scanner.Bytes(), &event); err != nil || event.Type != "snapshot" || !bytes.Contains(event.Data, []byte(`"retained":2`)) {
+		t.Fatalf("missing bounded snapshot: %s", scanner.Text())
+	}
+	if !scanner.Scan() {
+		t.Fatal("missing initial filtered tail log")
+	}
 	if err := json.Unmarshal(scanner.Bytes(), &event); err != nil || event.Type != "log" || !bytes.Contains(event.Data, []byte("/second")) {
 		t.Fatalf("wrong log event: %v: %s", err, scanner.Text())
 	}

@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -43,6 +44,9 @@ type Client struct {
 	routes         *routing.Table
 	streams        chan struct{}
 	capture        *CaptureSettings
+	reachability   HealthObservation
+	reachOnce      sync.Once
+	inspect        bool
 }
 
 // LifecycleEvent reports observed transport state, never application readiness.
@@ -59,6 +63,8 @@ type LifecycleEvent struct {
 	Generation            string
 	RegistrationConfirmed bool
 	CaptureID             string
+	RemainingMS           int64
+	LifecycleConfirmed    bool
 }
 
 func (c *Client) SetEventHandler(handler func(LifecycleEvent)) {
@@ -87,20 +93,26 @@ type connectionRejected struct {
 func (e *connectionRejected) Error() string { return e.message }
 
 type TunnelConn struct {
-	ID         string
-	Port       uint16
-	URL        string
-	wsConn     *websocket.Conn
-	session    *yamux.Session
-	ctx        context.Context
-	cancel     context.CancelFunc
-	latency    time.Duration
-	reconnects int
-	totalSize  int64
-	forwarded  sync.Once
-	status     string
-	generation string
-	dispatcher *routing.Table
+	ID                string
+	Port              uint16
+	URL               string
+	wsConn            *websocket.Conn
+	session           *yamux.Session
+	ctx               context.Context
+	cancel            context.CancelFunc
+	latency           time.Duration
+	reconnects        int
+	totalSize         int64
+	forwarded         sync.Once
+	status            string
+	generation        string
+	epoch             string
+	dispatcher        *routing.Table
+	lifecycle         *yamux.Stream
+	lifecycleReader   *bufio.Reader
+	localHealth       map[uint16]HealthObservation
+	applicationHealth map[string]HealthObservation
+	history           *liveHistory
 }
 
 func NewClient(server, token, domain string, secure bool, observers ...telemetry.Observer) *Client {
@@ -154,6 +166,9 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 		tunnelID = c.attachment.TunnelID
 	}
 	dispatcher := c.routes
+	if c.inspect && dispatcher == nil {
+		dispatcher = &routing.Table{Version: 1, Routes: []routing.Route{{Path: "/", Port: port}}}
+	}
 	if c.capture != nil {
 		if dispatcher == nil {
 			dispatcher = &routing.Table{Version: 1, Routes: []routing.Route{{Path: "/", Port: port}}}
@@ -218,7 +233,7 @@ func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) 
 	c.mu.Unlock()
 
 	tunnelURL := tc.URL
-	c.workers.Go(func() { c.trackLatency(tc) })
+	c.reachOnce.Do(func() { c.workers.Go(c.trackReachability) })
 	c.workers.Go(func() { c.handleTunnel(tc, port) })
 	connected = true
 
@@ -263,37 +278,8 @@ func (c *Client) Routes() []routing.Route {
 	return append([]routing.Route(nil), c.routes.Routes...)
 }
 
-func (c *Client) trackLatency(tc *TunnelConn) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-tc.ctx.Done():
-			return
-		case <-ticker.C:
-			start := time.Now()
-			scheme := "http"
-			if c.secure {
-				scheme = "https"
-			}
-			req, err := http.NewRequestWithContext(tc.ctx, "GET", fmt.Sprintf("%s://%s/health", scheme, c.server), nil)
-			if err != nil {
-				continue
-			}
-			resp, err := httpClient.Do(req)
-			if err != nil {
-				continue
-			}
-			resp.Body.Close()
-			c.mu.Lock()
-			tc.latency = time.Since(start)
-			c.mu.Unlock()
-		}
-	}
-}
-
 func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port uint16) (*TunnelConn, error) {
-	header := http.Header{"X-Tunnel-Token": {c.token}, protocol.RegistrationHeader: {protocol.RegistrationVersion}}
+	header := http.Header{"X-Tunnel-Token": {c.token}, protocol.RegistrationHeader: {protocol.RegistrationVersion}, protocol.LifecycleHeader: {"1"}}
 	if c.attachment != nil {
 		id, expected, nonce, err := c.attachment.Prepare()
 		if err != nil {
@@ -380,6 +366,8 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 	}
 	c.emit(LifecycleEvent{Type: "connected", TunnelID: tunnelID, Port: port, URL: tunnelURL})
 	generation := ""
+	var lifecycle *yamux.Stream
+	var lifecycleReader *bufio.Reader
 	if c.attachment != nil && resp.Header.Get(protocol.RegistrationHeader) != "1" {
 		session.Close()
 		conn.Close()
@@ -414,18 +402,52 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 				return nil, err
 			}
 		}
-		c.emit(LifecycleEvent{Type: "registered", TunnelID: tunnelID, Port: port, URL: tunnelURL, Generation: generation, RegistrationConfirmed: true})
+	}
+	if version := resp.Header.Get(protocol.LifecycleHeader); version != "" {
+		if version != "1" || generation == "" {
+			session.Close()
+			conn.Close()
+			return nil, errors.New("invalid lifecycle negotiation")
+		}
+		stop := context.AfterFunc(connectContext, func() { session.Close(); conn.Close() })
+		lifecycle, err = session.AcceptStream()
+		if err == nil {
+			deadline, _ := connectContext.Deadline()
+			lifecycle.SetReadDeadline(deadline)
+			lifecycleReader = bufio.NewReaderSize(lifecycle, protocol.MaxLifecycleSize)
+			_, err = protocol.ReadLifecycle(lifecycleReader, tunnelID, generation, "hello")
+			lifecycle.SetReadDeadline(time.Time{})
+		}
+		stop()
+		if err != nil {
+			session.Close()
+			conn.Close()
+			return nil, fmt.Errorf("lifecycle hello failed: %w", err)
+		}
+	}
+	if generation != "" {
+		c.emit(LifecycleEvent{Type: "registered", TunnelID: tunnelID, Port: port, URL: tunnelURL, Generation: generation, RegistrationConfirmed: true, LifecycleConfirmed: lifecycle != nil})
 	}
 
 	return &TunnelConn{
-		ID:         tunnelID,
-		Port:       port,
-		URL:        tunnelURL,
-		wsConn:     conn,
-		session:    session,
-		latency:    latency,
-		status:     "active",
-		generation: generation,
+		ID:                tunnelID,
+		Port:              port,
+		URL:               tunnelURL,
+		wsConn:            conn,
+		session:           session,
+		latency:           latency,
+		status:            "active",
+		generation:        generation,
+		epoch:             protocol.RandomTunnelID(),
+		localHealth:       make(map[uint16]HealthObservation),
+		applicationHealth: make(map[string]HealthObservation),
+		history: func() *liveHistory {
+			if c.inspect {
+				return &liveHistory{}
+			}
+			return nil
+		}(),
+		lifecycle: lifecycle, lifecycleReader: lifecycleReader,
 	}, nil
 }
 
@@ -439,22 +461,30 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 		c.mu.Unlock()
 	}()
 
-	localAddr := fmt.Sprintf("localhost:%d", port)
 	reconnectDelay := time.Second
 	attempt := 0
+	forwardContext, stopForwarding := context.WithCancel(tc.ctx)
+	defer func() { stopForwarding() }()
+	c.watchLifecycle(tc)
 
 	for {
 		stream, err := tc.session.AcceptStream()
 		if err != nil {
+			stopForwarding() // Old-generation local I/O cannot survive into a replacement.
 			if tc.ctx.Err() != nil {
 				return
 			}
 			c.mu.Lock()
-			wasConnected := tc.status == "active"
+			wasConnected := tc.status == "active" || tc.status == "draining"
+			code := "transport_lost"
+			if tc.status == "draining" {
+				code = "server_draining"
+			}
+			generation := tc.generation
 			tc.status = "reconnecting"
 			c.mu.Unlock()
 			if wasConnected {
-				c.emit(LifecycleEvent{Type: "disconnected", TunnelID: tc.ID, Port: port, Code: "transport_lost"})
+				c.emit(LifecycleEvent{Type: "disconnected", TunnelID: tc.ID, Port: port, Code: code, Generation: generation})
 			}
 			attempt++
 			delay := reconnectDelay/2 + time.Duration(rand.Int64N(int64(reconnectDelay/2)))
@@ -498,7 +528,14 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			tc.URL = newTC.URL
 			tc.status = "active"
 			tc.generation = newTC.generation
+			tc.epoch = newTC.epoch
+			tc.localHealth = newTC.localHealth
+			tc.applicationHealth = newTC.applicationHealth
+			tc.history = newTC.history
+			tc.lifecycle, tc.lifecycleReader = newTC.lifecycle, newTC.lifecycleReader
 			c.mu.Unlock()
+			forwardContext, stopForwarding = context.WithCancel(tc.ctx)
+			c.watchLifecycle(tc)
 			c.observer.Track(telemetry.TunnelReconnected)
 			c.observer.Operation(telemetry.Reconnect, started, telemetry.Success)
 			reconnectDelay = time.Second
@@ -511,14 +548,31 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 		if tc.dispatcher != nil {
 			select {
 			case c.streams <- struct{}{}:
-				c.workers.Go(func() { defer func() { <-c.streams }(); tc.dispatcher.ServeStream(tc.ctx, stream) })
+				generation := tc.sessionKey()
+				streamContext := forwardContext
+				table := *tc.dispatcher
+				table.Report = func(e routing.Exchange) { c.recordExchange(tc.ID, generation, e) }
+				table.Headers = func(route routing.Route, status int, at time.Time) {
+					c.recordApplication(tc.ID, generation, route, status, at)
+				}
+				table.Dial = func(ctx context.Context, port uint16) (net.Conn, error) {
+					start := time.Now()
+					conn, err := routing.DialLoopback(ctx, port)
+					c.recordTCP(tc.ID, generation, port, start, err)
+					return conn, err
+				}
+				c.workers.Go(func() { defer func() { <-c.streams }(); table.ServeStream(streamContext, stream) })
 			default:
+				at := time.Now().UTC()
+				c.recordExchange(tc.ID, tc.sessionKey(), routing.Exchange{StartedAt: at, CompletedAt: at, Status: 503, Origin: "client_proxy", Outcome: "rejected", Reason: "overloaded"})
 				stream.SetWriteDeadline(time.Now().Add(time.Second))
 				io.WriteString(stream, "HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\nContent-Length: 0\r\n\r\n")
 				stream.Close()
 			}
 			continue
 		}
+		generation := tc.sessionKey()
+		streamContext := forwardContext
 		c.workers.Go(func() {
 			s := stream
 			defer s.Close()
@@ -526,12 +580,13 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			outcome := telemetry.Unavailable
 			defer func() { c.observer.Operation(telemetry.Forward, started, outcome) }()
 
-			conn, err := (&net.Dialer{Timeout: 5 * time.Second}).DialContext(tc.ctx, "tcp", localAddr)
+			conn, err := routing.DialLoopback(streamContext, port)
+			c.recordTCP(tc.ID, generation, port, started, err)
 			if err != nil {
 				return
 			}
 			defer conn.Close()
-			stopCancel := context.AfterFunc(tc.ctx, func() { conn.Close(); s.Close() })
+			stopCancel := context.AfterFunc(streamContext, func() { conn.Close(); s.Close() })
 			defer stopCancel()
 
 			done := make(chan struct{}, 2)
@@ -626,14 +681,19 @@ func (c *Client) ListTunnels() []*protocol.TunnelInfo {
 
 	tunnels := make([]*protocol.TunnelInfo, 0, len(c.tunnels))
 	for _, tc := range c.tunnels {
+		latency := ""
+		if c.reachability.Outcome == "succeeded" && c.reachability.fresh(time.Now()).Freshness == "fresh" {
+			latency = tc.latency.Round(time.Millisecond).String()
+		}
 		tunnels = append(tunnels, &protocol.TunnelInfo{
 			TunnelID:   tc.ID,
 			Port:       tc.Port,
 			URL:        tc.URL,
 			Status:     tc.status,
-			Latency:    tc.latency.Round(time.Millisecond).String(),
+			Latency:    latency,
 			Reconnects: tc.reconnects,
 			TotalSize:  atomic.LoadInt64(&tc.totalSize),
+			Generation: tc.generation, RegistrationConfirmed: tc.generation != "", LifecycleConfirmed: tc.lifecycle != nil,
 		})
 	}
 	sort.Slice(tunnels, func(i, j int) bool {

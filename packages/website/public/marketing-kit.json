@@ -1,0 +1,51 @@
+{
+  "brand": "burrow",
+  "kit": "Bramble Labs approved marketing kit, 5 November 2026",
+  "assets": [
+    {
+      "source": "identity-library/burrow/favicons/favicon.svg",
+      "file": "src/app/icon.svg",
+      "role": "adaptive transparent symbol",
+      "sha256": "871627ea6be2b288d9802231d53b592db1e87a0d66a22708225860a45725b317",
+      "bytes": 1951
+    },
+    {
+      "source": "identity-library/burrow/favicons/favicon.ico",
+      "file": "src/app/favicon.ico",
+      "role": "legacy favicon",
+      "sha256": "cbad86d79516b3212394d275a5ed196fec13955b38a56ec97e068894a73e93e2",
+      "bytes": 8005
+    },
+    {
+      "source": "identity-library/burrow/favicons/favicon-colour.ico",
+      "file": "public/favicons/favicon-colour.ico",
+      "role": "browser-theme fallback",
+      "sha256": "cbad86d79516b3212394d275a5ed196fec13955b38a56ec97e068894a73e93e2",
+      "bytes": 8005
+    },
+    {
+      "source": "identity-library/burrow/favicons/favicon-white.ico",
+      "file": "public/favicons/favicon-white.ico",
+      "role": "browser-theme fallback",
+      "sha256": "2b5d3cfaad6129bc6a603ec447506a4469c540db47e7c41e5c45ed38e80c7cf1",
+      "bytes": 6125
+    },
+    {
+      "source": "identity-library/burrow/favicons/favicon-colour-32.png",
+      "file": "public/favicons/favicon-colour-32.png",
+      "role": "browser-theme fallback",
+      "sha256": "17e2f2b18298e47358ea2dd1a8b3da18925d8381c36610469df2e5d632897efe",
+      "bytes": 741
+    },
+    {
+      "source": "identity-library/burrow/favicons/favicon-white-32.png",
+      "file": "public/favicons/favicon-white-32.png",
+      "role": "browser-theme fallback",
+      "sha256": "15d0088806f6aa0d44026e4105e39d41a526a47916f8132b605df0e3f0049d18",
+      "bytes": 548
+    }
+  ],
+  "sources": [],
+  "websiteGraphicsAllowed": false,
+  "boundary": "Licensed editorial illustrations, not customer proof or native capture; no kit website graphics for Burrow"
+}
