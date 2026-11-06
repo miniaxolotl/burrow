@@ -41,7 +41,8 @@ do not replace them with proposed commands before implementation passes its gate
 
 ## Delivery order and dependencies
 
-**Delivery: one implementation PR containing all four features.** Use atomic,
+**Delivery updated by owner: preserve initial implementation PR #88 and finish
+the remaining slices in one additional PR stacked on it (#90).** Use atomic,
 incremental commits grouped by related behavior, with M1 → M2 → M3 → M4 as the
 recommended development order. Milestones are checkpoints inside that PR, not
 separate PRs, branches or partial feature releases. Hard dependencies are narrower:
@@ -70,10 +71,10 @@ Size each spike before scheduling it; there is no calendar estimate here.
 
 ### Commit organization within the single implementation PR
 
-Use one task branch/worktree and one implementation PR. The owner's subsequent
-instruction is to stack it on planning PR #84 until that parent merges, then
-retarget the same PR to `development` and revalidate. Do not create per-feature
-implementation PRs or a stack of feature PRs. Suggested focused commit subjects:
+The owner's latest instruction supersedes the earlier single-implementation-PR
+arrangement: #88 retains the initial checkpoint; #90 targets #88's branch and
+contains all remaining slices. Preserve both worktrees and retarget/revalidate
+as parents merge. Do not create more per-feature PRs. Suggested focused commits:
 
 1. `test(tunnels): add isolated workflow fixtures`
 2. `feat(cli): add cancellable headless output` — lifecycle and versioned encoders.

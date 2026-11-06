@@ -14,13 +14,14 @@ until combined acceptance passes. Retarget and revalidate as parents merge.
 | Isolated CLI subprocess fixtures               | Implemented: temporary HOME, no inherited owner/server configuration, private-owner and help/validation baselines.                                                                                     |
 | Headless lifecycle and structured output       | Initial M1a implementation: headless/TTY detection, JSON/JSONL, numeric units, truthful transport events, signals/cancellation and bounded output/drain. Final combined acceptance remains pending.    |
 | Registration acknowledgement and saved aliases | Implemented in child: negotiated acknowledgement, aggregate readiness, durable attachment CAS/nonce reconciliation, private locked aliases and close/replacement state. More fault acceptance pending. |
-| One-hostname local routing                     | Pending.                                                                                                                                                                                               |
-| Encrypted capture and durable local replay     | Pending.                                                                                                                                                                                               |
+| One-hostname local routing                     | Implemented in child: strict config, bounded private HTTP adapter, loopback routing, upgrade/SSE/trailer compatibility and scrollable TUI route table. Final acceptance pending.                       |
+| Encrypted capture and durable local replay     | Linux CLI, native TUI and real-service combination pass focused acceptance; macOS secure adapter and remaining fault/platform gates stay blocked/pending.                                              |
 | Combined acceptance and full exact-head gates  | Pending.                                                                                                                                                                                               |
 
 Each checkpoint uses focused passing commits with matching tests and documentation.
 Keep the PR draft until the whole plan's acceptance gates pass. No production
-deployment, public tunnel or application-content capture is part of these tests.
+deployment or public tunnel is part of these tests. Capture fixtures use only
+synthetic application content and isolated credential facilities.
 
 ## Implemented checkpoint evidence
 
@@ -69,13 +70,89 @@ sessions. Private-registry tests cover restart/uncertain attempt reuse, scope,
 locking, corrupt/newer schemas, symlinks/permissions and close/replacement races.
 An actual CLI subprocess reuses its URL after metadata removal and server restart
 with retained Redis. This passed against both miniredis and a disposable Redis
-7.4 container. The disconnect grace is shortened explicitly in that fixture;
-default-grace and partition-liveness acceptance remain pending. No hosted service
+7.4 container. The focused restart fixture shortens disconnect grace; the combined
+fixture below also verifies the real default grace. A real half-open transport
+fixture below verifies the default liveness bound too. No hosted service
 or public tunnel is involved.
 
 The rollout path now enforces the attachment-state image compatibility floor
 documented in [deployment guidance](deploy.md). Release-policy tests include the
 new guard without weakening current-ref or single-instance checks.
+
+### Capture/replay storage decision and evidence
+
+The optional store uses `modernc.org/sqlite v1.61.1` (pure Go, pinned) and an
+AES-GCM scope key in the OS credential facility. Review rejected `go-keyring`'s
+automatic unlock/prompt behavior. The Linux adapter instead uses maintained
+`godbus/dbus` with bounded calls and never calls Unlock/Prompt. Linux tests cover
+a real isolated unlocked Secret Service, a locked collection (existing/new key),
+and an absent backend. A real CLI capture → restart → list → local replay → delete
+passed with that disposable backend. macOS deliberately fails capture closed
+until a no-prompt Keychain adapter is implemented and tested; cross-compilation
+is not evidence of secure-backend support.
+
+SQLite receives ciphertext only, including sensitive request metadata. Each
+ciphertext authenticates schema, scope and record ID. Tests inspect files for
+synthetic plaintext, reject ciphertext swaps, fence clear/delete/expiry races,
+and verify nonblocking bounded capture under a stopped writer. The reviewed
+20 MiB payload budget reserves room for a bounded database and rollback journal
+under the proposal's 50 MiB physical envelope.
+
+Replay work and leases live in the same transactional store. Tests cover durable
+intent, linked approval, no automatic resends after disconnect, explicit erasure
+during dispatch, distinct HTTP 500/completed outcome and actual test-worker crashes
+after claim, after intent, after upstream receipt and after result commit. Recovery
+uses that durable evidence and never redispatches the old job. These are focused
+tests, not yet the complete combined compatibility/fault acceptance gate.
+
+### Real-service and native terminal acceptance
+
+`scripts/test/secure-backend.py` creates its own temporary HOME and session bus,
+unlocks a disposable GNOME keyring with a synthetic fixture password and cleans
+up its own service. It never uses an operator's credential session. With
+`BURROW_TEST_REDIS` pointed at a disposable Redis, it also runs the combined test:
+
+```sh
+BURROW_TEST_REDIS=redis://127.0.0.1:PORT python3 scripts/test/secure-backend.py
+```
+
+The combined real-Redis/real-credential-backend test passed: named routed capture,
+original request forwarding, actual default 20-second disconnect grace, metadata
+removal, restart without capture opt-in, server restart with retained Redis, and
+approved direct local replay while the Burrow server is offline. The URL stays
+the same and local application call counts show exactly one approved resend.
+
+The native TUI test runs the actual CLI in an isolated tmux terminal (110×32), not
+a rendered mock. It verifies capture selection/visible-row stability when new
+records arrive, cancellation/back from confirmation, approved replay, completed
+HTTP 200/500, uncertain disconnect without automatic resend and confirmed erasure.
+The test caught an ANSI-length truncation bug in the footer; it was fixed using
+ANSI-aware upstream layout, without relaxing the check.
+
+Rendered captures of that terminal, synthetic data only:
+
+| Captures                                                      | Approval                                                               | Uncertain outcome                                                           |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| ![Local captures](previews/tunnel-workflows/capture-list.svg) | ![Replay approval](previews/tunnel-workflows/capture-confirmation.svg) | ![Uncertain replay](previews/tunnel-workflows/capture-replay-uncertain.svg) |
+
+Other captures: [completed HTTP 200](previews/tunnel-workflows/capture-replay-completed.svg),
+[completed HTTP 500](previews/tunnel-workflows/capture-replay-http-failure.svg).
+To regenerate the SVGs, set `BURROW_TEST_TUI_CAPTURE_DIR` to a temporary directory
+when running the fixture, then use `scripts/test/render-terminal-captures.py`.
+
+The partition fixture pauses both directions without closing TCP or responding to
+yamux pings. Busy admission remains rejected while it is live; the server expires
+it in 30.03 seconds (10-second heartbeat plus 20-second timeout, with test scheduling
+tolerance) and admits a conditional new generation, without waiting for metadata
+expiry. Enable this real-time gate with `BURROW_TEST_LIVENESS=1`.
+
+Storage fault tests force SQLite full and read-only writes: failed publication is
+not replayable, failed job commits leave no accepted work, competing workers cannot
+claim the same scope and stale workers cannot overwrite uncertain outcomes. These
+controlled SQLite failures are not proof of every OS/filesystem outage mode.
+
+The PR remains draft. macOS secure capture support and exact-final-head CI remain
+outstanding; the full target acceptance matrix is not implied by these passes.
 
 ### Signal-cause compatibility regression
 
