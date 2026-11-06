@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.20](https://github.com/miniaxolotl/burrow/compare/v0.3.19...v0.3.20) (2026-11-06)
+
+
+### Features
+
+* **cli:** add headless lifecycle and structured output ([#88](https://github.com/miniaxolotl/burrow/issues/88)) ([23c9e42](https://github.com/miniaxolotl/burrow/commit/23c9e42856f6a62700de3a52bbc903349d68a7ed))
+* **tunnels:** add repeatable workflows with Linux capture ([#90](https://github.com/miniaxolotl/burrow/issues/90)) ([4f5340b](https://github.com/miniaxolotl/burrow/commit/4f5340bbfebb8c2fa8a0d89f71c609a77b452567))
+
 ## [0.3.19](https://github.com/miniaxolotl/burrow/compare/v0.3.18...v0.3.19) (2026-11-05)
 
 
