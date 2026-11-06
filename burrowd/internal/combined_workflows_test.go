@@ -176,9 +176,22 @@ func TestCombinedWorkflowsRealServices(t *testing.T) {
 	}
 	stop(cmd, scanner, stderr)
 	// Exercise the real default, not the shortened unit-test grace.
-	time.Sleep(tunnelGracePeriod + 50*time.Millisecond)
-	if td, err := registry.Get(ctx, one.TunnelID); err != nil || td != nil {
-		t.Fatalf("metadata survived default grace: %+v %v", td, err)
+	if first.gracePeriod != tunnelGracePeriod {
+		t.Fatal("fixture changed the default grace")
+	}
+	expiresBy := time.Now().Add(tunnelGracePeriod + 3*time.Second)
+	for {
+		td, err := registry.Get(ctx, one.TunnelID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if td == nil {
+			break
+		}
+		if time.Now().After(expiresBy) {
+			t.Fatal("metadata survived the default disconnect grace")
+		}
+		time.Sleep(25 * time.Millisecond)
 	}
 	cmd, scanner, stderr, ready = start(false)
 	two := ready.Data.Tunnels[0]

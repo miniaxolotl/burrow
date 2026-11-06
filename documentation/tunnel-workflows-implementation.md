@@ -151,8 +151,15 @@ not replayable, failed job commits leave no accepted work, competing workers can
 claim the same scope and stale workers cannot overwrite uncertain outcomes. These
 controlled SQLite failures are not proof of every OS/filesystem outage mode.
 
-The PR remains draft. macOS secure capture support and exact-final-head CI remain
-outstanding; the full target acceptance matrix is not implied by these passes.
+The PR remains draft because macOS secure capture support is still blocked.
+Record exact-current-head source CI in the PR; these local passes do not imply
+the full target platform acceptance matrix is complete.
+
+The final uncached parallel pass found a test-only fixed-sleep assumption after
+CLI exit. The server may observe that disconnect later under load. Restart
+fixtures now wait on actual registry metadata removal within bounded deadlines;
+the grace values are unchanged. The focused restart regression passed 30 repeated
+runs on Go 1.26.2 after this change.
 
 ### Signal-cause compatibility regression
 

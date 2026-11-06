@@ -117,9 +117,21 @@ func testNamedCLI(t *testing.T, address string) {
 	a, scan, stderr := start()
 	one := ready(scan)
 	stop(a, scan, stderr)
-	time.Sleep(40 * time.Millisecond) // Past the explicitly shortened disconnect grace.
-	if td, err := registry.Get(ctx, one.TunnelID); err != nil || td != nil {
-		t.Fatalf("fixture metadata not expired: %+v %v", td, err)
+	// Process exit does not schedule the server's disconnect observer. Wait for
+	// the actual cleanup predicate, not an assumed delay after the client exited.
+	expiresBy := time.Now().Add(3 * time.Second)
+	for {
+		td, err := registry.Get(ctx, one.TunnelID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if td == nil {
+			break
+		}
+		if time.Now().After(expiresBy) {
+			t.Fatal("fixture metadata did not expire after confirmed disconnect")
+		}
+		time.Sleep(5 * time.Millisecond)
 	}
 	b, scan, stderr := start()
 	two := ready(scan)
