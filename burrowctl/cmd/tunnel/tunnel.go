@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"burrow/burrowctl/internal"
+	"burrow/burrowctl/internal/clioutput"
 	"burrow/burrowctl/internal/config"
 	"burrow/protocol/telemetry"
 
@@ -28,7 +29,17 @@ func AddCommands(root *cobra.Command) {
 	for _, name := range []string{"server", "token", "domain"} {
 		viper.BindPFlag(name, flags.Lookup(name))
 	}
+	for _, command := range []*cobra.Command{TunnelCmd, listCmd, logsCmd, closeCmd} {
+		validate := command.Args
+		command.Args = func(cmd *cobra.Command, args []string) error {
+			if err := validate(cmd, args); err != nil {
+				return clioutput.Invalid(err)
+			}
+			return nil
+		}
+	}
 	root.AddCommand(TunnelCmd, listCmd, logsCmd, closeCmd)
+	TunnelCmd.Flags().Bool("headless", false, "Run without the interactive manager")
 }
 
 // resolveToken returns the best available auth token.
@@ -61,5 +72,5 @@ func configuredClient(cmd *cobra.Command) (*internal.Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load owner credential: %w", err)
 	}
-	return internal.NewClient(server.Host, token, viper.GetString("domain"), server.Scheme == "https", telemetry.FromContext(cmd.Context())), nil
+	return internal.NewClientWithContext(cmd.Context(), server.Host, token, viper.GetString("domain"), server.Scheme == "https", telemetry.FromContext(cmd.Context())), nil
 }

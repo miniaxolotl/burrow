@@ -1,6 +1,7 @@
 # Tunnel workflow development plan
 
-**Status: proposal, not implemented.** Prepared against development commit
+**Status: implementation in progress; target contract, not a completion claim.**
+See [implemented checkpoints](tunnel-workflows-implementation.md). Prepared against development commit
 `552ee32` (0.3.19), refined after source review on 5 November 2026. Commands,
 schemas and limits below are proposed contracts, not current CLI instructions.
 
@@ -69,8 +70,10 @@ Size each spike before scheduling it; there is no calendar estimate here.
 
 ### Commit organization within the single implementation PR
 
-Use one task branch/worktree and one PR targeting `development`; do not open
-stacked or per-feature implementation PRs. Suggested focused commit subjects:
+Use one task branch/worktree and one implementation PR. The owner's subsequent
+instruction is to stack it on planning PR #84 until that parent merges, then
+retarget the same PR to `development` and revalidate. Do not create per-feature
+implementation PRs or a stack of feature PRs. Suggested focused commit subjects:
 
 1. `test(tunnels): add isolated workflow fixtures`
 2. `feat(cli): add cancellable headless output` — lifecycle and versioned encoders.

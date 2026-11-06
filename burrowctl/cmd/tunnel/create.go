@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"burrow/burrowctl/cmd/tui"
+	"burrow/burrowctl/internal/clioutput"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -16,17 +17,17 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 	for _, arg := range args {
 		port, err := strconv.Atoi(arg)
 		if err != nil {
-			return fmt.Errorf("invalid port %q", arg)
+			return clioutput.Invalid(fmt.Errorf("invalid port %q", arg))
 		}
 		ports = append(ports, port)
 	}
 	seen := make(map[int]bool)
 	for _, port := range ports {
 		if port < 1 || port > 65535 {
-			return fmt.Errorf("port must be between 1 and 65535: %d", port)
+			return clioutput.Invalid(fmt.Errorf("port must be between 1 and 65535: %d", port))
 		}
 		if seen[port] {
-			return fmt.Errorf("port specified more than once: %d", port)
+			return clioutput.Invalid(fmt.Errorf("port specified more than once: %d", port))
 		}
 		seen[port] = true
 	}
@@ -36,6 +37,9 @@ func runTunnelCreate(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if headless(cmd) {
+		return runHeadless(cmd, client, ports)
+	}
 	defer client.Close()
 
 	failures := 0

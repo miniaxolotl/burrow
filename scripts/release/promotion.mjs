@@ -35,6 +35,49 @@ export function promotionTag(policy, pr) {
   return tag;
 }
 
+function admitDevelopmentStack(policy, expected) {
+  requireThat(
+    process.env.GITHUB_EVENT_NAME === "pull_request" &&
+      Number.isSafeInteger(expected.number) &&
+      expected.number > 0,
+    "Native stack admission requires a pull request event",
+  );
+  // Stack membership is GitHub-owned metadata, never a branch-name/body claim.
+  // A fresh read must still describe the exact event's head and parent base.
+  const current = api(`repos/${policy.repository}/pulls/${expected.number}`);
+  const stack = current.stack;
+  requireThat(
+    current.number === expected.number &&
+      current.state === "open" &&
+      ["head", "base"].every(
+        (side) =>
+          current[side]?.repo?.full_name === policy.repository &&
+          expected[side]?.repo?.full_name === policy.repository &&
+          current[side].ref === expected[side].ref &&
+          current[side].sha === expected[side].sha &&
+          hashPattern.test(current[side].sha),
+      ) &&
+      !policy.branches.includes(current.base.ref) &&
+      ![current.base.ref, current.head.ref].some((ref) =>
+        ref.startsWith("promote/"),
+      ) &&
+      Number.isSafeInteger(stack?.id) &&
+      stack.id > 0 &&
+      Number.isSafeInteger(stack.number) &&
+      stack.number > 0 &&
+      Number.isSafeInteger(stack.position) &&
+      stack.position > 1 &&
+      Number.isSafeInteger(stack.size) &&
+      stack.size >= stack.position &&
+      stack.base?.ref === "development" &&
+      hashPattern.test(stack.base.sha),
+    "Native development stack identity is missing or changed",
+  );
+  // No promotion output/CI reuse: non-development PR bases select the full
+  // source suite in selection.mjs. Protected targets still use promotionTag.
+  console.log("Verified native development stack; full source CI required");
+}
+
 export function assertCandidate(policy, candidate, tree) {
   requireThat(
     tagPattern.test(candidate.tag) &&
@@ -498,8 +541,11 @@ if (
       }
       if (!pr && process.env.GITHUB_REF_NAME?.startsWith("promote/"))
         throw new Error("Promotion CI requires its PR number");
-      if (pr && pr.base.ref !== "development")
-        output(admitPromotion(policy, pr, git("rev-parse", "HEAD")));
+      if (pr && pr.base.ref !== "development") {
+        if (policy.branches.slice(1).includes(pr.base.ref))
+          output(admitPromotion(policy, pr, git("rev-parse", "HEAD")));
+        else admitDevelopmentStack(policy, pr);
+      }
     } else if (command === "production")
       output(productionCandidate(policy, first));
     else if (command === "wait-ci") {

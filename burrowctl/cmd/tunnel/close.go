@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"burrow/burrowctl/internal/clioutput"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -23,6 +24,11 @@ func runTunnelClose(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	fmt.Printf("Tunnel %s closed\n", tunnelID)
-	return nil
+	if output := clioutput.FromCommand(cmd); output.Structured() {
+		return output.Emit("result", tunnelID, struct {
+			Closed bool `json:"closed"`
+		}{true})
+	}
+	_, err = fmt.Fprintf(clioutput.FromCommand(cmd), "Tunnel %s closed\n", tunnelID)
+	return err
 }

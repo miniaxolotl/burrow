@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net"
 	"net/http"
 	"sort"
@@ -21,13 +22,50 @@ import (
 )
 
 type Client struct {
-	server   string
-	token    string
-	domain   string
-	secure   bool
-	tunnels  map[uint16]*TunnelConn
-	mu       sync.RWMutex
-	observer telemetry.Observer
+	server         string
+	token          string
+	domain         string
+	secure         bool
+	tunnels        map[uint16]*TunnelConn
+	mu             sync.RWMutex
+	observer       telemetry.Observer
+	requestContext context.Context
+	ctx            context.Context
+	cancel         context.CancelFunc
+	closed         bool
+	workers        sync.WaitGroup
+	closeOnce      sync.Once
+	closeDone      chan struct{}
+	onEvent        func(LifecycleEvent)
+}
+
+// LifecycleEvent reports observed transport state, never application readiness.
+// Error codes are bounded vocabulary, not remote response bodies or credentials.
+type LifecycleEvent struct {
+	ObservedAt   time.Time
+	Type         string
+	TunnelID     string
+	Port         uint16
+	URL          string
+	Attempt      int
+	RetryDelayMS int64
+	Code         string
+}
+
+func (c *Client) SetEventHandler(handler func(LifecycleEvent)) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.onEvent = handler
+}
+
+func (c *Client) emit(event LifecycleEvent) {
+	event.ObservedAt = time.Now().UTC()
+	c.mu.RLock()
+	handler := c.onEvent
+	c.mu.RUnlock()
+	if handler != nil {
+		handler(event)
+	}
 }
 
 var httpClient = NewManagementHTTPClient()
@@ -51,44 +89,89 @@ type TunnelConn struct {
 	reconnects int
 	totalSize  int64
 	forwarded  sync.Once
+	status     string
 }
 
 func NewClient(server, token, domain string, secure bool, observers ...telemetry.Observer) *Client {
+	return NewClientWithContext(context.Background(), server, token, domain, secure, observers...)
+}
+
+func NewClientWithContext(ctx context.Context, server, token, domain string, secure bool, observers ...telemetry.Observer) *Client {
 	var observer telemetry.Observer = (*telemetry.Reporter)(nil)
 	if len(observers) > 0 && observers[0] != nil {
 		observer = observers[0]
 	}
+	clientContext, cancel := context.WithCancel(ctx)
 	return &Client{
-		server:   server,
-		token:    token,
-		domain:   domain,
-		secure:   secure,
-		tunnels:  make(map[uint16]*TunnelConn),
-		observer: observer,
+		server:         server,
+		token:          token,
+		domain:         domain,
+		secure:         secure,
+		tunnels:        make(map[uint16]*TunnelConn),
+		observer:       observer,
+		requestContext: ctx,
+		ctx:            clientContext,
+		cancel:         cancel,
+		closeDone:      make(chan struct{}),
 	}
 }
 
 func (c *Client) CreateTunnel(ctx context.Context, port uint16) (string, error) {
+	c.mu.Lock()
+	if c.closed {
+		c.mu.Unlock()
+		return "", errors.New("client has closed")
+	}
+	c.workers.Add(1)
+	c.mu.Unlock()
+	defer c.workers.Done()
+	tctx, cancel := context.WithCancel(ctx)
+	stopClientCancel := context.AfterFunc(c.ctx, cancel)
+	connected := false
+	defer func() {
+		if !connected {
+			cancel()
+			stopClientCancel()
+		}
+	}()
 	started := time.Now()
 	outcome := telemetry.Unavailable
 	defer func() { c.observer.Operation(telemetry.Connect, started, outcome) }()
 	tunnelID := protocol.RandomTunnelID()
-	tc, err := c.createTunnelSession(ctx, tunnelID, port)
+	c.emit(LifecycleEvent{Type: "connecting", TunnelID: tunnelID, Port: port})
+	tc, err := c.createTunnelSession(tctx, tunnelID, port)
 	if err != nil {
+		c.emit(LifecycleEvent{Type: "failed", TunnelID: tunnelID, Port: port, Code: "connection_failed"})
 		return "", err
 	}
 
-	tctx, cancel := context.WithCancel(context.Background())
 	tc.ctx = tctx
 	tc.cancel = cancel
 
 	c.mu.Lock()
+	if c.closed || tctx.Err() != nil {
+		c.mu.Unlock()
+		tc.wsConn.Close()
+		tc.session.Close()
+		return "", context.Canceled
+	}
 	c.tunnels[port] = tc
+	c.workers.Go(func() {
+		defer stopClientCancel()
+		<-tc.ctx.Done()
+		c.mu.RLock()
+		conn, session := tc.wsConn, tc.session
+		c.mu.RUnlock()
+		conn.Close()
+		session.Close()
+	})
 	c.mu.Unlock()
 
 	tunnelURL := tc.URL
-	go c.trackLatency(tc)
-	go c.handleTunnel(tc, port)
+	c.emit(LifecycleEvent{Type: "connected", TunnelID: tc.ID, Port: port, URL: tc.URL})
+	c.workers.Go(func() { c.trackLatency(tc) })
+	c.workers.Go(func() { c.handleTunnel(tc, port) })
+	connected = true
 
 	outcome = telemetry.Success
 	c.observer.Track(telemetry.TunnelOpened)
@@ -133,8 +216,31 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 	wsURL := fmt.Sprintf("%s://%s/tunnels/connect?tunnel_id=%s&port=%d", scheme, c.server, tunnelID, port)
 
 	start := time.Now()
-	conn, resp, err := websocket.DefaultDialer.DialContext(ctx, wsURL, header)
+	// Gorilla sets a deadline, but cancellation after TCP dial does not itself
+	// interrupt its blocking HTTP upgrade read. Close only during the handshake;
+	// the tunnel's lifetime watcher owns cancellation once it has connected.
+	connectContext, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	dialer := *websocket.DefaultDialer
+	var stopHandshake func() bool
+	dialer.NetDialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
+		connection, err := (&net.Dialer{}).DialContext(ctx, network, address)
+		if err == nil {
+			// Gorilla cancels its own derived dial context even on success. Watch
+			// our outer handshake context so that internal cleanup cannot close an
+			// already accepted transport before we stop this cancellation hook.
+			stopHandshake = context.AfterFunc(connectContext, func() { connection.Close() })
+		}
+		return connection, err
+	}
+	conn, resp, err := dialer.DialContext(connectContext, wsURL, header)
+	if stopHandshake != nil {
+		stopHandshake()
+	}
 	if err != nil {
+		if connectContext.Err() != nil {
+			return nil, connectContext.Err()
+		}
 		if resp != nil {
 			body, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
 			resp.Body.Close()
@@ -175,6 +281,7 @@ func (c *Client) createTunnelSession(ctx context.Context, tunnelID string, port 
 		wsConn:  conn,
 		session: session,
 		latency: latency,
+		status:  "active",
 	}, nil
 }
 
@@ -190,6 +297,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 
 	localAddr := fmt.Sprintf("localhost:%d", port)
 	reconnectDelay := time.Second
+	attempt := 0
 
 	for {
 		stream, err := tc.session.AcceptStream()
@@ -197,11 +305,21 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			if tc.ctx.Err() != nil {
 				return
 			}
+			c.mu.Lock()
+			wasConnected := tc.status == "active"
+			tc.status = "reconnecting"
+			c.mu.Unlock()
+			if wasConnected {
+				c.emit(LifecycleEvent{Type: "disconnected", TunnelID: tc.ID, Port: port, Code: "transport_lost"})
+			}
+			attempt++
+			delay := reconnectDelay/2 + time.Duration(rand.Int64N(int64(reconnectDelay/2)))
+			c.emit(LifecycleEvent{Type: "reconnecting", TunnelID: tc.ID, Port: port, Attempt: attempt, RetryDelayMS: delay.Milliseconds()})
 
 			select {
 			case <-tc.ctx.Done():
 				return
-			case <-time.After(reconnectDelay):
+			case <-time.After(delay):
 			}
 			reconnectDelay = min(reconnectDelay*2, 30*time.Second)
 
@@ -213,6 +331,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 				c.observer.Operation(telemetry.Reconnect, started, telemetry.Unavailable)
 				var rejected *connectionRejected
 				if errors.As(err, &rejected) && (rejected.status == http.StatusUnauthorized || rejected.status == http.StatusForbidden || rejected.status == http.StatusConflict || rejected.status == http.StatusGone) {
+					c.emit(LifecycleEvent{Type: "failed", TunnelID: tc.ID, Port: port, Code: "connection_rejected"})
 					return
 				}
 				if tc.ctx.Err() != nil {
@@ -233,25 +352,32 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 			tc.latency = newTC.latency
 			tc.reconnects++
 			tc.URL = newTC.URL
+			tc.status = "active"
 			c.mu.Unlock()
+			c.emit(LifecycleEvent{Type: "connected", TunnelID: tc.ID, Port: port, URL: newTC.URL})
 			c.observer.Track(telemetry.TunnelReconnected)
 			c.observer.Operation(telemetry.Reconnect, started, telemetry.Success)
 			reconnectDelay = time.Second
+			attempt = 0
 			continue
 		}
 
 		reconnectDelay = time.Second
-		go func(s *yamux.Stream) {
+		attempt = 0
+		c.workers.Go(func() {
+			s := stream
 			defer s.Close()
 			started := time.Now()
 			outcome := telemetry.Unavailable
 			defer func() { c.observer.Operation(telemetry.Forward, started, outcome) }()
 
-			conn, err := net.DialTimeout("tcp", localAddr, 5*time.Second)
+			conn, err := (&net.Dialer{Timeout: 5 * time.Second}).DialContext(tc.ctx, "tcp", localAddr)
 			if err != nil {
 				return
 			}
 			defer conn.Close()
+			stopCancel := context.AfterFunc(tc.ctx, func() { conn.Close(); s.Close() })
+			defer stopCancel()
 
 			done := make(chan struct{}, 2)
 			var responseBytes int64
@@ -274,7 +400,7 @@ func (c *Client) handleTunnel(tc *TunnelConn, port uint16) {
 				outcome = telemetry.Success
 				tc.forwarded.Do(func() { c.observer.Track(telemetry.TunnelForwarded) })
 			}
-		}(stream)
+		})
 	}
 }
 
@@ -305,16 +431,23 @@ func (c *Client) CloseTunnel(port uint16) error {
 }
 
 func (c *Client) Close() error {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	return c.CloseContext(context.Background())
+}
 
-	for _, tc := range c.tunnels {
-		tc.cancel()
-		tc.session.Close()
-		tc.wsConn.Close()
+func (c *Client) CloseContext(ctx context.Context) error {
+	c.closeOnce.Do(func() {
+		c.mu.Lock()
+		c.closed = true
+		c.cancel()
+		c.mu.Unlock()
+		go func() { c.workers.Wait(); close(c.closeDone) }()
+	})
+	select {
+	case <-c.closeDone:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
-	c.tunnels = make(map[uint16]*TunnelConn)
-	return nil
 }
 
 func (c *Client) ListTunnels() []*protocol.TunnelInfo {
@@ -327,7 +460,7 @@ func (c *Client) ListTunnels() []*protocol.TunnelInfo {
 			TunnelID:   tc.ID,
 			Port:       port,
 			URL:        tc.URL,
-			Status:     "active",
+			Status:     tc.status,
 			Latency:    tc.latency.Round(time.Millisecond).String(),
 			Reconnects: tc.reconnects,
 			TotalSize:  atomic.LoadInt64(&tc.totalSize),
