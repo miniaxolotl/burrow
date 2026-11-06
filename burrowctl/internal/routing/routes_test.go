@@ -38,6 +38,8 @@ func TestRouteConfigRejectsAmbiguityBeforeExposure(t *testing.T) {
 	for _, input := range []string{
 		`{"version":1,"version":1,"routes":[{"path":"/","port":3000}]}`,
 		`{"version":1,"routes":[{"path":"/","port":3000,"port":3001}]}`,
+		`{"version":1,"routes":[{"path":"/","port":3000,"Port":3001}]}`,
+		`{"Version":1,"routes":[{"path":"/","port":3000}]}`,
 		`{"version":2,"routes":[{"path":"/","port":3000}]}`,
 		`{"version":1,"routes":[]}`,
 		`{"version":1,"routes":[{"path":"/","port":0}]}`,

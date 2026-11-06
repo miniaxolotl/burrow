@@ -259,6 +259,7 @@ dot segments, backslashes, repeated/trailing slashes (except `/`) or non-ASCII.
 Routed requests containing encoded separators, dot segments (including encoded
 dots), NUL, backslashes, repeated slashes or invalid escapes return 400, not a
 cleaned/redirected path. Plain single-port raw mode retains existing behavior.
+Configuration field names are exact and case-sensitive; `Port` cannot shadow `port`.
 
 The private HTTP dispatcher admits one request/upgrade lifetime per yamux stream,
 with 32 KiB headers, at most 128 concurrent streams, bounded dial/header deadlines
