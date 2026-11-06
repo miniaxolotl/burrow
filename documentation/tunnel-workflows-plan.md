@@ -1,7 +1,11 @@
 # Tunnel workflow development plan
 
-**Status: implementation in progress; target contract, not a completion claim.**
-See [implemented checkpoints](tunnel-workflows-implementation.md). Prepared against development commit
+**Status: historical target contract; Linux delivery merged in #84/#88/#90.**
+See [implemented checkpoints and limits](tunnel-workflows-implementation.md) for
+the actual scope, including deferred macOS capture. The pre-implementation baseline
+and original delivery instructions below are retained as historical context, not
+current worktree/PR instructions. New operational work has a separate
+[development plan](tunnel-operations-plan.md). Prepared against development commit
 `552ee32` (0.3.19), refined after source review on 5 November 2026. Commands,
 schemas and limits below are proposed contracts, not current CLI instructions.
 
