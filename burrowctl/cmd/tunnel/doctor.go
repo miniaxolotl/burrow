@@ -9,6 +9,7 @@ import (
 
 	"burrow/burrowctl/internal"
 	"burrow/burrowctl/internal/clioutput"
+	"burrow/burrowctl/internal/config"
 	"burrow/burrowctl/internal/routing"
 
 	"github.com/spf13/cobra"
@@ -64,6 +65,15 @@ func runDoctor(cmd *cobra.Command, args []string) error {
 		}
 	}
 	server := viper.GetString("server")
+	if !cmd.Flags().Changed("server") && os.Getenv("BURROW_SERVER") == "" {
+		existing, err := config.ExistingServer()
+		if err != nil {
+			return clioutput.Invalid(err)
+		}
+		if existing != "" {
+			server = existing
+		}
+	}
 	if _, err := internal.ServerURL(server); err != nil {
 		return clioutput.Invalid(err)
 	}

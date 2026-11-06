@@ -2,11 +2,13 @@ package cmd_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -68,5 +70,32 @@ func TestDoctorClosedTargetIsFailureNotHealthy(t *testing.T) {
 	out, err := command.CombinedOutput()
 	if err == nil || !bytes.Contains(out, []byte(`"tcp_unavailable"`)) || !bytes.Contains(out, []byte(`"server_http_status"`)) {
 		t.Fatalf("false healthy: %v %s", err, out)
+	}
+}
+
+func TestDoctorUsesExistingServerWithoutForwardingStoredCredential(t *testing.T) {
+	app := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	defer app.Close()
+	_, port, _ := net.SplitHostPort(app.Listener.Addr().String())
+	var hits atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		if r.Header.Get("X-Tunnel-Token") != "" {
+			t.Error("stored credential leaked")
+		}
+	}))
+	defer server.Close()
+	command, home := workflowCommand(t, "doctor", port, "--output", "json")
+	dir := filepath.Join(home, ".config", "burrow")
+	os.MkdirAll(dir, 0700)
+	data, _ := json.Marshal(map[string]string{"server": strings.TrimPrefix(server.URL, "http://"), "token": "synthetic-stored-owner"})
+	os.WriteFile(filepath.Join(dir, "client.json"), data, 0600)
+	output, err := command.CombinedOutput()
+	if err != nil || hits.Load() != 1 {
+		t.Fatalf("existing server ignored: %v %s", err, output)
+	}
+	files, _ := os.ReadDir(dir)
+	if len(files) != 1 {
+		t.Fatal("doctor created extra state")
 	}
 }
