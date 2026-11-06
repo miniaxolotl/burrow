@@ -1,6 +1,5 @@
 import { site } from "@/lib/site";
 import Link from "next/link";
-import Image from "next/image";
 
 export function WorkflowStories() {
   return (
@@ -15,13 +14,19 @@ export function WorkflowStories() {
       </div>
       <div className="workflow-pair" data-stagger>
         <article data-reveal>
-          <div className="workflow-photo">
-            <Image
-              src="/images/kit/burrow-code.webp"
-              alt="Application code on a laptop"
-              fill
-              sizes="(max-width: 767px) calc(100vw - 40px), 50vw"
-            />
+          <div
+            className="workflow-example workflow-ports"
+            data-ui
+            aria-label="Illustrative frontend and API ports"
+          >
+            <div>
+              <span>Frontend</span>
+              <code>localhost:3000</code>
+            </div>
+            <div>
+              <span>API</span>
+              <code>localhost:8080</code>
+            </div>
           </div>
           <h3>Share more than one service</h3>
           <p>

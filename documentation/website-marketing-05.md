@@ -1,14 +1,32 @@
-# Collection 05 website materials
+# Website product presentation
 
 The website leads with giving a local app a public HTTPS link. The main action is
 installation. Short examples explain preview sharing, webhook testing and running
 the open-source server on your own infrastructure.
+
+The service workflow uses HTML frontend/API port rows beside the log command,
+not a decorative code photograph. Terminal scenario labels and request routes
+remain readable within the existing stable demonstration. The approved Arc logo,
+IBM Plex type and Apple touch icon remain unchanged. Adaptive SVG and explicit
+light/dark ICO/PNG fallbacks follow the browser colour scheme independently of
+the light page; imported bytes are traced in
+`packages/website/public/marketing-kit.json`.
+
+**No new marketing-kit website graphics are shipped for Burrow, including share
+compositions.** Existing terminal-based social artwork remains. The identity-only
+manifest and `tests/marketing-kit.spec.ts` enforce this boundary and check served
+favicon hashes and theme links. Existing installation, manager, request inspection
+and clipboard behavior remain part of the browser regression suite.
+See the [current four-width review](design/screenshots/marketing-polish-20261106/README.md).
 
 Current help/contact routes and designated public email are documented in
 [Website support and contact](website-support-contact.md). Earlier verification
 counts below remain historical, not the current regression-suite totals.
 
 ## Copy follow-up
+
+The Collection 05 sections below are historical; their test counts and artwork
+descriptions do not describe the current source or a new production acceptance.
 
 The 21 October follow-up shortens workflow headings, FAQs and footer referrals,
 uses a plain missing-page message and fixes repeated legal-page titles. Public

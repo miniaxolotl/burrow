@@ -37,7 +37,7 @@
 .terminal-home .tunnel-scenarios button {
   min-height: 44px;
   padding: 8px 12px;
-  font-size: 13px;
+  font-size: 14px;
   border-radius: 4px;
 }
 .terminal-home .tunnel-scenarios button[aria-pressed="true"] {
@@ -147,7 +147,7 @@
   font-size: 13px;
 }
 .terminal-home .request-route :is(code, span) {
-  font-size: 11px;
+  font-size: 12px;
   overflow-wrap: anywhere;
 }
 .terminal-home .tunnel-story-detail {
@@ -168,7 +168,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  font-size: 12px;
+  font-size: 13px;
 }
 .terminal-home .tunnel-landscape figcaption > span {
   color: var(--brand-muted);
@@ -217,15 +217,34 @@
   color: var(--brand-ink);
 }
 .terminal-home .workflow-example {
-  background: transparent;
-  padding: 0;
-  min-height: 0;
-}
-.terminal-home .workflow-example pre {
+  display: grid;
+  align-content: center;
+  min-height: 188px;
   padding: 24px;
+  border-radius: 8px;
   background: #20332b;
   color: #f7f6f0;
-  border-radius: 4px;
+}
+.terminal-home .workflow-example pre {
+  padding: 0;
+  margin: 0;
+  color: inherit;
+}
+.terminal-home .workflow-ports {
+  gap: 24px;
+}
+.terminal-home .workflow-ports > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 20px;
+}
+.terminal-home .workflow-ports span {
+  font-size: 14px;
+  color: #dce6d5;
+}
+.terminal-home .workflow-ports code {
+  font-size: 16px;
 }
 .terminal-home #manager-preview-content {
   min-height: 0;
