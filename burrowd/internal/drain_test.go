@@ -3,7 +3,9 @@ package internal
 import (
 	"context"
 	"errors"
+	"github.com/gorilla/websocket"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -186,6 +188,57 @@ func TestShutdownSharesFirstResult(t *testing.T) {
 	second := s.Shutdown(t.Context())
 	if !errors.Is(first, context.Canceled) || !errors.Is(second, context.Canceled) {
 		t.Fatalf("inconsistent shutdown: first=%v second=%v", first, second)
+	}
+}
+
+func TestDrainDeadlineClosesHijackedWebSocket(t *testing.T) {
+	s := NewServer(nil, "example.test", false)
+	s.SetDrainTimeout(25 * time.Millisecond)
+	proxyFixture(t, s, "probe", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
+		conn, err := u.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+		for {
+			kind, data, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+			if conn.WriteMessage(kind, data) != nil {
+				return
+			}
+		}
+	}))
+	proxy := httptest.NewServer(s)
+	defer proxy.Close()
+	dialer := websocket.Dialer{NetDialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+		return (&net.Dialer{}).DialContext(ctx, "tcp", strings.TrimPrefix(proxy.URL, "http://"))
+	}}
+	conn, _, err := dialer.DialContext(t.Context(), "ws://probe.example.test/ws", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	conn.WriteMessage(websocket.TextMessage, []byte("admitted"))
+	if _, body, err := conn.ReadMessage(); err != nil || string(body) != "admitted" {
+		t.Fatalf("upgrade failed: %q %v", body, err)
+	}
+	if err := s.Shutdown(t.Context()); !errors.Is(err, ErrDrainTimeout) {
+		t.Fatalf("upgrade lifetime was not drained: %v", err)
+	}
+	s.mu.RLock()
+	active := len(s.requestCancels)
+	s.mu.RUnlock()
+	if active != 0 {
+		t.Fatalf("shutdown retained %d hijacked request handlers", active)
+	}
+	conn.SetReadDeadline(time.Now().Add(time.Second))
+	if _, _, err := conn.ReadMessage(); err == nil {
+		t.Fatal("hijacked upgrade survived drain deadline")
+	} else if failure, ok := err.(net.Error); ok && failure.Timeout() {
+		t.Fatal("hijacked upgrade only stopped at the test's read timeout")
 	}
 }
 

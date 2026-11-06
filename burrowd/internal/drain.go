@@ -1,10 +1,12 @@
 package internal
 
 import (
+	"bufio"
 	"context"
 	"crypto/rand"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -78,6 +80,7 @@ func (s *Server) shutdown(parent context.Context, started chan<- struct{}) error
 		}
 	}
 	s.mu.Lock()
+	s.forceClosing = true
 	sessions := make([]*tunnelSession, 0, len(s.connections))
 	for id, session := range s.connections {
 		sessions = append(sessions, session)
@@ -86,10 +89,17 @@ func (s *Server) shutdown(parent context.Context, started chan<- struct{}) error
 	for _, stop := range s.requestCancels {
 		stop()
 	}
+	upgrades := make([]net.Conn, 0, len(s.hijacked))
+	for conn := range s.hijacked {
+		upgrades = append(upgrades, conn)
+	}
 	s.mu.Unlock()
 	// Closing yamux ends both normal and hijacked upgrade lifetimes. Never close
 	// transports while holding the map/admission lock.
 	<-notified
+	for _, conn := range upgrades {
+		conn.Close()
+	}
 	for _, session := range sessions {
 		session.conn.Close()
 	}
@@ -113,6 +123,44 @@ func (s *Server) shutdown(parent context.Context, started chan<- struct{}) error
 		}
 	}
 	return result
+}
+
+// Preserve ResponseController's access to streaming/trailers/informational
+// responses. Intercept only successful public upgrade hijacks for forced cleanup.
+type drainResponseWriter struct {
+	http.ResponseWriter
+	server *Server
+}
+
+func (w *drainResponseWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
+func (w *drainResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	conn, buffer, err := http.NewResponseController(w.ResponseWriter).Hijack()
+	if err != nil {
+		return nil, nil, err
+	}
+	tracked := &drainConn{Conn: conn, server: w.server}
+	w.server.mu.Lock()
+	forcing := w.server.forceClosing
+	if !forcing {
+		w.server.hijacked[tracked] = struct{}{}
+	}
+	w.server.mu.Unlock()
+	if forcing {
+		tracked.Close()
+	}
+	return tracked, buffer, nil
+}
+
+type drainConn struct {
+	net.Conn
+	server *Server
+	once   sync.Once
+	err    error
+}
+
+func (c *drainConn) Close() error {
+	c.once.Do(func() { c.err = c.Conn.Close(); c.server.mu.Lock(); delete(c.server.hijacked, c); c.server.mu.Unlock() })
+	return c.err
 }
 
 func (s *Server) notifyDraining(ctx context.Context, sessions []*tunnelSession, deadline time.Time) {

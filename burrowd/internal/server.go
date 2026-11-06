@@ -66,6 +66,8 @@ type Server struct {
 	requests       sync.WaitGroup
 	handlers       sync.WaitGroup
 	requestCancels map[*http.Request]context.CancelFunc
+	hijacked       map[net.Conn]struct{}
+	forceClosing   bool
 	intake         context.Context
 	stopIntake     context.CancelFunc
 	readyMu        sync.Mutex
@@ -95,6 +97,7 @@ func NewServer(registry *TunnelRegistry, domain string, secure bool, observers .
 		observer:       observer,
 		drainTimeout:   15 * time.Second,
 		requestCancels: make(map[*http.Request]context.CancelFunc),
+		hijacked:       make(map[net.Conn]struct{}),
 		shutdownDone:   make(chan struct{}),
 		intake:         intake, stopIntake: stopIntake,
 	}
@@ -689,7 +692,7 @@ func (s *Server) handleTCP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer stream.Close()
 
-	size, ok := s.proxyStream(w, r, stream, entry)
+	size, ok := s.proxyStream(&drainResponseWriter{ResponseWriter: w, server: s}, r, stream, entry)
 	if !ok {
 		return
 	}
