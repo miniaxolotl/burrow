@@ -236,7 +236,7 @@ HTTP. Reconnect support is not an in-flight continuity or zero-downtime guarante
 the hardening review requires explicit drain/reconnect failure tests and hosted
 acceptance before making such a claim.
 
-The proposed [tunnel operations plan](tunnel-operations-plan.md) defines bounded
+The [tunnel operations plan](tunnel-operations-plan.md) defines bounded
 admission/draining, optional client notices and separate readiness. It preserves
 the single-instance and image-generation gates. No readiness endpoint, provider
 health-path change or drain guarantee is implemented by that planning PR; hosted

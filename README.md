@@ -18,9 +18,10 @@ headless/structured output and one-hostname routing, with
 [the original plan](documentation/tunnel-workflows-plan.md) retained for context.
 This is not a published-release announcement.
 
-The proposed [tunnel operations plan](documentation/tunnel-operations-plan.md)
-covers deployment-aware draining, local health diagnostics and traffic inspection.
-It is documentation only; these improvements are not implemented yet.
+The [operations implementation](documentation/tunnel-operations-implementation.md)
+adds bounded draining/notices, `doctor` and opt-in `--inspect` metadata, stacked on
+the historical [plan](documentation/tunnel-operations-plan.md). Hosted termination
+and native macOS acceptance are separate pending gates, not release guarantees.
 
 ## Quick start
 

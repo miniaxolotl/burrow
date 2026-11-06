@@ -9,8 +9,9 @@ because native macOS hardware is currently unavailable. #88 preserves the initia
 headless checkpoint; #90 delivers the remaining workflows with **Linux-only capture
 and replay**. Ordinary macOS tunneling, aliases, routing and headless mode remain
 available; they do not enable capture. #91 remains a draft targeting development.
-The next [operations plan](tunnel-operations-plan.md) is a separate proposal, not
-part of this implemented scope.
+The [operations implementation](tunnel-operations-implementation.md), stacked on
+the separate [operations plan](tunnel-operations-plan.md), extends this baseline;
+it is not part of the historical workflow acceptance recorded below.
 
 ## Checkpoints
 
