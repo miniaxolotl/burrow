@@ -27,7 +27,8 @@ func ClipPath(path string) (string, bool) {
 // AppendMetadata operates on completed immutable records, evicting oldest first.
 // Its bounded input makes accounting independent of request/response body size.
 func AppendMetadata(rows []*TunnelLog, entry *TunnelLog) ([]*TunnelLog, int) {
-	entry.Path, entry.PathTruncated = ClipPath(entry.Path)
+	path, truncated := ClipPath(entry.Path)
+	entry.Path, entry.PathTruncated = path, entry.PathTruncated || truncated
 	rows = append(rows, entry)
 	bytes := 0
 	for _, row := range rows {

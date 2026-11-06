@@ -26,4 +26,8 @@ func TestMetadataBoundsEntriesBytesAndUTF8(t *testing.T) {
 	if size > MaxMetadataBytes {
 		t.Fatal("byte cap exceeded")
 	}
+	rows, _ = AppendMetadata(nil, &TunnelLog{Path: "/already-clipped", PathTruncated: true})
+	if !rows[0].PathTruncated {
+		t.Fatal("existing truncation evidence was erased")
+	}
 }

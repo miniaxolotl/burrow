@@ -124,7 +124,7 @@ func (q Query) Match(row *protocol.TunnelLog) bool {
 func (q Query) Apply(rows []*protocol.TunnelLog) []*protocol.TunnelLog {
 	result := make([]*protocol.TunnelLog, 0, len(rows))
 	for _, row := range rows {
-		if q.Match(row) {
+		if row != nil && q.Match(row) {
 			result = append(result, row)
 		}
 	}

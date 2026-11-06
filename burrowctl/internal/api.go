@@ -52,10 +52,26 @@ func (c *Client) GetLogs(id string) ([]*protocol.TunnelLog, error) {
 func (c *Client) GetLogsContext(ctx context.Context, id string) ([]*protocol.TunnelLog, error) {
 	var logs []*protocol.TunnelLog
 	err := c.apiContext(ctx, http.MethodGet, "/tunnels/"+url.PathEscape(id)+"/logs", &logs)
+	if err != nil {
+		return nil, err
+	}
 	if len(logs) > protocol.MaxMetadataEntries {
 		logs = logs[len(logs)-protocol.MaxMetadataEntries:]
 	}
-	return logs, err
+	for _, entry := range logs {
+		if entry == nil {
+			return nil, fmt.Errorf("invalid request metadata")
+		}
+		path, truncated := protocol.ClipPath(entry.Path)
+		entry.Path = path
+		entry.PathTruncated = entry.PathTruncated || truncated
+		entry.Route = "" // A server snapshot cannot supply local route knowledge.
+	}
+	if len(logs) == 0 {
+		return []*protocol.TunnelLog{}, nil
+	}
+	bounded, _ := protocol.AppendMetadata(logs[:len(logs)-1], logs[len(logs)-1])
+	return bounded, nil
 }
 
 func (c *Client) RemoteTunnels() (*protocol.TunnelList, error) {
