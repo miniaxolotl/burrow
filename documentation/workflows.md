@@ -100,6 +100,31 @@ URL. Exiting the CLI disconnects forwarding but is not the same as explicitly
 closing the ID. Keep the private owner configuration: deleting it is not a cleanup
 step and may remove your ability to manage other tunnels.
 
+## Beyond the basics
+
+These workflows build on the same owner credential and are covered in the
+[client reference](client.md). macOS local capture remains deferred; ordinary
+macOS tunneling, aliases, routing and headless mode work without it.
+
+- **Script a tunnel:** run `burrowctl tunnel 3000 --headless --output jsonl`
+  for machine-readable lifecycle envelopes (`connecting`, `connected`,
+  `registered`, `ready`, `reconnecting`, `stopped`). Finite commands accept
+  `--output json`; `logs --follow` uses `--output jsonl`.
+- **Check setup first:** `burrowctl doctor 3000 8080` verifies apex
+  reachability and loopback TCP targets without opening a tunnel or sending
+  application requests.
+- **Keep a stable URL:** `burrowctl tunnel 3000 --name webhook` saves a private
+  local alias that reuses its URL across restarts for the same server and
+  owner. Names are not public subdomains; `burrowctl saved` shows local alias
+  state.
+- **Serve one hostname from two apps:** a versioned route file with
+  `burrowctl tunnel --config ./burrow.json` maps path prefixes to fixed
+  loopback ports behind a single public origin.
+- **Replay locally on Linux:** `burrowctl tunnel 3000 --name webhook --capture`
+  keeps encrypted on-disk request records; `burrowctl replay` re-sends a
+  selected record to the loopback target only after explicit approval. Bodies
+  can contain secrets and are never uploaded.
+
 ## Troubleshooting
 
 - **Local request fails:** fix the service/port first. A tunnel cannot repair it.

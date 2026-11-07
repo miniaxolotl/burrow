@@ -36,16 +36,18 @@ export default function SupportPage() {
         <h2>A tunnel will not connect</h2>
         <p>
           Check your network connection, the selected server, and the error
-          shown by the CLI. Include your operating system, Burrow version, and a
-          redacted error if you email us. Never include owner credentials or
-          authentication tokens.
+          shown by the CLI. <code>burrowctl doctor 3000</code> verifies server
+          reachability and local ports without opening a tunnel. Include your
+          operating system, Burrow version, and a redacted error if you email
+          us. Never include owner credentials or authentication tokens.
         </p>
       </section>
       <section>
         <h2>A webhook or request fails</h2>
         <p>
           Confirm the method and path expected by your local app. Check its logs
-          and the request information available in Burrow. Share only a
+          and your tunnel&apos;s request history with{" "}
+          <code>burrowctl logs &lt;tunnel-id&gt; --tail 20</code>. Share only a
           sanitized example, not request bodies, authorization headers, or
           private tunnel URLs.
         </p>
