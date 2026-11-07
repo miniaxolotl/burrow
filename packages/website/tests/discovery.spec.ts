@@ -43,6 +43,7 @@ test.describe("public reference documents", () => {
     ["client", "burrowctl", "burrowctl tunnel 3000 8080"],
     ["server", "burrowd", "X-Tunnel-Token"],
     ["workflows", "Webhooks and multiple local services", "204 No Content"],
+    ["deploy", "Deploy & release", "BURROW_DOMAIN"],
   ]) {
     test(`${slug} has readable canonical documentation`, async ({ page }) => {
       expect((await page.goto(`/docs/${slug}`))?.status()).toBe(200);
@@ -83,11 +84,7 @@ test.describe("public reference documents", () => {
       .click();
     await expect(page.locator("#automatic-ownership")).toHaveCount(1);
     await expect(page.locator('article a[href="/docs/server"]')).toBeVisible();
-    await expect(
-      page.locator(
-        'article a[href="https://github.com/miniaxolotl/burrow/blob/production/documentation/deploy.md"]',
-      ),
-    ).toBeVisible();
+    await expect(page.locator('article a[href="/docs/deploy"]')).toBeVisible();
     await page.goto("/docs/workflows");
     await expect(page.locator("article")).toContainText("not the application");
     await expect(page.locator("article")).toContainText(
@@ -98,7 +95,7 @@ test.describe("public reference documents", () => {
   test("only intentionally published documents resolve", async ({
     request,
   }) => {
-    for (const path of ["/docs/secrets", "/docs/deploy", "/docs/missing"]) {
+    for (const path of ["/docs/secrets", "/docs/missing"]) {
       expect((await request.get(path)).status()).toBe(404);
     }
   });

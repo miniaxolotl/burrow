@@ -21,6 +21,13 @@ export const documentation = [
     description:
       "Run the Burrow server with Redis and TLS, and understand management authentication and ownership retention.",
   },
+  {
+    slug: "deploy",
+    source: "deploy.md",
+    title: "Deploy & release",
+    description:
+      "Self-host with Docker or OpenTofu, follow the release and promotion policy, and run bounded live load tests.",
+  },
 ] as const;
 
 export function documentationHref(href: string, source: string): string {
