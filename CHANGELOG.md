@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.22](https://github.com/miniaxolotl/burrow/compare/v0.3.21...v0.3.22) (2026-11-07)
+
+
+### Features
+
+* **website:** document shipped tunnel workflows and publish deploy guide ([d046360](https://github.com/miniaxolotl/burrow/commit/d0463607705ad0aadd47c4234de6ccf84ad55d70))
+* **website:** document shipped tunnel workflows and publish deploy guide ([e97b945](https://github.com/miniaxolotl/burrow/commit/e97b9453de16d721307c922a6b397688cf146208))
+
 ## [0.3.21](https://github.com/miniaxolotl/burrow/compare/v0.3.20...v0.3.21) (2026-11-06)
 
 

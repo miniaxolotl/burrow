@@ -21,6 +21,7 @@ Replace 3000 with the app's port and keep the client running.
 - [Client](${site.url}/docs/client): installation and CLI reference.
 - [Workflows](${site.url}/docs/workflows): previews and webhook examples.
 - [Server](${site.url}/docs/server): self-hosted service reference.
+- [Deploy](${site.url}/docs/deploy): deployment, release policy and load testing.
 - [Source](${site.github}): code and license.
 - [Support](${site.url}/support): product help.
 - [Contact](${site.url}/contact): public contact details.

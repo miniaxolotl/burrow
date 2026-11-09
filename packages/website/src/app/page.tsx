@@ -14,12 +14,24 @@ import { HeroCtaCopy } from "@/components/website-telemetry";
 
 const features = [
   [
+    "Share more than one service",
+    "Give your frontend and API separate public links from one client with burrowctl tunnel 3000 8080. The manager keeps the ports and URLs together.",
+  ],
+  [
+    "Inspect only your requests",
+    "List your tunnels, filter logs by method, status, path or duration, and follow new requests live. History stays owner-scoped and never leaves your machine without you.",
+  ],
+  [
     "Reconnect without a new link",
     "While the CLI is running, transient connection failures retry the same URL. Explicitly closing a tunnel revokes it; a new tunnel gets a fresh URL.",
   ],
   [
     "Owner-only controls",
     "The client creates a private owner credential automatically. Sharing a public URL doesn't grant someone access to list, inspect or close your tunnels.",
+  ],
+  [
+    "No account needed",
+    "There is no signup, login or manual credential setup. Each server gets its own local owner identity, and a shareable link never carries management access.",
   ],
   [
     "Self-hosting",
@@ -127,7 +139,10 @@ export default async function HomePage() {
             </h2>
             <p>
               Add ports, copy links and inspect requests from one terminal. Try
-              the illustrated manager below with sample tunnels.
+              the illustrated manager below with sample tunnels. Prefer scripts?
+              The same CLI runs headless with JSON output, and{" "}
+              <code>burrowctl doctor</code> checks your setup without opening a
+              tunnel.
             </p>
           </div>
           <ManagerPreview />
