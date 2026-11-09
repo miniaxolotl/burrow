@@ -143,11 +143,10 @@ There are no privileged users, global lists, or admin commands. Each command see
 
 ## Headless mode and structured output
 
-**Development branch:** these additions are described in the
-[workflow implementation](tunnel-workflows-implementation.md); this is not a
-claim that the published npm release already includes them. Capture currently
-requires a usable Linux Secret Service backend. macOS capture is excluded from
-workflow PR #90 and deferred to [draft PR #91](https://github.com/miniaxolotl/burrow/pull/91);
+Shipped in 0.3.20 and described in the
+[workflow implementation](tunnel-workflows-implementation.md). Capture below
+currently requires a usable Linux Secret Service backend. macOS capture is
+excluded and deferred to [draft PR #91](https://github.com/miniaxolotl/burrow/pull/91);
 ordinary macOS tunneling, aliases, routing and headless mode remain available.
 
 ```sh
@@ -224,7 +223,7 @@ a separate explicit opt-in. Source support is not proof of hosted drain continui
 
 ## Automatic ownership
 
-### Encrypted local capture and durable replay (development)
+### Encrypted local capture and durable replay (Linux; macOS deferred)
 
 ```sh
 burrowctl tunnel 3000 --name webhook --capture --output jsonl
@@ -316,7 +315,7 @@ filesystem snapshots and user-managed backups prevent a forensic/cryptographic
 erasure promise. Capture backups/restore/exports are unsupported; restoring an
 old backup can predate tombstones and must not be used for replay.
 
-### One hostname, multiple local services (development)
+### One hostname, multiple local services
 
 Create an explicit route file, then run `burrowctl tunnel --config ./burrow.json`
 (optionally with `--name shop` and/or `--output jsonl`):
@@ -363,7 +362,7 @@ counts as one server connection; the first port is informational metadata, not
 the complete route table. A shared public origin also shares cookie/security
 trust: configure application cookie paths, base paths and CORS appropriately.
 
-### Saved URLs (development)
+### Saved URLs
 
 ```sh
 burrowctl tunnel 3000 --name webhook --output jsonl

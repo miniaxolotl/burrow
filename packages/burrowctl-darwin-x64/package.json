@@ -1,6 +1,6 @@
 {
   "name": "@miniaxolotl/burrowctl-darwin-x64",
-  "version": "0.3.21",
+  "version": "0.3.22",
   "description": "macOS x64 binary for burrowctl",
   "license": "MIT",
   "publishConfig": {

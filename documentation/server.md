@@ -73,11 +73,11 @@ credential automatically; no account is needed. URL query credentials are reject
 | GET       | `/tunnels/<id>/logs`                          | Owner's request history, up to 200 entries             |
 | DELETE    | `/tunnels/<id>`                               | Owner-only closure and permanent ID revocation         |
 
-Development also provides public `GET /.well-known/burrow-capabilities` for
+Since 0.3.20 the server also provides public `GET /.well-known/burrow-capabilities` for
 registration/persistent-attachment negotiation and owner-only
 `GET /tunnels/<id>/reservation` for saved-alias reconciliation. These accompany
-the [merged workflow implementation](tunnel-workflows-implementation.md), not a
-claim that every published server already supports them.
+the [merged workflow implementation](tunnel-workflows-implementation.md) and are
+included in current releases.
 
 The [operations implementation](tunnel-operations-implementation.md), stacked on
 the historical plan, adds bounded draining, optional lifecycle notices and `/ready`.

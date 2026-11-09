@@ -17,8 +17,9 @@ export default function DocsPage() {
       <h2>Start with the client</h2>
       <p>
         The burrowctl guide takes you from prerequisites to a verified first
-        tunnel. Use the webhook walkthrough for a runnable test endpoint, or the
-        server reference when you want to run your own infrastructure.
+        tunnel. Use the webhook walkthrough for a runnable test endpoint, the
+        server reference when you want to run your own infrastructure, and the
+        deployment guide for Docker, OpenTofu and release policy.
       </p>
       <dl>
         {documentation.map((item) => (
