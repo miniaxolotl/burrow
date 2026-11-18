@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.23](https://github.com/miniaxolotl/burrow/compare/v0.3.22...v0.3.23) (2026-11-18)
+
+
+### Features
+
+* **website:** measure campaign visits and diagnose website errors ([#106](https://github.com/miniaxolotl/burrow/issues/106)) ([a57f87c](https://github.com/miniaxolotl/burrow/commit/a57f87c3b42767c3ffcfbbb64adc8cd4e7f8a20f))
+
 ## [0.3.22](https://github.com/miniaxolotl/burrow/compare/v0.3.21...v0.3.22) (2026-11-07)
 
 
