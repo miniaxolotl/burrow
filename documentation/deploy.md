@@ -98,9 +98,16 @@ no Homebrew tap, winget package, or apt repository in this project.
 Use `scripts/release/replay-binaries.sh BASE CANDIDATE TARGET` to check whether
 the compiled `burrowd` and `burrowctl` bytes changed independently. Run it with
 Git, Bash, `sha256sum` and a Go toolchain that builds both reviewed commits.
-It builds temporary snapshots with the same compiler, target and flags, normalizes
-the marked product version, disables VCS stamping, and reports both SHA-256s and
-the changed paths. It does not execute the binaries or require release credentials.
+It builds clean, detached Git worktrees so tracked `export-ignore` files are
+included and uncommitted edits are excluded. Both builds use the same local
+compiler and flags, normalize the marked product version, and disable VCS
+stamping. The report records the compiler, target, CPU level, both SHA-256s
+and changed paths. It does not execute the binaries or require release credentials.
+
+The build starts with only `HOME` and `PATH` from the caller and ignores saved
+Go settings. It pins `CGO_ENABLED=0` and either `GOAMD64=v1` or `GOARM64=v8.0`.
+These match `go version -m` on the checksum-verified v0.3.23 Linux CLI archives;
+recheck the levels when the release configuration changes.
 
 ```bash
 bash scripts/release/replay-binaries.sh 'a57f87c^' a57f87c linux/amd64 # website #106
