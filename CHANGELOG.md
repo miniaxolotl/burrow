@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.24](https://github.com/miniaxolotl/burrow/compare/v0.3.23...v0.3.24) (2026-11-18)
+
+
+### Bug Fixes
+
+* **website:** guard analytics and campaign documents ([#109](https://github.com/miniaxolotl/burrow/issues/109)) ([41d88d6](https://github.com/miniaxolotl/burrow/commit/41d88d658066dcd78e4ba3e2d5deedfd4a5a0c82))
+
 ## [0.3.23](https://github.com/miniaxolotl/burrow/compare/v0.3.22...v0.3.23) (2026-11-18)
 
 
