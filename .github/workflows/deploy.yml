@@ -19,6 +19,7 @@ jobs:
       sha: ${{ steps.candidate.outputs.sha }}
       tag: ${{ steps.candidate.outputs.tag }}
       version: ${{ steps.candidate.outputs.version }}
+      delivery: ${{ steps.candidate.outputs.delivery }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -39,6 +40,7 @@ jobs:
 
   publish:
     needs: candidate
+    if: needs.candidate.outputs.delivery == 'full'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: production

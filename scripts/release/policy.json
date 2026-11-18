@@ -3,6 +3,11 @@
   "operator": "miniaxolotl",
   "label": "enhancement",
   "branches": ["development", "production"],
+  "siteOnly": {
+    "tag": "v0.3.24",
+    "production": "03b49db541f0b9c9c51314dbdeecd3663a246c01",
+    "reviewedSource": "1c6e402b5bd5e600f98c7bc6fda345cbe4a31009"
+  },
   "ciJobs": [
     "Infrastructure Quality",
     "Website",
