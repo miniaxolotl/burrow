@@ -1,3 +1,4 @@
+import { errorSummary } from "./error-summary";
 import type { BrowserOptions, ErrorEvent, Log, Metric } from "@sentry/nextjs";
 import { pagePath } from "./analytics-policy";
 
@@ -56,7 +57,10 @@ export function sanitizeError(event: ErrorEvent): ErrorEvent {
         ].includes(exception.type ?? "")
           ? exception.type
           : "Error",
-        value: "Website error (details redacted)",
+        value: errorSummary(
+          exception.value,
+          event.request?.url ? pagePath(event.request.url) : "unknown route",
+        ),
         mechanism: exception.mechanism
           ? {
               type: exception.mechanism.type,
