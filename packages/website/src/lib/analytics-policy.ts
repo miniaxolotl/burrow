@@ -57,6 +57,7 @@ const sdkProperties = new Set([
 export function pagePath(value: string): string {
   try {
     const path = new URL(value, origin).pathname.replace(/\/$/, "") || "/";
+    if (["/contact", "/support", "/docs"].includes(path)) return path;
     return routes.has(path) ? path : "/other";
   } catch {
     return "/other";
@@ -185,7 +186,13 @@ export function sanitizeEvent(
     /^\d+\.\d+\.\d+$/.test(input.version)
   )
     properties.version = input.version;
-  for (const key of ["utm_source", "utm_medium", "utm_campaign"]) {
+  for (const key of [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_content",
+    "utm_term",
+  ]) {
     if (
       typeof input[key] === "string" &&
       /^[a-z][a-z0-9_-]{0,63}$/i.test(input[key])

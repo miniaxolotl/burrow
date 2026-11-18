@@ -5,7 +5,16 @@ import { Analytics } from "@vercel/analytics/next";
 import { useSyncExternalStore } from "react";
 import { telemetryOptedOut, subscribePreference } from "@/lib/telemetry-choice";
 
-const publicPaths = new Set(["/", "/privacy", "/terms"]);
+import { campaignUrl } from "@/lib/campaign-url";
+
+const publicPaths = new Set([
+  "/",
+  "/contact",
+  "/support",
+  "/privacy",
+  "/terms",
+  "/docs",
+]);
 
 export function WebsiteSpeedInsights() {
   const disabled = useSyncExternalStore(
@@ -37,6 +46,16 @@ export function WebsiteVercelAnalytics() {
     () => true,
   );
   return disabled ? null : (
-    <Analytics beforeSend={(event) => (telemetryOptedOut() ? null : event)} />
+    <Analytics
+      beforeSend={(event) => {
+        if (telemetryOptedOut()) return null;
+        const url = campaignUrl(
+          event.url,
+          "https://useburrow.app",
+          publicPaths,
+        );
+        return url ? { ...event, url } : null;
+      }}
+    />
   );
 }
