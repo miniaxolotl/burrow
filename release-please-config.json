@@ -12,15 +12,6 @@
       "pull-request-title-pattern": "chore(release): release ${version}",
       "pull-request-footer": "Source release only. Deployment, artifact acceptance and store submission are separate operations.",
       "changelog-path": "CHANGELOG.md",
-      "extra-files": [
-        "packages/burrowctl/package.json",
-        "packages/burrowctl-linux-x64/package.json",
-        "packages/burrowctl-linux-arm64/package.json",
-        "packages/burrowctl-darwin-x64/package.json",
-        "packages/burrowctl-darwin-arm64/package.json",
-        "burrowd/version.go",
-        "burrowctl/version.go"
-      ],
       "versioning": "always-bump-patch",
       "changelog-sections": [
         { "type": "feature", "section": "Features", "hidden": false },

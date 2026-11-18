@@ -299,3 +299,11 @@ curl http://localhost:25701/health
 For self-hosted HTTPS, set `BURROW_DOMAIN` to your tunnel domain and
 `BURROW_TLS=true`, and terminate TLS in front of port 25701. Upstash connections
 use `rediss://`; the container includes public CA certificates.
+
+## Site-only delivery of v0.3.24
+
+Selection and promotion admission check the production parent and the reviewed #109/#110 product tree in `scripts/release/policy.json`. Release Please updates the private product version; the wrapper, its four native packages, Go version stamps, download archives and tunnel image stay at their last verified delivery. The production merge triggers the existing Vercel Git integration. The artifact publisher is skipped and its dependent infrastructure rollout cannot run.
+
+Verify the Vercel production alias resolves to the deployment for the **production merge SHA**, fetch the live site, read back the active DigitalOcean deployment/digest and npm pins, and check the previous release assets. A new tag or changed baseline needs a newly reviewed delivery decision; do not use the legacy full publisher to recover a missing receipt.
+
+The release commit must directly follow the merged tooling PR and may only change the private manifest version, release manifest and changelog. For the next release, review destination impact in a protected follow-up PR before regenerating its proposal. Re-enable the retained full publisher only for a decision with evidence that all its targets need delivery; deleting the site receipt does not enable it.
