@@ -93,6 +93,45 @@ The npm registry serves npm, pnpm, Yarn, and Bun. Native archives cover Linux an
 macOS on amd64/arm64. Docker images cover Linux amd64/arm64. There is currently
 no Homebrew tap, winget package, or apt repository in this project.
 
+### Compare candidate binaries (report only)
+
+Use `scripts/release/replay-binaries.sh BASE CANDIDATE TARGET` to check whether
+the compiled `burrowd` and `burrowctl` bytes changed independently. Run it with
+Git, Bash, `sha256sum` and a Go toolchain that builds both reviewed commits.
+It builds temporary snapshots with the same compiler, target and flags, normalizes
+the marked product version, disables VCS stamping, and reports both SHA-256s and
+the changed paths. It does not execute the binaries or require release credentials.
+
+```bash
+bash scripts/release/replay-binaries.sh 'a57f87c^' a57f87c linux/amd64 # website #106
+bash scripts/release/replay-binaries.sh 'c36f277^' c36f277 linux/amd64 # server fix #81
+bash scripts/release/replay-binaries.sh '6c0c5ba^' 6c0c5ba linux/amd64 # protocol #97
+```
+
+| Replay (Go 1.26.10, Linux amd64) | `burrowd` | `burrowctl` | Delivery inputs to review                                                                                             |
+| -------------------------------- | --------- | ----------- | --------------------------------------------------------------------------------------------------------------------- |
+| Website #106                     | Identical | Identical   | Vercel site sources changed.                                                                                          |
+| Server #81                       | Different | Identical   | Server image, archives and tunnel; `documentation/server.md` also feeds the site. The changed client files are tests. |
+| Protocol #97                     | Different | Different   | Server, client archives and pinned native family; verify mixed-version compatibility.                                 |
+
+For a delivery review, use the source of the last **verified delivery of that
+target**, not necessarily the last product tag. Repeat for Linux and Darwin on
+amd64 and arm64. Review the full diff too: wrapper installation, Docker base,
+build flags, archive contents, and the site (including rendered reference docs)
+can change independently of these bytes. Neither paths nor a different hash
+authorize an npm bump. Identify what changes for an installer and inspect the
+packed wrapper's exact native pins against the registry.
+
+In particular, the v0.3.22 and v0.3.23 **published** wrappers differ only in
+their version and four exact pins. The v0.3.23 Linux amd64 server and client
+archives each also contain `CHANGELOG.md`, `LICENSE` and `README.md`. A replay
+digest is not a release checksum: verify the final stamped archives against
+`checksums.txt`. Before splitting delivery, preserve a complete checksum list
+for the selected archives and the last verified download links for the rest.
+Server changes still need image-digest and real HTTPS tunnel verification;
+protocol changes also need an installed client against the candidate server.
+The coordinated production pipeline above remains in effect.
+
 ## Select and promote
 
 1. Merge the green Release Please PR into development and wait for its immutable
