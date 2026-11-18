@@ -93,6 +93,52 @@ The npm registry serves npm, pnpm, Yarn, and Bun. Native archives cover Linux an
 macOS on amd64/arm64. Docker images cover Linux amd64/arm64. There is currently
 no Homebrew tap, winget package, or apt repository in this project.
 
+### Compare candidate binaries (report only)
+
+Use `scripts/release/replay-binaries.sh BASE CANDIDATE TARGET` to check whether
+the compiled `burrowd` and `burrowctl` bytes changed independently. Run it with
+Git, Bash, `sha256sum` and a Go toolchain that builds both reviewed commits.
+It builds clean, detached Git worktrees so tracked `export-ignore` files are
+included and uncommitted edits are excluded. Both builds use the same local
+compiler and flags, normalize the marked product version, and disable VCS
+stamping. The report records the compiler, target, CPU level, both SHA-256s
+and changed paths. It does not execute the binaries or require release credentials.
+
+The build starts with only `HOME` and `PATH` from the caller and ignores saved
+Go settings. It pins `CGO_ENABLED=0` and either `GOAMD64=v1` or `GOARM64=v8.0`.
+These match `go version -m` on the checksum-verified v0.3.23 Linux CLI archives;
+recheck the levels when the release configuration changes.
+
+```bash
+bash scripts/release/replay-binaries.sh 'a57f87c^' a57f87c linux/amd64 # website #106
+bash scripts/release/replay-binaries.sh 'c36f277^' c36f277 linux/amd64 # server fix #81
+bash scripts/release/replay-binaries.sh '6c0c5ba^' 6c0c5ba linux/amd64 # protocol #97
+```
+
+| Replay (Go 1.26.10, Linux amd64) | `burrowd` | `burrowctl` | Delivery inputs to review                                                                                             |
+| -------------------------------- | --------- | ----------- | --------------------------------------------------------------------------------------------------------------------- |
+| Website #106                     | Identical | Identical   | Vercel site sources changed.                                                                                          |
+| Server #81                       | Different | Identical   | Server image, archives and tunnel; `documentation/server.md` also feeds the site. The changed client files are tests. |
+| Protocol #97                     | Different | Different   | Server, client archives and pinned native family; verify mixed-version compatibility.                                 |
+
+For a delivery review, use the source of the last **verified delivery of that
+target**, not necessarily the last product tag. Repeat for Linux and Darwin on
+amd64 and arm64. Review the full diff too: wrapper installation, Docker base,
+build flags, archive contents, and the site (including rendered reference docs)
+can change independently of these bytes. Neither paths nor a different hash
+authorize an npm bump. Identify what changes for an installer and inspect the
+packed wrapper's exact native pins against the registry.
+
+In particular, the v0.3.22 and v0.3.23 **published** wrappers differ only in
+their version and four exact pins. The v0.3.23 Linux amd64 server and client
+archives each also contain `CHANGELOG.md`, `LICENSE` and `README.md`. A replay
+digest is not a release checksum: verify the final stamped archives against
+`checksums.txt`. Before splitting delivery, preserve a complete checksum list
+for the selected archives and the last verified download links for the rest.
+Server changes still need image-digest and real HTTPS tunnel verification;
+protocol changes also need an installed client against the candidate server.
+The coordinated production pipeline above remains in effect.
+
 ## Select and promote
 
 1. Merge the green Release Please PR into development and wait for its immutable
@@ -253,3 +299,11 @@ curl http://localhost:25701/health
 For self-hosted HTTPS, set `BURROW_DOMAIN` to your tunnel domain and
 `BURROW_TLS=true`, and terminate TLS in front of port 25701. Upstash connections
 use `rediss://`; the container includes public CA certificates.
+
+## Site-only delivery of v0.3.24
+
+Selection and promotion admission check the production parent and the reviewed #109/#110 product tree in `scripts/release/policy.json`. Release Please updates the private product version; the wrapper, its four native packages, Go version stamps, download archives and tunnel image stay at their last verified delivery. The production merge triggers the existing Vercel Git integration. The artifact publisher is skipped and its dependent infrastructure rollout cannot run.
+
+Verify the Vercel production alias resolves to the deployment for the **production merge SHA**, fetch the live site, read back the active DigitalOcean deployment/digest and npm pins, and check the previous release assets. A new tag or changed baseline needs a newly reviewed delivery decision; do not use the legacy full publisher to recover a missing receipt.
+
+The release commit must directly follow the merged tooling PR and may only change the private manifest version, release manifest and changelog. For the next release, review destination impact in a protected follow-up PR before regenerating its proposal. Re-enable the retained full publisher only for a decision with evidence that all its targets need delivery; deleting the site receipt does not enable it.

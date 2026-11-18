@@ -9,6 +9,7 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 import { readGitHubJson } from "../ci/github-json.mjs";
 
 const tagPattern = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
@@ -33,6 +34,67 @@ export function promotionTag(policy, pr) {
     "A frozen release ref is required",
   );
   return tag;
+}
+
+// A reviewed delivery receipt, not a workflow input. The production base and
+// reviewed product snapshot are immutable; unreviewed payload changes stop here.
+export function assertSiteOnly(
+  receipt,
+  { production, paths, previous, current },
+) {
+  requireThat(production === receipt.production, "Production baseline changed");
+  requireThat(
+    previous.private === true &&
+      current.version === receipt.tag.slice(1) &&
+      isDeepStrictEqual({ ...previous, version: current.version }, current),
+    "Unexpected private manifest change",
+  );
+  const controls = new Set([
+    "package.json",
+    "CHANGELOG.md",
+    ".release-please-manifest.json",
+  ]);
+  for (const path of paths)
+    requireThat(controls.has(path), `Unreviewed delivery input: ${path}`);
+}
+
+function delivery(policy, candidate, production) {
+  const receipt = policy.siteOnly;
+  requireThat(
+    receipt?.tag === candidate.tag,
+    "Review destination impact for this new tag before promotion",
+  );
+  const tooling = api(`repos/${policy.repository}/pulls/${receipt.toolingPr}`);
+  requireThat(
+    tooling.merged_at &&
+      tooling.base.ref === "development" &&
+      tooling.base.repo.full_name === policy.repository &&
+      hashPattern.test(tooling.merge_commit_sha) &&
+      git("rev-parse", `${tooling.merge_commit_sha}^1`) ===
+        receipt.reviewedSource &&
+      git("rev-parse", `${candidate.sha}^1`) === tooling.merge_commit_sha,
+    "Release must directly follow the reviewed tooling PR on the reviewed product baseline",
+  );
+  const names = execFileSync(
+    "git",
+    [
+      "diff",
+      "--no-renames",
+      "--name-only",
+      "-z",
+      tooling.merge_commit_sha,
+      candidate.sha,
+      "--",
+    ],
+    { encoding: "utf8" },
+  );
+  assertSiteOnly(receipt, {
+    production,
+    paths: names.split("\0").filter(Boolean),
+    previous: JSON.parse(git("show", `${receipt.reviewedSource}:package.json`)),
+    current: JSON.parse(git("show", `${candidate.sha}:package.json`)),
+  });
+  return "site-only";
 }
 
 function admitDevelopmentStack(policy, expected) {
@@ -372,6 +434,11 @@ export function admitPromotion(policy, pr, mergeSha) {
   );
   git("merge-base", "--is-ancestor", candidate.sha, pr.head.sha);
   assertUpstream(policy, candidate, pr.base.ref);
+  candidate.delivery = delivery(
+    policy,
+    candidate,
+    pr.merged_at ? git("rev-parse", `${mergeSha}^1`) : pr.base.sha,
+  );
   return candidate;
 }
 
@@ -400,6 +467,7 @@ function output(candidate) {
   const values = Object.fromEntries(
     ["tag", "sha", "tree", "version"].map((key) => [key, candidate[key]]),
   );
+  if (candidate.delivery) values.delivery = candidate.delivery;
   if (process.env.GITHUB_OUTPUT)
     appendFileSync(
       process.env.GITHUB_OUTPUT,
@@ -427,6 +495,7 @@ function openPromotion(policy, tag, target) {
   assertUpstream(policy, candidate, target);
   const base = api(`repos/${policy.repository}/git/ref/heads/${target}`).object
     .sha;
+  delivery(policy, candidate, base);
   const upstream = policy.branches[policy.branches.indexOf(target) - 1];
   const parent =
     upstream === "development"
