@@ -198,3 +198,11 @@ documents limitations for personless events. Provider readback finds zero person
 profiles. Daily alerts and Monday reports remain enabled; CTA experiments and
 milestone surveys remain drafts. Release gates passed Go/race/build checks,
 11 browser cases, release contracts, workflow lint and infrastructure validation.
+
+## Campaign and incident triage
+
+Tag a public landing link with `utm_source`, `utm_medium` and `utm_campaign`; use `utm_content` for creative and `utm_term` for a public keyword code. Use ASCII labels beginning with a letter, up to 64 characters. Never put an address, account identifier or free-text search in a campaign tag.
+
+In Vercel Web Analytics select the production site `useburrow.app` and break pageviews down by campaign and source. In PostHog filter `$pageview` and the relevant CTA event to the website surface and production environment, then break down by event `utm_campaign`. Treat an outbound click as a referral, not a confirmed install. Consent, blockers and project boundaries affect coverage.
+
+For a missing view, check the deployed release, analytics consent and whether the landing path is a public route. Inspect the status of the Vercel insights request and PostHog capture request separately. For exceptions, start with the Sentry release and first in-app frame, then compare Vercel logs for that deployment and UTC timestamp. Do not paste full request URLs or payloads into incident reports.
