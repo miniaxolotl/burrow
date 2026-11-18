@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { consentAllowed, subscribeConsent } from "@/lib/cookie-consent";
+import { publicCampaignDocument } from "@/lib/campaign-url";
 
 const containerId = "GTM-PGLVNMZ8";
 const hosts = new Set(["useburrow.app", "www.useburrow.app"]);
@@ -13,9 +14,7 @@ function publicLocation(url: URL) {
     url.protocol === "https:" &&
     hosts.has(url.hostname) &&
     paths.has(url.pathname) &&
-    [...url.searchParams.keys()].every((key) =>
-      /^utm_(source|medium|campaign|term|content)$/.test(key),
-    )
+    publicCampaignDocument(url.href, url.origin, paths)
   );
 }
 

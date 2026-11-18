@@ -77,6 +77,30 @@ tag mapping and production acceptance.
 
 ### Deployment and source maps
 
+Both Vercel SDKs mount only for `VERCEL_ENV=production`. They require Analytics
+consent and honor footer opt-out, DNT, GPC and storage failure. Initialization
+requires an initially public `https://useburrow.app` document on `/`, `/contact`,
+`/support`, `/privacy`, `/terms` or `/docs`. Tunnel subdomains, unknown paths,
+fragments, arbitrary queries and invalid/duplicate campaign parameters are
+excluded, even after private-to-public client navigation. Send hooks recheck the
+current document and consent. Web Analytics retains validated campaign labels;
+Speed Insights removes queries/fragments and uses the public pathname. Malformed
+and foreign-origin event URLs are dropped safely.
+
+GTM separately needs Advertising consent and its narrower public-route allowlist.
+It validates the document URL before loading, since tags can read it independently
+of event projection. The `tracking=off` recovery URL remains disabled until
+explicit consent clears it. Each `utm_source`, `utm_medium`, `utm_campaign`,
+`utm_content`, `utm_term` may appear once, matching `[a-z][a-z0-9_-]{0,63}`
+(case-insensitive). Use public codes, never identity, tunnel identifiers or text.
+
+Verify consent/revocation, browser/storage vetoes, campaigns and private/client
+navigation in a production build. Vercel may inject hashed paths: inspect script
+`data-sdkn` attributes, not just `/_vercel/*`. Synthetic sinks prove wiring/privacy,
+not ingestion; vendor scripts suppress automated visits. Historical receipts below
+are not current deployment acceptance. Check deployed source and fresh provider
+receipts separately after promotion.
+
 Production-only Vercel variables were configured and read back on October 20, 2026. The original checkout's ignored `secrets.md` records credentials and the
 shared existing upload-token location; operator credentials never ship in clients.
 

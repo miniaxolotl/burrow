@@ -136,8 +136,12 @@ export default function RootLayout({
         <WebsiteTelemetry />
         <WebsiteCookieConsent />
         <WebsiteTagManager />
-        <WebsiteVercelAnalytics />
-        {process.env.VERCEL_ENV === "production" && <WebsiteSpeedInsights />}
+        {process.env.VERCEL_ENV === "production" && (
+          <>
+            <WebsiteVercelAnalytics />
+            <WebsiteSpeedInsights />
+          </>
+        )}
       </body>
     </html>
   );
