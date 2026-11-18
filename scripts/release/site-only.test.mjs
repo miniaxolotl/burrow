@@ -36,6 +36,8 @@ test("site delivery admits only the reviewed tree plus release metadata and tool
       "scripts/install.sh",
       "packages/website/src/app/page.tsx",
       "pnpm-lock.yaml",
+      ".github/workflows/deploy.yml",
+      "scripts/release/policy.json",
     ].map((path) => ({ paths: [path] })),
   ]) {
     assert.throws(() =>

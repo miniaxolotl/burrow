@@ -53,12 +53,6 @@ export function assertSiteOnly(
     "package.json",
     "CHANGELOG.md",
     ".release-please-manifest.json",
-    "release-please-config.json",
-    ".github/workflows/deploy.yml",
-    "scripts/release/policy.json",
-    "scripts/release/promotion.mjs",
-    "scripts/release/site-only.test.mjs",
-    "documentation/deploy.md",
   ]);
   for (const path of paths)
     requireThat(controls.has(path), `Unreviewed delivery input: ${path}`);
@@ -70,7 +64,17 @@ function delivery(policy, candidate, production) {
     receipt?.tag === candidate.tag,
     "Review destination impact for this new tag before promotion",
   );
-  git("merge-base", "--is-ancestor", receipt.reviewedSource, candidate.sha);
+  const tooling = api(`repos/${policy.repository}/pulls/${receipt.toolingPr}`);
+  requireThat(
+    tooling.merged_at &&
+      tooling.base.ref === "development" &&
+      tooling.base.repo.full_name === policy.repository &&
+      hashPattern.test(tooling.merge_commit_sha) &&
+      git("rev-parse", `${tooling.merge_commit_sha}^1`) ===
+        receipt.reviewedSource &&
+      git("rev-parse", `${candidate.sha}^1`) === tooling.merge_commit_sha,
+    "Release must directly follow the reviewed tooling PR on the reviewed product baseline",
+  );
   const names = execFileSync(
     "git",
     [
@@ -78,7 +82,7 @@ function delivery(policy, candidate, production) {
       "--no-renames",
       "--name-only",
       "-z",
-      receipt.reviewedSource,
+      tooling.merge_commit_sha,
       candidate.sha,
       "--",
     ],
