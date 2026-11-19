@@ -166,7 +166,13 @@ The coordinated production pipeline above remains in effect.
    Records include the verified baseline, frozen production parent, exact source
    and retained-input SHA-256. They expire after 90 days; rerun the original
    selection run to refresh them. Admission and production revalidation repeat
-   the input comparison, not a trust in the PR text or receipt alone.
+   the input comparison, not a trust in the PR text or receipt alone. Renewal
+   preserves the frozen parent: open candidates require that parent to remain
+   current; merged candidates require their merge SHA to remain current and its
+   first parent to match the freeze. Later production commits (even identical
+   trees) cannot renew an older selection. Historical v0.3.24 retries use their
+   original workflow revision; the new baseline policy admits only selections
+   whose frozen production parent contains the verified anchor.
 3. Review the identity in the PR and enable auto-merge using **merge**, not squash
    or rebase. Strict `CI Gate`, conversation resolution and no-bypass protection
    apply. Source tags and frozen candidate refs cannot be rewritten or deleted.
@@ -336,8 +342,12 @@ delivery inputs cannot disappear through a CI path filter. The explicit boundari
 not shipped to the retained service/install targets are:
 
 - `packages/website/` and `documentation/`: Vercel source/reference content.
-- `scripts/ci/`, release `*.test.mjs`, admission `promotion.mjs`/`policy.json`, and
-  the release README: validation/admission tooling, not installed payloads.
+- The exact CI selector `scripts/ci/selection.mjs`, CI/release `*.test.mjs`,
+  admission `promotion.mjs`/`policy.json`, and the release README: reviewed
+  selection/admission policy and tests, not installed payloads. This is **not** a
+  blanket `scripts/ci/` exclusion: `current-ref.mjs` fences infrastructure writes,
+  and its `github-json.mjs` dependency also supplies admission/dispatch reads.
+  Both remain fingerprinted along with unknown new CI helpers.
 - `CHANGELOG.md`: new release notes; previous archives are not repacked. Only the
   private root version and single root release-ledger version may advance. Other
   manifest fields and manifest file modes remain checked.

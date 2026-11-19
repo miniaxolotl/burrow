@@ -39,21 +39,22 @@ export function promotionTag(policy, pr) {
 
 // Audited destination boundaries, not the CI path selector. Everything else,
 // including new/unknown files, is part of the retained delivery fingerprint.
-// The site and reference docs are Vercel inputs. CI/admission and their tests
-// never ship in native packages/images. Publisher, rollout and shared build
+// The site and reference docs are Vercel inputs. The CI selector and tests do
+// not run in writers; the shared GitHub reader/current-ref fence do and remain
+// protected despite living under scripts/ci. Publisher, rollout and shared build
 // configuration remain protected. Release notes can advance without repacking
 // old archives; README/LICENSE (archive payloads) cannot.
 function siteOrControl(path) {
   return (
     path.startsWith("packages/website/") ||
     path.startsWith("documentation/") ||
-    path.startsWith("scripts/ci/") ||
-    /^scripts\/release\/[^/]+\.test\.mjs$/.test(path) ||
+    /^scripts\/(?:ci|release)\/[^/]+\.test\.mjs$/.test(path) ||
     [
       "CHANGELOG.md",
       "scripts/release/README.md",
       "scripts/release/promotion.mjs",
       "scripts/release/policy.json",
+      "scripts/ci/selection.mjs",
     ].includes(path)
   );
 }
@@ -159,11 +160,18 @@ function delivery(policy, candidate, production) {
   return "site-only";
 }
 
-export function selectionProduction(current, frozenParent, mergeParent = null) {
+export function selectionProduction(
+  current,
+  frozenParent,
+  mergeParent = null,
+  mergedSha = null,
+) {
   requireThat(
-    [current, frozenParent, ...(mergeParent ? [mergeParent] : [])].every(
-      (sha) => hashPattern.test(sha),
-    ),
+    [
+      current,
+      frozenParent,
+      ...(mergeParent ? [mergeParent, mergedSha] : []),
+    ].every((sha) => hashPattern.test(sha)),
     "Full production identities required",
   );
   requireThat(
@@ -171,6 +179,10 @@ export function selectionProduction(current, frozenParent, mergeParent = null) {
     mergeParent
       ? "Frozen production parent mismatch"
       : "Production advanced; select a new release",
+  );
+  requireThat(
+    !mergeParent || current === mergedSha,
+    "Production advanced beyond this merged selection; select the current release",
   );
   return frozenParent;
 }
@@ -614,6 +626,7 @@ function openPromotion(policy, tag, target) {
       existing[0].merged_at
         ? git("rev-parse", `${existing[0].merge_commit_sha}^1`)
         : null,
+      existing[0].merged_at ? existing[0].merge_commit_sha : null,
     );
     candidate.delivery = delivery(policy, candidate, retainedBase);
     console.log(existing[0].html_url);

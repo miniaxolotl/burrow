@@ -19,13 +19,20 @@ test("selection receipt refresh retains the frozen parent after merge", () => {
   const after = "b".repeat(40);
   assert.equal(typeof admission.selectionProduction, "function");
   assert.equal(admission.selectionProduction(before, before), before);
-  assert.equal(admission.selectionProduction(after, before, before), before);
+  assert.equal(
+    admission.selectionProduction(after, before, before, after),
+    before,
+  );
+  assert.throws(
+    () => admission.selectionProduction("c".repeat(40), before, before, after),
+    /Production advanced/,
+  );
   assert.throws(
     () => admission.selectionProduction(after, before),
     /Production advanced/,
   );
   assert.throws(
-    () => admission.selectionProduction(after, before, after),
+    () => admission.selectionProduction(after, before, after, after),
     /Frozen production parent/,
   );
 });
@@ -50,6 +57,8 @@ function fixture(run) {
     put("package.json", JSON.stringify({ private: true, version: "0.3.24" }));
     put(".release-please-manifest.json", JSON.stringify({ ".": "0.3.24" }));
     put("scripts/install.sh", "verified installer\n");
+    put("scripts/ci/current-ref.mjs", "verified writer fence\n");
+    put("scripts/ci/github-json.mjs", "verified provider reader\n");
     put(
       "packages/burrowctl/package.json",
       '{"version":"0.3.23","optionalDependencies":{"native":"0.3.23"}}',
@@ -71,6 +80,8 @@ test("successive source-bound site releases need no tag or tooling PR exception"
       put("packages/website/src/app/page.tsx", `site ${version}`);
       put("documentation/deploy.md", `docs ${version}`);
       put("scripts/release/promotion.mjs", `tooling ${version}`);
+      put("scripts/ci/selection.mjs", `selector ${version}`);
+      put("scripts/ci/selection.test.mjs", `selector tests ${version}`);
       put("package.json", JSON.stringify({ private: true, version }));
       put(".release-please-manifest.json", JSON.stringify({ ".": version }));
       put("CHANGELOG.md", `notes ${version}`);
@@ -109,6 +120,9 @@ for (const path of [
   "README.md",
   "LICENSE",
   "scripts/release/src/index.ts",
+  "scripts/ci/current-ref.mjs",
+  "scripts/ci/github-json.mjs",
+  "scripts/ci/new-writer-helper.mjs",
   "unknown-input",
   "packages/unknown/package.json",
 ])
