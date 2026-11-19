@@ -1,5 +1,5 @@
 .page {
-  padding-block: 36px 96px;
+  padding-block: 32px 80px;
 }
 .back,
 .navigation a {
@@ -14,25 +14,25 @@
 }
 .heading {
   max-width: 780px;
-  padding-block: 32px 48px;
+  padding-block: 16px 32px;
 }
 .heading h1 {
-  font-size: clamp(36px, 5vw, 64px);
+  font-size: clamp(34px, 4.2vw, 56px);
   font-weight: 500;
   line-height: 1.15;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
 }
 .heading p {
   max-width: 65ch;
-  margin-top: 24px;
-  line-height: 1.8;
+  margin-top: 16px;
+  font-size: 17px;
+  line-height: 1.65;
   color: var(--color-muted);
 }
 .layout {
   display: grid;
-  grid-template-columns: 220px minmax(0, 760px);
+  grid-template-columns: 220px minmax(0, 1fr);
   gap: 48px;
-  padding-top: 32px;
 }
 .navigation {
   display: flex;
@@ -71,7 +71,7 @@
 }
 .body {
   min-width: 0;
-  max-width: 76ch;
+  max-width: 65ch;
   font-size: 17px;
   line-height: 1.75;
   overflow-wrap: anywhere;

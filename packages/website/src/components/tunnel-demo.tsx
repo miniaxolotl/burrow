@@ -43,6 +43,19 @@ const scenarios = [
     detail:
       "Keep authentication on sensitive endpoints. A public tunnel does not make a private API.",
   },
+  {
+    label: "Local app offline",
+    port: 3000,
+    request: "GET /",
+    status: "502 Bad Gateway",
+    slug: "softly-brave-little-fox",
+    sender: "Teammate’s browser",
+    destination: "Local app unavailable",
+    description:
+      "The tunnel can be connected while the local app is stopped. The public URL cannot serve an app that is not running.",
+    detail:
+      "Restart your local app on port 3000 and check it locally before trying the public link again. This example never probes your computer.",
+  },
 ] as const;
 
 export function TunnelDemo() {
@@ -93,7 +106,7 @@ export function TunnelDemo() {
             <div
               className="tunnel-terminal-body"
               id={selected === index ? "tunnel-example-output" : undefined}
-              key={scenario.port}
+              key={scenario.label}
               data-inactive={selected !== index}
               aria-hidden={selected !== index}
               inert={selected !== index}
@@ -147,7 +160,7 @@ export function TunnelDemo() {
       <div className="tunnel-scenario-story">
         {scenarios.map((scenario, index) => (
           <div
-            key={scenario.port}
+            key={scenario.label}
             className="tunnel-story-detail"
             data-inactive={selected !== index}
             aria-hidden={selected !== index}
@@ -159,7 +172,9 @@ export function TunnelDemo() {
         ))}
       </div>
       <figcaption>
-        <span>Illustrated preview with example URL and request</span>
+        <span>
+          Illustrated preview. Fictional traffic; no tunnel is created.
+        </span>
         <button
           className="tunnel-replay"
           type="button"

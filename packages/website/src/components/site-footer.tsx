@@ -25,6 +25,7 @@ export function SiteFooter() {
             </Link>
             <Link href="/#how-it-works">How it works</Link>
             <Link href="/#install">Install Burrow</Link>
+            <Link href="/docs/client">Client guide</Link>
           </nav>
           <div className="footer-links">
             <p>Stay in touch</p>

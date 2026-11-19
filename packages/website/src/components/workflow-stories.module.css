@@ -1,0 +1,222 @@
+.example {
+  margin: 0;
+  font-family: var(--font-plex-sans), Arial, sans-serif;
+  line-height: 1.5;
+  color: var(--brand-ink);
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-line);
+  border-radius: 4px;
+}
+.command {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding: 16px 24px;
+  background: #20332b;
+  color: #f7f8f5;
+}
+.example code {
+  font-family: var(--font-plex-mono), monospace;
+  font-size: 14px;
+  letter-spacing: normal;
+  overflow-wrap: anywhere;
+}
+.command span {
+  font-size: 15px;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+}
+.services {
+  padding: 24px;
+  background: var(--brand-paper);
+}
+.example h3 {
+  margin: 0;
+  font-family: inherit;
+  font-size: 16px;
+  line-height: 1.5;
+  font-weight: 600;
+}
+.choices {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+.choices button {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 12px;
+  text-align: left;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.choices button:hover {
+  background: #e8eee6;
+}
+.choices button[aria-pressed="true"] {
+  border-color: var(--brand-accent);
+  background: var(--brand-surface);
+}
+.choices strong {
+  font-size: 16px;
+  font-weight: 600;
+}
+.example .choices button > span {
+  font-size: 14px;
+  color: var(--brand-muted);
+}
+.panels {
+  display: grid;
+  min-width: 0;
+}
+.panel {
+  /* Overlap both intrinsic sizes so selecting a service never resizes the figure. */
+  grid-area: 1 / 1;
+  min-width: 0;
+  padding: 24px;
+}
+.panel[data-inactive="true"] {
+  visibility: hidden;
+  pointer-events: none;
+}
+.endpoint > code {
+  display: block;
+  margin-block: 6px;
+  overflow-wrap: anywhere;
+}
+.endpoint p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--brand-muted);
+}
+.example table {
+  width: 100%;
+  margin-top: 20px;
+  table-layout: fixed;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+.example caption {
+  text-align: left;
+  padding-bottom: 8px;
+  font-size: 16px;
+  font-weight: 500;
+}
+.example caption span {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--brand-muted);
+}
+.example th {
+  padding-bottom: 8px;
+  font-weight: 500;
+  color: var(--brand-muted);
+}
+.example :is(th, td):not(:first-child) {
+  width: 76px;
+  text-align: right;
+}
+.example td {
+  border-top: 1px solid var(--brand-line);
+  padding-block: 10px;
+  vertical-align: top;
+}
+.request {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.requestMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding-right: 16px;
+}
+.example time {
+  display: block;
+  font-size: 13px;
+  color: var(--brand-muted);
+}
+.status {
+  font-weight: 600;
+}
+.status[data-error="true"] {
+  color: #9d3e25;
+}
+.note {
+  margin: 12px 0 16px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+.follow {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  background: var(--brand-paper);
+  border-radius: 4px;
+}
+.follow span {
+  font-size: 14px;
+  color: var(--brand-muted);
+}
+.follow code {
+  overflow-wrap: anywhere;
+}
+.example figcaption {
+  border-top: 1px solid var(--brand-line);
+  padding: 12px 24px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--brand-muted);
+}
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 28px;
+  margin-top: 16px;
+}
+@media (max-width: 900px) {
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .command,
+  .services,
+  .panel {
+    padding: 16px;
+  }
+  .choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .choices button {
+    padding: 10px 8px;
+  }
+  .example :is(th, td):not(:first-child) {
+    width: 60px;
+  }
+  .example :is(th, td):nth-child(2) {
+    width: 48px;
+  }
+  .requestMeta {
+    display: grid;
+    gap: 4px;
+    padding-right: 8px;
+  }
+  .example figcaption {
+    padding-inline: 16px;
+  }
+}

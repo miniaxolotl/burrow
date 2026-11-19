@@ -42,7 +42,7 @@ test.describe("public reference documents", () => {
   for (const [slug, heading, content] of [
     ["client", "burrowctl", "burrowctl tunnel 3000 8080"],
     ["server", "burrowd", "X-Tunnel-Token"],
-    ["workflows", "Webhooks and multiple local services", "204 No Content"],
+    ["workflows", "Webhooks and local apps", "204 No Content"],
     ["deploy", "Deploy & release", "BURROW_DOMAIN"],
   ]) {
     test(`${slug} has readable canonical documentation`, async ({ page }) => {

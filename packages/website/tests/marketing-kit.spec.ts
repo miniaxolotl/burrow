@@ -37,7 +37,19 @@ test("Burrow uses approved theme-aware identity without kit website graphics", a
   await expect(
     page.locator('img[src*="/images/marketing"], img[src*="website-graphics"]'),
   ).toHaveCount(0);
+  const services = page.getByRole("figure", {
+    name: "Example services and their request logs",
+  });
   await expect(
-    page.getByLabel("Illustrative frontend and API ports"),
+    services.getByRole("region", { name: "Frontend example request logs" }),
   ).toContainText("localhost:3000");
+  await services.getByRole("button", { name: /API Port 8080/ }).click();
+  const api = services.getByRole("region", {
+    name: "API example request logs",
+  });
+  await expect(api).toContainText("localhost:8080");
+  await expect(api).toContainText(
+    "burrowctl logs softly-calm-blue-owl --follow",
+  );
+  await expect(api.locator("tbody tr")).toHaveCount(3);
 });

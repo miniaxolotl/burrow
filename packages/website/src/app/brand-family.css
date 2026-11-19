@@ -59,22 +59,6 @@ em {
 .marketing-site .tunnel-identity {
   background: #f0e3d5;
 }
-.marketing-site .workflow-grid {
-  gap: 32px;
-}
-.marketing-site .workflow-story:nth-child(n) {
-  background: transparent;
-  border: 0;
-  border-top: 1px solid var(--brand-line);
-  border-radius: 0;
-  padding: 24px 0 0;
-}
-.marketing-site .workflow-heading > span {
-  font-size: 10px;
-}
-.marketing-site .workflow-story h3 {
-  margin-top: 20px;
-}
 .marketing-site .dark-section::before {
   content: none;
 }
