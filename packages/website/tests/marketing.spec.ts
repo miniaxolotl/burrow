@@ -51,7 +51,9 @@ test("the tunnel example can be replayed by keyboard with reduced motion", async
   await expect(output.getByText("Tunnel connected")).toBeVisible();
   await expect(output.getByText("200 OK", { exact: true })).toBeVisible();
   await expect(
-    example.getByText("Illustrated preview with example URL and request"),
+    example.getByText(
+      "Illustrated preview. Fictional traffic; no tunnel is created.",
+    ),
   ).toBeVisible();
   await expect(output.locator(".tunnel-command")).toHaveCSS(
     "animation-name",

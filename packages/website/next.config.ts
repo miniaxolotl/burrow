@@ -13,6 +13,7 @@ if (upload && !process.env.SENTRY_AUTH_TOKEN)
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  allowedDevOrigins: ["10.8.0.5"],
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
     NEXT_PUBLIC_DEPLOYMENT_ENVIRONMENT: process.env.VERCEL_ENV || "development",

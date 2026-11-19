@@ -10,7 +10,7 @@ export const documentation = [
   {
     slug: "workflows",
     source: "workflows.md",
-    title: "Webhooks and multiple local services",
+    title: "Webhooks and local apps",
     description:
       "Try a disposable webhook endpoint, share multiple ports, inspect your own request logs and clean up safely.",
   },

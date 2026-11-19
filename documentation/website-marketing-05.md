@@ -4,8 +4,17 @@ The website leads with giving a local app a public HTTPS link. The main action i
 installation. Short examples explain preview sharing, webhook testing and running
 the open-source server on your own infrastructure.
 
-The service workflow uses HTML frontend/API port rows beside the log command,
-not a decorative code photograph. Terminal scenario labels and request routes
+The service workflow connects a Frontend on port 3000 and API on port 8080 in one
+HTML example. Selecting a service updates its public-link example, matching local
+port, newest-first request metadata and owner-scoped follow command. Status and
+duration are separate columns; a prepared 404/202 API example explains missing
+routes and acknowledgement versus completed processing. Both panels stay mounted
+in an intrinsic grid track to preserve the surrounding layout. The examples make
+no requests to the reserved `example.com` hosts and open no tunnels. IBM Plex Sans handles
+labels and explanations; Plex Mono is reserved for commands, URLs and paths.
+Native service buttons retain keyboard focus, identify their controlled panels
+and announce the selected example without making the full table a live region.
+Terminal scenario labels and request routes
 remain readable within the existing stable demonstration. The approved Arc logo,
 IBM Plex type and Apple touch icon remain unchanged. Adaptive SVG and explicit
 light/dark ICO/PNG fallbacks follow the browser colour scheme independently of
@@ -17,7 +26,28 @@ compositions.** Existing terminal-based social artwork remains. The identity-onl
 manifest and `tests/marketing-kit.spec.ts` enforce this boundary and check served
 favicon hashes and theme links. Existing installation, manager, request inspection
 and clipboard behavior remain part of the browser regression suite.
-See the [current four-width review](design/screenshots/marketing-polish-20261106/README.md).
+
+The family polish retains Plex, the Arc identity, clay actions and the existing
+terminal layout. The headline uses full ink; legal text is 16px with readable
+metadata, and support/contact use the same restrained heading scale as the
+other family sites. Public-only neutral paper/white surfaces and focus treatments
+do not restyle the CLI or change the tunnel service.
+
+The interactive terminal now includes **Local app offline**, showing a connected
+tunnel with a sample 502 response and recovery guidance. Its labels make clear
+that traffic is fictional, no tunnel is created and the browser never probes
+localhost. Existing scenario, installation-command and manager controls remain
+playable. A tunnel is not a deployment, and HTTPS does not authenticate the
+application. See the [family-polish review](design/screenshots/marketing-family-polish/README.md).
+
+Research direction: prove webhook and local-preview workflows, not an exclusive
+“no-account” claim. [Cloudflare Quick Tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)
+also offers no-account setup; [ngrok](https://ngrok.com/docs/pricing-limits/free-plan-limits)
+and [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) illustrate different
+setup/access trade-offs. Acquisition experiments remain recommendations, not
+launched campaigns or validated market demand.
+The [earlier four-width review](design/screenshots/marketing-polish-20261106/README.md)
+is retained as dated evidence, not the current service-selector presentation.
 
 Current help/contact routes and designated public email are documented in
 [Website support and contact](website-support-contact.md). Earlier verification
