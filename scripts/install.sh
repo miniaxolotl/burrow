@@ -7,6 +7,9 @@ set -e
 
 REPO="miniaxolotl/burrow"
 BINARY="burrowd"
+# Update these together after reviewing a delivered binary release.
+TAG="v0.3.23"
+CHECKSUMS_SHA256="ea9c74f470ac11a70e74b8e9bd8c9ba4287a0cc7ed553c371d0dca47865cfe76"
 LOCAL_INSTALL=""
 
 info() { printf '  \033[1;34m>\033[0m %s\n' "$*"; }
@@ -56,62 +59,37 @@ detect_platform() {
     esac
 }
 
-fetch_latest_tag() {
-    need curl
-
-    TAG="$(curl -fsSI "https://github.com/${REPO}/releases/latest" 2>/dev/null \
-        | grep -i '^location:' \
-        | head -1 \
-        | sed 's|.*/tag/||' \
-        | tr -d '\r\n')"
-
-    [ -n "$TAG" ] || err "Could not determine latest release. Check https://github.com/${REPO}/releases"
-}
-
 verify_checksum() {
-    local asset_path="$1"
-    local asset_name
-    asset_name="$(basename "$asset_path")"
-    local checksums_url="https://github.com/${REPO}/releases/download/${TAG}/checksums.txt"
-    local checksums_path="${TMPDIR}/checksums.txt"
-
-    if ! curl -fsSL --max-time 10 "$checksums_url" -o "$checksums_path" 2>/dev/null; then
-        warn "No checksums.txt found — skipping integrity check"
-        return
-    fi
-
-    local expected
-    expected="$(grep "  ${asset_name}$\| ${asset_name}$" "$checksums_path" | awk '{print $1}')"
-    if [ -z "$expected" ]; then
-        warn "No checksum entry for ${asset_name} — skipping integrity check"
-        return
-    fi
-
-    info "Verifying checksum..."
     if command -v sha256sum >/dev/null 2>&1; then
-        echo "${expected}  ${asset_path}" | sha256sum -c --quiet \
-            || err "Checksum verification failed."
+        actual=$(sha256sum < "$1") || err "Could not checksum $1"
     elif command -v shasum >/dev/null 2>&1; then
-        echo "${expected}  ${asset_path}" | shasum -a 256 -q -c \
-            || err "Checksum verification failed."
+        actual=$(shasum -a 256 < "$1") || err "Could not checksum $1"
     else
-        warn "Neither sha256sum nor shasum available — skipping integrity check"
+        err "Install sha256sum or shasum to verify this release."
     fi
+    [ "${actual%% *}" = "$2" ] || err "Checksum mismatch: $1"
 }
 
 install() {
     VERSION="${TAG#v}"
     ASSET="${BINARY}_${VERSION}_${OS}_${ARCH}.tar.gz"
-    DOWNLOAD_URL="https://github.com/${REPO}/releases/download/${TAG}/${ASSET}"
+    RELEASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
 
     TMPDIR="$(mktemp -d)"
     trap 'rm -rf "$TMPDIR"' EXIT
 
+    curl -fsSL --max-time 30 "${RELEASE_URL}/checksums.txt" -o "${TMPDIR}/checksums.txt" \
+        || err "Cannot download the reviewed checksum inventory for ${TAG}."
+    verify_checksum "${TMPDIR}/checksums.txt" "$CHECKSUMS_SHA256"
+    expected=$(awk -v asset="$ASSET" '$2 == asset { count++; digest=$1 }
+        END { if (count != 1 || length(digest) != 64 || digest ~ /[^0-9a-f]/) exit 1; print digest }' \
+        "${TMPDIR}/checksums.txt") || err "Missing or invalid checksum entry for ${ASSET}."
+
     info "Downloading ${BINARY} ${TAG} for ${OS}/${ARCH}..."
-    curl -fsSL "$DOWNLOAD_URL" -o "${TMPDIR}/${ASSET}" \
+    curl -fsSL "${RELEASE_URL}/${ASSET}" -o "${TMPDIR}/${ASSET}" \
         || err "Download failed. Check https://github.com/${REPO}/releases/tag/${TAG}"
 
-    verify_checksum "${TMPDIR}/${ASSET}"
+    verify_checksum "${TMPDIR}/${ASSET}" "$expected"
 
     info "Extracting..."
     tar -xzf "${TMPDIR}/${ASSET}" -C "$TMPDIR"
@@ -159,7 +137,7 @@ main() {
     parse_args "$@"
     info "burrowd installer"
     detect_platform
-    fetch_latest_tag
+    need curl
     install
     info "Done. Run '${BINARY} --version' to verify."
 }

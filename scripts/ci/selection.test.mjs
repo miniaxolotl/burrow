@@ -16,6 +16,42 @@ const policy = {
     { prefix: "shared/", jobs: ["website", "server"] },
   ],
 };
+test("rendered Markdown selects both site lanes, including deleted and renamed sources", () => {
+  const actual = JSON.parse(
+    readFileSync(new URL("./job-policy.json", import.meta.url)),
+  );
+  const selected = (...paths) =>
+    Object.entries(classify(actual, paths))
+      .filter(([, on]) => on)
+      .map(([name]) => name)
+      .sort();
+  const site = ["website", "website-quality"];
+  for (const page of ["client", "workflows", "server", "deploy"]) {
+    const path = `documentation/${page}.md`;
+    assert.deepEqual(selected(path), site, path);
+    assert.deepEqual(selected(path, "documentation/archived.md"), site);
+  }
+  assert.deepEqual(selected("documentation/release-conventions.md"), []);
+  assert.deepEqual(
+    selected("documentation/server.md", "protocol/message.go"),
+    [...actual.jobs].sort(),
+  );
+  assert.deepEqual(selected("pnpm-lock.yaml"), [...actual.jobs].sort());
+});
+
+test("full source evidence requires success for every named CI job", () => {
+  const workflow = readFileSync(
+    new URL("../../.github/workflows/ci.yml", import.meta.url),
+    "utf8",
+  );
+  const { ciJobs } = JSON.parse(
+    readFileSync(new URL("../release/policy.json", import.meta.url)),
+  );
+  const names = [...workflow.matchAll(/^  [\w-]+:\n    name: (.+)$/gm)].map(
+    ([, name]) => name,
+  );
+  assert.deepEqual(ciJobs.sort(), names.sort());
+});
 test("repository policy covers every workflow job and shared Go dependencies", () => {
   const actual = JSON.parse(
     readFileSync(new URL("./job-policy.json", import.meta.url), "utf8"),
