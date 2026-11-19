@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.25](https://github.com/miniaxolotl/burrow/compare/v0.3.24...v0.3.25) (2026-11-19)
+
+
+### Bug Fixes
+
+* **domain:** point Grove links to grovenote.app ([#116](https://github.com/miniaxolotl/burrow/issues/116)) ([9c9764f](https://github.com/miniaxolotl/burrow/commit/9c9764f0a0954cdd75e5c1cdcf12f201fa026a66))
+* **release:** gate rendered docs and verify the binary installer ([#114](https://github.com/miniaxolotl/burrow/issues/114)) ([86aef8f](https://github.com/miniaxolotl/burrow/commit/86aef8f859ce36a28f655e2aede09ce2c723401b))
+* **release:** prove repeatable site-only delivery inputs ([#117](https://github.com/miniaxolotl/burrow/issues/117)) ([536353b](https://github.com/miniaxolotl/burrow/commit/536353b3e5c68fadfff2ebf5ade4f8b9099504d0))
+* **website:** polish layouts and service log examples ([#118](https://github.com/miniaxolotl/burrow/issues/118)) ([5ef662d](https://github.com/miniaxolotl/burrow/commit/5ef662d8bd990dc4d5b3073b7f06f7a1ae8506d4))
+
 ## [0.3.24](https://github.com/miniaxolotl/burrow/compare/v0.3.23...v0.3.24) (2026-11-18)
 
 
