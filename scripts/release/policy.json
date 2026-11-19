@@ -10,8 +10,10 @@
     "reviewedSource": "1c6e402b5bd5e600f98c7bc6fda345cbe4a31009"
   },
   "ciJobs": [
+    "Change Classification",
     "Infrastructure Quality",
     "Website",
+    "Website Quality",
     "Go Quality",
     "Go Build",
     "Go Tests",

@@ -29,8 +29,9 @@ reviewed and separately activated.
 ## Branch and release policy
 
 Feature PRs integrate into `development`. Release Please prepares a single product
-version and changelog there; all native packages, the wrapper and both Go binaries
-share it. Both `feat` and `feature` produce feature notes. A source GitHub release
+version and changelog there. A site-only tag leaves the delivered binaries and
+wrapper (including its four exact native pins) at their verified version.
+Both `feat` and `feature` produce feature notes. A source GitHub release
 is metadata, not a deployment.
 
 Only `production` publishes npm, binary archives, container images and the Vercel
@@ -61,13 +62,19 @@ the complete website tree before the production merge.
    and validation, workflow lint, and a Docker build.
 2. **CI Gate** verifies classification, admission and exact selected-job results;
    unknown/empty/unreadable diffs select all. Development PRs select dependency
-   families, while source push/manual validation stays complete. Frozen promotion
+   families. Changes to Markdown in the website's public reference allowlist run
+   both Website and Website Quality; internal docs alone skip those jobs.
+   Source push/manual validation stays complete. Frozen promotion
    PRs reuse independent source validation through authenticated admission.
    A downstream PR must come from the owner's
    frozen `promote/production/vX.Y.Z` ref, have Release Please provenance and match
    the tag's tree. Independent source CI is required; PR/self evidence is rejected.
 3. **Deploy** waits for complete production CI, resolves the tag source separately
-   from the production merge SHA and rejects stale production runs. It builds
+   from the production merge SHA and rejects stale production runs. The only
+   admitted decision, v0.3.24, delivers the site via Vercel Git and skips both
+   publication and rollout. Unreviewed tags are refused. Steps 4–7 describe the
+   retained full publisher and rollout, disabled for this decision.
+   When enabled, the publisher builds
    GoReleaser artifacts, checks every npm tarball and existing GitHub asset before
    publication, and preserves the Release Please release body. Conflicting bytes
    under an existing version fail; identical artifacts are reused on retry.
@@ -92,6 +99,12 @@ the complete website tree before the production merge.
 The npm registry serves npm, pnpm, Yarn, and Bun. Native archives cover Linux and
 macOS on amd64/arm64. Docker images cover Linux amd64/arm64. There is currently
 no Homebrew tap, winget package, or apt repository in this project.
+
+`scripts/install.sh` installs `burrowd` from the reviewed v0.3.23 binary release.
+It verifies the SHA-256 of `checksums.txt` and the selected platform archive before
+extracting it. Either `sha256sum` or `shasum` is required. Update the tag and
+inventory digest together after verifying a new binary delivery; neither a source
+tag without assets nor GitHub's `latest` label selects installer bytes.
 
 ### Compare candidate binaries (report only)
 

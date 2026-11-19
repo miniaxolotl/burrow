@@ -4,6 +4,11 @@ import { appendFileSync, readFileSync } from "node:fs";
 import process from "node:process";
 import console from "node:console";
 import { pathToFileURL, URL } from "node:url";
+import { documentation } from "../../packages/website/src/content/documentation.ts";
+
+const renderedDocs = new Set(
+  documentation.map(({ source }) => `documentation/${source}`),
+);
 
 function inventory(policy) {
   assert.ok(Array.isArray(policy.jobs) && policy.jobs.length > 0);
@@ -35,7 +40,9 @@ export function classify(policy, paths) {
   const selection = Object.fromEntries(
     jobs.map((job) => [job, paths.length === 0]),
   );
-  for (const path of paths) {
+  for (const changed of paths) {
+    // Public Markdown is a website build input; only other docs can skip CI.
+    const path = renderedDocs.has(changed) ? "packages/website/" : changed;
     if (
       path.startsWith("documentation/") ||
       ["README.md", "AGENTS.md", "LICENSE"].includes(path)
