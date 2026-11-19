@@ -14,6 +14,22 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import * as admission from "./promotion.mjs";
 
+test("selection receipt refresh retains the frozen parent after merge", () => {
+  const before = "a".repeat(40);
+  const after = "b".repeat(40);
+  assert.equal(typeof admission.selectionProduction, "function");
+  assert.equal(admission.selectionProduction(before, before), before);
+  assert.equal(admission.selectionProduction(after, before, before), before);
+  assert.throws(
+    () => admission.selectionProduction(after, before),
+    /Production advanced/,
+  );
+  assert.throws(
+    () => admission.selectionProduction(after, before, after),
+    /Frozen production parent/,
+  );
+});
+
 function fixture(run) {
   const cwd = mkdtempSync(join(tmpdir(), "burrow-site-inputs-"));
   const git = (...args) =>

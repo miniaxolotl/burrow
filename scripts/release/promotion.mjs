@@ -159,6 +159,22 @@ function delivery(policy, candidate, production) {
   return "site-only";
 }
 
+export function selectionProduction(current, frozenParent, mergeParent = null) {
+  requireThat(
+    [current, frozenParent, ...(mergeParent ? [mergeParent] : [])].every(
+      (sha) => hashPattern.test(sha),
+    ),
+    "Full production identities required",
+  );
+  requireThat(
+    mergeParent ? mergeParent === frozenParent : current === frozenParent,
+    mergeParent
+      ? "Frozen production parent mismatch"
+      : "Production advanced; select a new release",
+  );
+  return frozenParent;
+}
+
 function admitDevelopmentStack(policy, expected) {
   requireThat(
     process.env.GITHUB_EVENT_NAME === "pull_request" &&
@@ -590,6 +606,16 @@ function openPromotion(policy, tag, target) {
       git("rev-parse", `${existing[0].head.sha}^{tree}`) === candidate.tree,
       "Frozen ref drift",
     );
+    // Receipt renewal must not rebind a merged candidate to its own merge SHA,
+    // or silently rebase an open frozen selection onto a newer production tip.
+    const retainedBase = selectionProduction(
+      base,
+      git("rev-parse", `${existing[0].head.sha}^1`),
+      existing[0].merged_at
+        ? git("rev-parse", `${existing[0].merge_commit_sha}^1`)
+        : null,
+    );
+    candidate.delivery = delivery(policy, candidate, retainedBase);
     console.log(existing[0].html_url);
     recordSelection(policy, candidate, existing[0]);
     return;
