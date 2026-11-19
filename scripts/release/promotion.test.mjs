@@ -56,6 +56,40 @@ test("bot promotions require operator-triggered, exact-candidate workflow eviden
   assert.doesNotThrow(() =>
     assertSelection(settings, pr, candidate, run, record),
   );
+  const proven = {
+    ...candidate,
+    delivery: "site-only",
+    deliveryProof: {
+      baseline: "e".repeat(40),
+      production: "f".repeat(40),
+      source: sha,
+      inputs: "1".repeat(64),
+    },
+  };
+  const proofRecord = {
+    ...record,
+    delivery: proven.delivery,
+    deliveryProof: proven.deliveryProof,
+  };
+  assert.doesNotThrow(() =>
+    assertSelection(settings, pr, proven, run, proofRecord),
+  );
+  for (const change of [
+    { deliveryProof: undefined },
+    { delivery: "full" },
+    ...Object.keys(proven.deliveryProof).map((key) => ({
+      deliveryProof: { ...proven.deliveryProof, [key]: "changed" },
+    })),
+  ]) {
+    assert.throws(
+      () =>
+        assertSelection(settings, pr, proven, run, {
+          ...proofRecord,
+          ...change,
+        }),
+      /evidence mismatch/,
+    );
+  }
   for (const change of [
     { event: "push" },
     { head_branch: "feature/forged" },

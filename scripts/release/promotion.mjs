@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
+import { createHash } from "node:crypto";
 import { readGitHubJson } from "../ci/github-json.mjs";
 
 const tagPattern = /^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
@@ -36,65 +37,154 @@ export function promotionTag(policy, pr) {
   return tag;
 }
 
-// A reviewed delivery receipt, not a workflow input. The production base and
-// reviewed product snapshot are immutable; unreviewed payload changes stop here.
-export function assertSiteOnly(
-  receipt,
-  { production, paths, previous, current },
-) {
-  requireThat(production === receipt.production, "Production baseline changed");
-  requireThat(
-    previous.private === true &&
-      current.version === receipt.tag.slice(1) &&
-      isDeepStrictEqual({ ...previous, version: current.version }, current),
-    "Unexpected private manifest change",
+// Audited destination boundaries, not the CI path selector. Everything else,
+// including new/unknown files, is part of the retained delivery fingerprint.
+// The site and reference docs are Vercel inputs. The CI selector and tests do
+// not run in writers; the shared GitHub reader/current-ref fence do and remain
+// protected despite living under scripts/ci. Publisher, rollout and shared build
+// configuration remain protected. Release notes can advance without repacking
+// old archives; README/LICENSE (archive payloads) cannot.
+function siteOrControl(path) {
+  return (
+    path.startsWith("packages/website/") ||
+    path.startsWith("documentation/") ||
+    /^scripts\/(?:ci|release)\/[^/]+\.test\.mjs$/.test(path) ||
+    [
+      "CHANGELOG.md",
+      "scripts/release/README.md",
+      "scripts/release/promotion.mjs",
+      "scripts/release/policy.json",
+      "scripts/ci/selection.mjs",
+    ].includes(path)
   );
-  const controls = new Set([
-    "package.json",
-    "CHANGELOG.md",
-    ".release-please-manifest.json",
-  ]);
-  for (const path of paths)
-    requireThat(controls.has(path), `Unreviewed delivery input: ${path}`);
+}
+
+export function verifySiteOnlyInputs({
+  baseline,
+  production,
+  source,
+  tag,
+  cwd = process.cwd(),
+}) {
+  requireThat(
+    [baseline, production, source].every((sha) => hashPattern.test(sha)) &&
+      tagPattern.test(tag),
+    "Full source identities and a plain tag are required",
+  );
+  const run = (...args) =>
+    execFileSync("git", args, {
+      cwd,
+      encoding: "utf8",
+      timeout: 30_000,
+      maxBuffer: 16 * 1024 * 1024,
+    });
+  run("merge-base", "--is-ancestor", baseline, production);
+  const root = (sha, path) => JSON.parse(run("show", `${sha}:${path}`));
+  const previous = root(baseline, "package.json");
+  const snapshot = (sha) => {
+    const current = root(sha, "package.json");
+    requireThat(
+      previous.private === true &&
+        isDeepStrictEqual({ ...previous, version: current.version }, current),
+      `Unexpected package.json input at ${sha}`,
+    );
+    const ledger = root(sha, ".release-please-manifest.json");
+    requireThat(
+      isDeepStrictEqual(ledger, { ".": current.version }),
+      `Unexpected release manifest at ${sha}`,
+    );
+    if (sha === source)
+      requireThat(
+        current.version === tag.slice(1),
+        "Source tag/version mismatch",
+      );
+    return new Map(
+      run("ls-tree", "-rz", "--full-tree", sha)
+        .split("\0")
+        .filter(Boolean)
+        .flatMap((entry) => {
+          const tab = entry.indexOf("\t");
+          const path = entry.slice(tab + 1);
+          const identity = entry.slice(0, tab);
+          if (siteOrControl(path)) return [];
+          if (
+            ["package.json", ".release-please-manifest.json"].includes(path)
+          ) {
+            requireThat(
+              identity.startsWith("100644 blob "),
+              `Unexpected manifest mode: ${path}`,
+            );
+            return [
+              [
+                path,
+                path === "package.json"
+                  ? JSON.stringify({ ...previous, version: null })
+                  : "release ledger",
+              ],
+            ];
+          }
+          return [[path, identity]];
+        }),
+    );
+  };
+  const expected = snapshot(baseline);
+  for (const sha of new Set([production, source])) {
+    const actual = snapshot(sha);
+    const drift = [...new Set([...expected.keys(), ...actual.keys()])]
+      .filter((path) => expected.get(path) !== actual.get(path))
+      .sort();
+    requireThat(
+      drift.length === 0,
+      `Site-only blocked at ${sha}; delivery inputs changed: ${drift.join(", ")}. Review a targeted delivery; no publication or installer approval is inferred.`,
+    );
+  }
+  return {
+    baseline,
+    production,
+    source,
+    inputs: createHash("sha256")
+      .update(
+        JSON.stringify([...expected].sort(([a], [b]) => a.localeCompare(b))),
+      )
+      .digest("hex"),
+  };
 }
 
 function delivery(policy, candidate, production) {
-  const receipt = policy.siteOnly;
-  requireThat(
-    receipt?.tag === candidate.tag,
-    "Review destination impact for this new tag before promotion",
-  );
-  const tooling = api(`repos/${policy.repository}/pulls/${receipt.toolingPr}`);
-  requireThat(
-    tooling.merged_at &&
-      tooling.base.ref === "development" &&
-      tooling.base.repo.full_name === policy.repository &&
-      hashPattern.test(tooling.merge_commit_sha) &&
-      git("rev-parse", `${tooling.merge_commit_sha}^1`) ===
-        receipt.reviewedSource &&
-      git("rev-parse", `${candidate.sha}^1`) === tooling.merge_commit_sha,
-    "Release must directly follow the reviewed tooling PR on the reviewed product baseline",
-  );
-  const names = execFileSync(
-    "git",
-    [
-      "diff",
-      "--no-renames",
-      "--name-only",
-      "-z",
-      tooling.merge_commit_sha,
-      candidate.sha,
-      "--",
-    ],
-    { encoding: "utf8" },
-  );
-  assertSiteOnly(receipt, {
+  candidate.deliveryProof = verifySiteOnlyInputs({
+    baseline: policy.siteOnly?.verifiedProduction,
     production,
-    paths: names.split("\0").filter(Boolean),
-    previous: JSON.parse(git("show", `${receipt.reviewedSource}:package.json`)),
-    current: JSON.parse(git("show", `${candidate.sha}:package.json`)),
+    source: candidate.sha,
+    tag: candidate.tag,
   });
   return "site-only";
+}
+
+export function selectionProduction(
+  current,
+  frozenParent,
+  mergeParent = null,
+  mergedSha = null,
+) {
+  requireThat(
+    [
+      current,
+      frozenParent,
+      ...(mergeParent ? [mergeParent, mergedSha] : []),
+    ].every((sha) => hashPattern.test(sha)),
+    "Full production identities required",
+  );
+  requireThat(
+    mergeParent ? mergeParent === frozenParent : current === frozenParent,
+    mergeParent
+      ? "Frozen production parent mismatch"
+      : "Production advanced; select a new release",
+  );
+  requireThat(
+    !mergeParent || current === mergedSha,
+    "Production advanced beyond this merged selection; select the current release",
+  );
+  return frozenParent;
 }
 
 function admitDevelopmentStack(policy, expected) {
@@ -237,7 +327,10 @@ export function assertSelection(policy, pr, candidate, run, record) {
       record.target === pr.base.ref &&
       record.tag === candidate.tag &&
       record.sha === candidate.sha &&
-      record.tree === candidate.tree,
+      record.tree === candidate.tree &&
+      (!candidate.deliveryProof ||
+        (record.delivery === candidate.delivery &&
+          isDeepStrictEqual(record.deliveryProof, candidate.deliveryProof))),
     "Frozen selection evidence mismatch",
   );
 }
@@ -304,6 +397,8 @@ function recordSelection(policy, candidate, pr) {
         sha: candidate.sha,
         tree: candidate.tree,
         sourceCiRun: candidate.ciRun,
+        delivery: candidate.delivery,
+        deliveryProof: candidate.deliveryProof,
       },
       null,
       2,
@@ -427,7 +522,6 @@ export function admitPromotion(policy, pr, mergeSha) {
     tag,
     git("rev-parse", `${mergeSha}^{tree}`),
   );
-  authorizePromotion(policy, pr, candidate);
   requireThat(
     git("rev-parse", `${pr.head.sha}^{tree}`) === candidate.tree,
     "Frozen head tree mismatch",
@@ -439,6 +533,7 @@ export function admitPromotion(policy, pr, mergeSha) {
     candidate,
     pr.merged_at ? git("rev-parse", `${mergeSha}^1`) : pr.base.sha,
   );
+  authorizePromotion(policy, pr, candidate);
   return candidate;
 }
 
@@ -495,7 +590,7 @@ function openPromotion(policy, tag, target) {
   assertUpstream(policy, candidate, target);
   const base = api(`repos/${policy.repository}/git/ref/heads/${target}`).object
     .sha;
-  delivery(policy, candidate, base);
+  candidate.delivery = delivery(policy, candidate, base);
   const upstream = policy.branches[policy.branches.indexOf(target) - 1];
   const parent =
     upstream === "development"
@@ -523,6 +618,17 @@ function openPromotion(policy, tag, target) {
       git("rev-parse", `${existing[0].head.sha}^{tree}`) === candidate.tree,
       "Frozen ref drift",
     );
+    // Receipt renewal must not rebind a merged candidate to its own merge SHA,
+    // or silently rebase an open frozen selection onto a newer production tip.
+    const retainedBase = selectionProduction(
+      base,
+      git("rev-parse", `${existing[0].head.sha}^1`),
+      existing[0].merged_at
+        ? git("rev-parse", `${existing[0].merge_commit_sha}^1`)
+        : null,
+      existing[0].merged_at ? existing[0].merge_commit_sha : null,
+    );
+    candidate.delivery = delivery(policy, candidate, retainedBase);
     console.log(existing[0].html_url);
     recordSelection(policy, candidate, existing[0]);
     return;
@@ -562,7 +668,7 @@ function openPromotion(policy, tag, target) {
     title: `chore(release): promote ${tag} to ${target}`,
     base: target,
     head: branch,
-    body: `## Frozen release\n\n- Tag: \`${tag}\`\n- Source: \`${candidate.sha}\`\n- Tree: \`${candidate.tree}\`\n- Upstream: \`${upstream}\` at \`${parent}\`\n- Tooling: \`${git("rev-parse", "HEAD")}\`\n\nIndependent source CI and protected promotion admission are required. Merge with a merge commit to preserve source ancestry.\n\n<!-- release-selection:${process.env.GITHUB_RUN_ID ?? "local"} -->`,
+    body: `## Frozen release\n\n- Tag: \`${tag}\`\n- Source: \`${candidate.sha}\`\n- Tree: \`${candidate.tree}\`\n- Upstream: \`${upstream}\` at \`${parent}\`\n- Tooling: \`${git("rev-parse", "HEAD")}\`\n- Delivery: site-only; no npm/archive/image publication or service rollout\n- Verified delivery baseline: \`${candidate.deliveryProof.baseline}\`\n- Frozen production parent: \`${base}\`\n- Retained input SHA-256: \`${candidate.deliveryProof.inputs}\`\n\nIndependent source CI and protected promotion admission are required. Merge with a merge commit to preserve source ancestry.\n\n<!-- release-selection:${process.env.GITHUB_RUN_ID ?? "local"} -->`,
   });
   api(`repos/${policy.repository}/issues/${pr.number}/assignees`, {
     assignees: [policy.operator],

@@ -4,10 +4,7 @@
   "label": "enhancement",
   "branches": ["development", "production"],
   "siteOnly": {
-    "toolingPr": 112,
-    "tag": "v0.3.24",
-    "production": "03b49db541f0b9c9c51314dbdeecd3663a246c01",
-    "reviewedSource": "1c6e402b5bd5e600f98c7bc6fda345cbe4a31009"
+    "verifiedProduction": "9fcb0be4c388dc7b8802b98adf7321e588b6d202"
   },
   "ciJobs": [
     "Change Classification",

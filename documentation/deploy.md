@@ -70,10 +70,12 @@ the complete website tree before the production merge.
    frozen `promote/production/vX.Y.Z` ref, have Release Please provenance and match
    the tag's tree. Independent source CI is required; PR/self evidence is rejected.
 3. **Deploy** waits for complete production CI, resolves the tag source separately
-   from the production merge SHA and rejects stale production runs. The only
-   admitted decision, v0.3.24, delivers the site via Vercel Git and skips both
-   publication and rollout. Unreviewed tags are refused. Steps 4–7 describe the
-   retained full publisher and rollout, disabled for this decision.
+   from the production merge SHA and rejects stale production runs. Site-only
+   admission compares retained delivery inputs at both the candidate and frozen
+   production parent against the verified production baseline. It delivers the
+   site via Vercel Git and skips publication and rollout. Changed or unknown
+   delivery inputs are refused. Steps 4–7 describe the retained full publisher
+   and rollout, which this policy never enables.
    When enabled, the publisher builds
    GoReleaser artifacts, checks every npm tarball and existing GitHub asset before
    publication, and preserves the Release Please release body. Conflicting bytes
@@ -161,12 +163,24 @@ The coordinated production pipeline above remains in effect.
    a labelled PR assigned to `miniaxolotl`. It never follows later development.
    A run-scoped candidate artifact binds the operator, tooling revision, source,
    tree, frozen head and PR. CI verifies this record for bot-authored promotions.
-   Records expire after 90 days; rerun the original selection run to refresh them.
+   Records include the verified baseline, frozen production parent, exact source
+   and retained-input SHA-256. They expire after 90 days; rerun the original
+   selection run to refresh them. Admission and production revalidation repeat
+   the input comparison, not a trust in the PR text or receipt alone. Renewal
+   preserves the frozen parent: open candidates require that parent to remain
+   current; merged candidates require their merge SHA to remain current and its
+   first parent to match the freeze. Later production commits (even identical
+   trees) cannot renew an older selection. Historical v0.3.24 retries use their
+   original workflow revision; the new baseline policy admits only selections
+   whose frozen production parent contains the verified anchor.
 3. Review the identity in the PR and enable auto-merge using **merge**, not squash
    or rebase. Strict `CI Gate`, conversation resolution and no-bypass protection
    apply. Source tags and frozen candidate refs cannot be rewritten or deleted.
-4. Verify Deploy, Vercel production readiness, npm versions, GitHub archives and
-   the real tunnel smoke test. The branch trees may match with different SHAs.
+4. Verify Deploy and Vercel production readiness for the production merge SHA.
+   Read back the unchanged npm pins, GitHub archives and active service digest;
+   site-only skips the service rollout and its tunnel test. A separately approved
+   service delivery requires the real tunnel smoke test. The branch trees may
+   match with different SHAs.
 
 Rerun a failed Deploy on the same current production commit. Publication is
 non-atomic across providers: an error remains visible, and successful immutable
@@ -313,10 +327,54 @@ For self-hosted HTTPS, set `BURROW_DOMAIN` to your tunnel domain and
 `BURROW_TLS=true`, and terminate TLS in front of port 25701. Upstash connections
 use `rediss://`; the container includes public CA certificates.
 
-## Site-only delivery of v0.3.24
+## Repeatable site-only delivery
 
-Selection and promotion admission check the production parent and the reviewed #109/#110 product tree in `scripts/release/policy.json`. Release Please updates the private product version; the wrapper, its four native packages, Go version stamps, download archives and tunnel image stay at their last verified delivery. The production merge triggers the existing Vercel Git integration. The artifact publisher is skipped and its dependent infrastructure rollout cannot run.
+`scripts/release/policy.json` anchors retained delivery inputs to verified production
+`9fcb0be4c388dc7b8802b98adf7321e588b6d202` (v0.3.24; [Deploy receipt](https://github.com/miniaxolotl/burrow/actions/runs/44406272602)).
+The site was verified live; npm packages, binary archives and service image remained
+at v0.3.23. The baseline is evidence, not the latest tag. Advance it only after a
+separately reviewed and verified delivery, never just to make a comparison pass.
 
-Verify the Vercel production alias resolves to the deployment for the **production merge SHA**, fetch the live site, read back the active DigitalOcean deployment/digest and npm pins, and check the previous release assets. A new tag or changed baseline needs a newly reviewed delivery decision; do not use the legacy full publisher to recover a missing receipt.
+Selection, promotion admission and production revalidation compare **complete Git
+tree entries** (path, type, mode and content identity) at both the candidate and
+production parent with that baseline. New, removed, renamed, symlinked or executable
+delivery inputs cannot disappear through a CI path filter. The explicit boundaries
+not shipped to the retained service/install targets are:
 
-The release commit must directly follow the merged tooling PR and may only change the private manifest version, release manifest and changelog. For the next release, review destination impact in a protected follow-up PR before regenerating its proposal. Re-enable the retained full publisher only for a decision with evidence that all its targets need delivery; deleting the site receipt does not enable it.
+- `packages/website/` and `documentation/`: Vercel source/reference content.
+- The exact CI selector `scripts/ci/selection.mjs`, CI/release `*.test.mjs`,
+  admission `promotion.mjs`/`policy.json`, and the release README: reviewed
+  selection/admission policy and tests, not installed payloads. This is **not** a
+  blanket `scripts/ci/` exclusion: `current-ref.mjs` fences infrastructure writes,
+  and its `github-json.mjs` dependency also supplies admission/dispatch reads.
+  Both remain fingerprinted along with unknown new CI helpers.
+- `CHANGELOG.md`: new release notes; previous archives are not repacked. Only the
+  private root version and single root release-ledger version may advance. Other
+  manifest fields and manifest file modes remain checked.
+
+Everything else must match, including Go modules, wrapper/native package pins,
+installer, lockfile, shared build configuration, publisher source, Docker inputs,
+infrastructure, deployment workflow, archive README/LICENSE and unknown new files.
+This conservative boundary may refuse a harmless build/test-only change; review
+its actual target effect rather than adding broad path exclusions. There is no
+tag/tooling-PR special case and no fallback to `full` publication. Frozen source,
+Release Please provenance, independent full CI, operator selection and protected
+merge requirements still apply. No new npm version or installer approval is implied.
+
+For a read-only local comparison of committed source (no GitHub/provider writes):
+
+```bash
+node --input-type=module -e 'import {verifySiteOnlyInputs} from "./scripts/release/promotion.mjs"; import {readFileSync} from "node:fs"; import {execFileSync} from "node:child_process"; const sha=r=>execFileSync("git",["rev-parse",r],{encoding:"utf8"}).trim(); console.log(verifySiteOnlyInputs({baseline:JSON.parse(readFileSync("scripts/release/policy.json")).siteOnly.verifiedProduction,production:sha("origin/production"),source:sha("HEAD"),tag:"v0.3.24"}));'
+```
+
+Use the candidate's actual private version for `tag`; this comparison alone does
+not establish release provenance or independent CI. It intentionally refuses
+current development after #114: `scripts/install.sh` changes from GitHub latest
+with optional integrity checks to checksum-pinned v0.3.23 with mandatory checks.
+That fixes selection/security but changes installer behavior. A targeted installer
+delivery/approval decision is still required; this repair does not approve it,
+publish packages, roll out the service or promote any candidate.
+
+After a separately authorized site-only promotion, verify the Vercel production
+alias and live content for the **production merge SHA**, then read back the
+unchanged service digest, npm pins and previous release assets.
