@@ -102,6 +102,81 @@ test("successive source-bound site releases need no tag or tooling PR exception"
   });
 });
 
+test("real frozen/merge graphs renew identical proofs only at the selected merge tip", () => {
+  fixture(({ cwd, git, put, commit, baseline }) => {
+    let production = baseline;
+    for (const version of ["0.3.25", "0.3.26"]) {
+      put("packages/website/page.tsx", version);
+      put("package.json", JSON.stringify({ private: true, version }));
+      put(".release-please-manifest.json", JSON.stringify({ ".": version }));
+      const source = commit();
+      const tree = git("rev-parse", `${source}^{tree}`);
+      const freeze = git(
+        "commit-tree",
+        tree,
+        "-p",
+        production,
+        "-p",
+        source,
+        "-m",
+        "freeze",
+      );
+      const merged = git(
+        "commit-tree",
+        tree,
+        "-p",
+        production,
+        "-p",
+        freeze,
+        "-m",
+        "merge",
+      );
+      const proof = admission.verifySiteOnlyInputs({
+        baseline,
+        production,
+        source,
+        tag: `v${version}`,
+        cwd,
+      });
+      const retained = admission.selectionProduction(
+        merged,
+        git("rev-parse", `${freeze}^1`),
+        git("rev-parse", `${merged}^1`),
+        merged,
+      );
+      assert.deepEqual(
+        admission.verifySiteOnlyInputs({
+          baseline,
+          production: retained,
+          source,
+          tag: `v${version}`,
+          cwd,
+        }),
+        proof,
+      );
+      const laterSameTree = git(
+        "commit-tree",
+        tree,
+        "-p",
+        merged,
+        "-m",
+        "later same-tree production",
+      );
+      assert.throws(
+        () =>
+          admission.selectionProduction(
+            laterSameTree,
+            production,
+            production,
+            merged,
+          ),
+        /Production advanced/,
+      );
+      production = merged;
+    }
+  });
+});
+
 for (const path of [
   "scripts/install.sh",
   "packages/burrowctl/package.json",
