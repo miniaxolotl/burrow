@@ -44,7 +44,7 @@ punctuation. Install: `npm i -g @miniaxolotl/burrowctl`. Start:
 Avoid unsupported Windows, deployment or private-access promises.
 
 Use https://useburrow.app, https://bramblelabs.co, https://usefern.app and
-https://usegrove.cloud for the product family. Preserve the existing WireGuard
+https://grovenote.app for the product family. Preserve the existing WireGuard
 preview access when running local reviews.
 
 ## Verification
