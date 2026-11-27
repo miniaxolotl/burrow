@@ -5,7 +5,7 @@ Release admission and retained publication tooling. Follow
 delivery approval.
 
 `promotion.mjs` binds an immutable Release Please source to independent full CI
-and an operator-selected frozen promotion. Site-only selection compares retained
+and a frozen promotion prepared by Source Release. Site-only selection compares retained
 delivery inputs against the verified production anchor in `policy.json`, repeats
 the comparison during admission/deployment, and records the exact identities and
 input digest. Unknown or changed service/install inputs fail closed. There is no

@@ -21,10 +21,8 @@ versions and tags are retained; generated release PRs own version/changelog edit
 Shared workflow names, action pins, runtime and evidence conventions follow the
 [cross-repository CI/CD baseline](pipeline-conventions.md).
 
-The [Burrow hardening review](cicd-hardening-review.md) separates implemented
-admission/publication/rollout from planned selection, drain continuity and automatic
-last-good recovery. Continue using this operator path until replacements are
-reviewed and separately activated.
+The [Burrow hardening review](cicd-hardening-review.md) records the earlier
+pipeline. The selection procedure below applies to new eligible releases.
 
 ## Branch and release policy
 
@@ -158,10 +156,11 @@ The coordinated production pipeline above remains in effect.
 
 1. Merge the green Release Please PR into development and wait for its immutable
    `vX.Y.Z` source release and complete development CI.
-2. Run **Select Release Candidate** from development with that exact tag. It uses
-   the job-scoped `GITHUB_TOKEN`, freezes the tag tree and current production parent, and opens
+2. **Source Release** prepares the production PR automatically on the protected
+   development push for that tagged Release Please merge. It waits for full CI
+   on the exact source, checks the site-only inputs, freezes the tag tree and current production parent, and opens
    a labelled PR assigned to `miniaxolotl`. It never follows later development.
-   A run-scoped candidate artifact binds the operator, tooling revision, source,
+   A run-scoped candidate artifact binds the selection workflow, tooling revision, source,
    tree, frozen head and PR. CI verifies this record for bot-authored promotions.
    Records include the verified baseline, frozen production parent, exact source
    and retained-input SHA-256. They expire after 90 days; rerun the original
@@ -173,14 +172,22 @@ The coordinated production pipeline above remains in effect.
    trees) cannot renew an older selection. Historical v0.3.24 retries use their
    original workflow revision; the new baseline policy admits only selections
    whose frozen production parent contains the verified anchor.
-3. Review the identity in the PR and enable auto-merge using **merge**, not squash
-   or rebase. Strict `CI Gate`, conversation resolution and no-bypass protection
+3. Review the identity and the actual native PR checks; approve a pending bot
+   workflow if GitHub requests it. A successful dispatched check cannot clear that
+   approval. Merge the checked production PR using **merge**, not squash
+   or rebase. Automatic merge is not requested by Source Release. `CI Gate`, conversation resolution and no-bypass protection
    apply. Source tags and frozen candidate refs cannot be rewritten or deleted.
 4. Verify Deploy and Vercel production readiness for the production merge SHA.
    Read back the unchanged npm pins, GitHub archives and active service digest;
    site-only skips the service rollout and its tunnel test. A separately approved
    service delivery requires the real tunnel smoke test. The branch trees may
    match with different SHAs.
+
+For an interrupted automatic selection, rerun the original Source Release push
+run, even if the tag or PR already exists. Do not launch a new manual selection
+for that release. **Select Release Candidate** is owner-only historical recovery;
+keep existing selections on their original workflow. An installer, CLI, service
+or other retained-input change needs a separately reviewed targeted delivery.
 
 Rerun a failed Deploy on the same current production commit. Publication is
 non-atomic across providers: an error remains visible, and successful immutable

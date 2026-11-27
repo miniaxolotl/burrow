@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import {
   mkdtempSync,
   mkdirSync,
   writeFileSync,
+  readFileSync,
   rmSync,
   chmodSync,
   unlinkSync,
@@ -72,6 +73,192 @@ function fixture(run) {
   }
 }
 
+test("an exact release push prepares one frozen PR and renews it on the original run", () => {
+  fixture(({ cwd, git, put, commit, baseline }) => {
+    const policy = JSON.parse(readFileSync("scripts/release/policy.json"));
+    policy.siteOnly.verifiedProduction = baseline;
+    const repo = policy.repository;
+    put("packages/website/page.tsx", "new site");
+    put("package.json", JSON.stringify({ private: true, version: "0.3.25" }));
+    put(".release-please-manifest.json", JSON.stringify({ ".": "0.3.25" }));
+    const sha = commit();
+    const tree = git("rev-parse", "HEAD^{tree}");
+    git("update-ref", "refs/remotes/origin/development", sha);
+    const tag = "v0.3.25";
+    const branch = `promote/production/${tag}`;
+    const head = git(
+      "commit-tree",
+      tree,
+      "-p",
+      baseline,
+      "-p",
+      sha,
+      "-m",
+      "frozen",
+    );
+    const pr = {
+      number: 17,
+      state: "open",
+      head: { ref: branch, sha: head, repo: { full_name: repo } },
+      base: { ref: "production", sha: baseline },
+      body: "<!-- release-selection:42 -->",
+      user: { login: "github-actions[bot]", type: "Bot" },
+    };
+    const releasePr = {
+      merged_at: "2026-01-01",
+      merge_commit_sha: sha,
+      base: { ref: "development", repo: { full_name: repo } },
+      head: {
+        ref: "release-please--branches--development--components--burrow",
+        repo: { full_name: repo },
+      },
+      user: { login: "github-actions[bot]", type: "Bot" },
+      labels: [{ name: "autorelease: tagged" }],
+    };
+    const run = {
+      id: 5,
+      run_attempt: 1,
+      event: "push",
+      status: "completed",
+      conclusion: "success",
+      path: ".github/workflows/ci.yml",
+      head_sha: sha,
+      head_repository: { full_name: repo },
+    };
+    const jobs = policy.ciJobs.map((name) => ({
+      name,
+      run_id: 5,
+      run_attempt: 1,
+      head_sha: sha,
+      status: "completed",
+      conclusion: "success",
+    }));
+    const listPr = `pulls?state=all&base=production&head=miniaxolotl:${branch}&per_page=100&page=1`;
+    const routes = {
+      [`releases/tags/${tag}`]: { tag_name: tag, draft: false },
+      [`commits/${sha}/pulls?per_page=100&page=1`]: [releasePr],
+      [`actions/workflows/ci.yml/runs?head_sha=${sha}&per_page=100&page=1`]: {
+        workflow_runs: [run],
+      },
+      "actions/runs/5/attempts/1/jobs?per_page=100&page=1": { jobs },
+      "git/ref/heads/production": { object: { sha: baseline } },
+      [listPr]: [],
+      [`git/matching-refs/heads/${branch}`]: [],
+      "POST git/commits": { sha: head },
+      "POST git/refs": {},
+      "POST pulls": pr,
+      "POST issues/17/assignees": {},
+      "POST issues/17/labels": {},
+    };
+    for (const file of ["release/promotion.mjs", "ci/github-json.mjs"])
+      put(`tools/${file}`, readFileSync(`scripts/${file}`));
+    put("tools/release/policy.json", JSON.stringify(policy));
+    put(
+      "event.json",
+      JSON.stringify({
+        after: sha,
+        forced: false,
+        deleted: false,
+        created: false,
+      }),
+    );
+    put("writes", "");
+    put(
+      "gh",
+      `#!${process.execPath}\nconst fs=require('node:fs'); const a=process.argv.slice(2); const key=a.find(x=>x.startsWith('repos/')).slice(${`repos/${repo}/`.length}); const write=a.includes('POST'); if(write)fs.appendFileSync('writes',JSON.stringify([key,JSON.parse(fs.readFileSync(0))])+'\\n');const v=JSON.parse(fs.readFileSync('routes'))[(write?'POST ':'')+key]; if(v===undefined)throw Error(key);console.log((write?'':'HTTP/2.0 200 OK\\n\\n')+JSON.stringify(v));`,
+    );
+    chmodSync(join(cwd, "gh"), 0o700);
+    const invoke = (overrides = {}) => {
+      put("routes", JSON.stringify(routes));
+      return spawnSync(
+        process.execPath,
+        ["tools/release/promotion.mjs", "auto"],
+        {
+          cwd,
+          encoding: "utf8",
+          timeout: 10000,
+          env: {
+            ...process.env,
+            PATH: `${cwd}:${process.env.PATH}`,
+            GITHUB_ACTIONS: "true",
+            GITHUB_REF: "refs/heads/development",
+            GITHUB_REF_PROTECTED: "true",
+            GITHUB_REPOSITORY: repo,
+            GITHUB_SHA: sha,
+            GITHUB_WORKFLOW_REF: `${repo}/.github/workflows/release.yml@refs/heads/development`,
+            GITHUB_EVENT_NAME: "push",
+            GITHUB_EVENT_PATH: join(cwd, "event.json"),
+            GITHUB_RUN_ID: "42",
+            GITHUB_OUTPUT: join(cwd, "output"),
+            ...overrides,
+          },
+        },
+      );
+    };
+    const writes = () =>
+      readFileSync(join(cwd, "writes"), "utf8")
+        .trim()
+        .split("\n")
+        .filter(Boolean)
+        .map((s) => JSON.parse(s));
+    assert.equal(
+      invoke().status,
+      0,
+      "ordinary push skips without selecting the previous tag",
+    );
+    git("tag", "-a", tag, "-m", "released", sha);
+    for (const overrides of [
+      { GITHUB_REF_PROTECTED: "false" },
+      { GITHUB_EVENT_NAME: "workflow_dispatch" },
+      { GITHUB_SHA: baseline },
+      { GITHUB_WORKFLOW_REF: "wrong" },
+    ])
+      assert.notEqual(invoke(overrides).status, 0);
+    releasePr.head.ref = "feature/unrelated";
+    assert.notEqual(invoke().status, 0);
+    releasePr.head.ref =
+      "release-please--branches--development--components--burrow";
+    routes["branches/production"] = {
+      name: "production",
+      protected: false,
+      commit: { sha: baseline },
+    };
+    assert.notEqual(invoke().status, 0, "production must still be protected");
+    routes["branches/production"].protected = true;
+    assert.deepEqual(writes(), []);
+    const first = invoke();
+    assert.equal(first.status, 0, first.stderr);
+    assert.deepEqual(
+      writes().find(([key]) => key === "git/commits")[1].parents,
+      [baseline, sha],
+    );
+    assert.deepEqual(writes().find(([key]) => key === "git/refs")[1], {
+      ref: `refs/heads/${branch}`,
+      sha: head,
+    });
+    routes[listPr] = [pr];
+    const retry = invoke();
+    assert.equal(retry.status, 0, retry.stderr);
+    assert.equal(writes().filter(([key]) => key === "pulls").length, 1);
+    assert.equal(writes().filter(([key]) => key === "git/refs").length, 1);
+    assert.equal(
+      writes().filter(([key]) => key === "issues/17/labels").length,
+      2,
+      "retry repairs interrupted PR decoration",
+    );
+    const receipt = JSON.parse(readFileSync(join(cwd, "selection.json")));
+    assert.equal(receipt.delivery, "site-only");
+    assert.equal(receipt.sha, sha);
+    assert.equal(receipt.head, head);
+    assert.equal(receipt.sourceCiRun, 5);
+    assert.notEqual(
+      invoke({ GITHUB_RUN_ID: "43" }).status,
+      0,
+      "do not adopt another run's selection",
+    );
+  });
+});
+
 test("successive source-bound site releases need no tag or tooling PR exception", () => {
   assert.equal(typeof admission.verifySiteOnlyInputs, "function");
   fixture(({ cwd, put, commit, baseline }) => {
@@ -80,6 +267,7 @@ test("successive source-bound site releases need no tag or tooling PR exception"
       put("packages/website/src/app/page.tsx", `site ${version}`);
       put("documentation/deploy.md", `docs ${version}`);
       put("scripts/release/promotion.mjs", `tooling ${version}`);
+      put(".github/workflows/release.yml", `source release ${version}`);
       put("scripts/ci/selection.mjs", `selector ${version}`);
       put("scripts/ci/selection.test.mjs", `selector tests ${version}`);
       put("package.json", JSON.stringify({ private: true, version }));

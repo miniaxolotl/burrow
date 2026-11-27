@@ -134,6 +134,44 @@ test("promotion accepts a different merge SHA only with the frozen release tree"
   );
 });
 
+test("automatic receipts authorize only the tagged source release's development push", () => {
+  const pr = { number: 17, head: { sha: tree }, base: { ref: "production" } };
+  const run = {
+    id: 42,
+    event: "push",
+    head_branch: "development",
+    head_repository: { full_name: policy.repository },
+    path: ".github/workflows/release.yml",
+    head_sha: sha,
+  };
+  const record = {
+    repository: policy.repository,
+    run: 42,
+    tooling: sha,
+    pr: 17,
+    head: tree,
+    target: "production",
+    tag: candidate.tag,
+    sha,
+    tree,
+  };
+  assert.doesNotThrow(() =>
+    assertSelection(policy, pr, candidate, run, record),
+  );
+  for (const change of [
+    { event: "workflow_dispatch" },
+    { head_sha: tree },
+    { head_branch: "production" },
+    { head_repository: { full_name: "fork/app" } },
+    { path: ".github/workflows/ci.yml" },
+  ])
+    assert.throws(
+      () =>
+        assertSelection(policy, pr, candidate, { ...run, ...change }, record),
+      /Unauthorized/,
+    );
+});
+
 test("a manually tagged or foreign release cannot authorize publication", () => {
   assert.throws(
     () => assertCandidate(policy, { ...candidate, releasePr: null }, tree),

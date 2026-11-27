@@ -8,8 +8,8 @@ contracts synchronized when updating them.
 | File          | Name                     | Responsibility                                                     |
 | ------------- | ------------------------ | ------------------------------------------------------------------ |
 | `ci.yml`      | CI                       | Validate source or admit a frozen promotion; finish with `CI Gate` |
-| `release.yml` | Source Release           | Release Please on development; immutable source tags               |
-| `promote.yml` | Select Release Candidate | Operator-selected tag, independent source CI, frozen PR            |
+| `release.yml` | Source Release           | Release Please; prepare Burrow's exact-source site-only PR         |
+| `promote.yml` | Select Release Candidate | Burrow owner recovery for historical selections                    |
 | `deploy.yml`  | Deploy                   | Burrow/Grove production: `candidate` → `publish` → `deploy`        |
 
 Fern delivers through `stage-release.yml` (images and production services), Xcode
