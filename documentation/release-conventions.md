@@ -81,7 +81,12 @@ core/frozen refs remain protected.
 
 ## Promotion is separate from source release
 
-Website/Burrow/Grove/InkByte: feature PR → development → released tag → deliberately
+Burrow: the tagged Release Please merge on development prepares one frozen
+production PR after exact-source CI and site-only qualification. Rerun the same
+push run to resume. Review native PR checks before the production merge; a new
+source tag does not update the installed CLI/native packages or service.
+
+Website/Grove/InkByte: feature PR → development → released tag → deliberately
 selected frozen production PR → production. Fern additionally stages the candidate
 and records exact server/native/TestFlight/provider/device acceptance before
 production prepares the **same accepted build** for owner App Review.

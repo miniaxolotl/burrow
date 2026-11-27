@@ -1,6 +1,21 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
+test("ordinary source releases prepare the receipt before dispatching frozen PR checks", () => {
+  const text = readFileSync(".github/workflows/release.yml", "utf8");
+  const selection = text.indexOf("node scripts/release/promotion.mjs auto");
+  const receipt = text.indexOf("path: selection.json");
+  const dispatch = text.indexOf("PROMOTION_PR:");
+  assert.ok(
+    selection > text.indexOf("googleapis/release-please-action@") &&
+      receipt > selection &&
+      dispatch > receipt,
+  );
+  assert.doesNotMatch(
+    text,
+    /gh pr merge|enablePullRequestAutoMerge|environment: production/,
+  );
+});
 test("source release guards intent and preserves its authenticated generated-PR CI path", () => {
   const text = readFileSync(".github/workflows/release.yml", "utf8");
   assert.match(

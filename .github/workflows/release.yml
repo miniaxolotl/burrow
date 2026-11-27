@@ -12,7 +12,7 @@ jobs:
   release-please:
     if: github.repository == 'miniaxolotl/burrow' && github.ref == 'refs/heads/development' && github.ref_protected == true
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 60
     permissions:
       contents: write
       pull-requests: write
@@ -40,4 +40,26 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_PRS: ${{ steps.release.outputs.prs }}
+        run: node scripts/release/dispatch-ci.mjs
+      - name: Fetch immutable tags, including after an interrupted selection
+        if: github.event_name == 'push' && !github.event.forced && !github.event.created && !github.event.deleted
+        run: git fetch origin --tags
+      - name: Prepare the frozen PR after independent source CI
+        id: selection
+        if: github.event_name == 'push' && !github.event.forced && !github.event.created && !github.event.deleted
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/release/promotion.mjs auto
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: steps.selection.outputs.pr != ''
+        with:
+          name: selected-candidate-${{ github.run_attempt }}
+          path: selection.json
+          retention-days: 90
+          if-no-files-found: error
+      - name: Dispatch CI for the frozen PR
+        if: steps.selection.outputs.pr != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PROMOTION_PR: ${{ steps.selection.outputs.pr }}
         run: node scripts/release/dispatch-ci.mjs
